@@ -1,29 +1,20 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import StudentDashboard from './pages/Student/StudentDashboard';
-import Login from './pages/Login';
-import Demo from './pages/Student/Demo';
+
+// Updated paths to include pages/HOD/
+import HODDashboard from './pages/HOD/HOD_dashboard';
+import MeetingRequests from './pages/HOD/Meeting_requests';
+import MedicalReview from './pages/HOD/Medical_review';
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Demo />} />
-          <Route path="/login" element={<Login />} />
-
-          {/* Protected Routes for Students */}
-          <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
-            <Route path="/dashboard" element={<StudentDashboard />} />
-          </Route>
-
-          {/* Default Catch-all Redirect */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route path="/hod/dashboard" element={<HODDashboard />} />
+        <Route path="/hod/meetings" element={<MeetingRequests />} />
+        <Route path="/hod/medical" element={<MedicalReview />} />
+        <Route path="*" element={<Navigate to="/hod/medical" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
