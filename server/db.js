@@ -1,28 +1,13 @@
-import mysql from 'mysql2/promise';
+import pkg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
-let pool;
+const { Pool } = pkg;
 
-export function getPool() {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST || '127.0.0.1',
-      port: Number(process.env.DB_PORT || 3307),
-      user: process.env.DB_USER || 'aags',
-      password: process.env.DB_PASSWORD || 'aags',
-      database: process.env.DB_NAME || 'aags',
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
-  }
-  return pool;
-}
-
-export async function dbAvailable() {
-  try {
-    await getPool().query('SELECT 1');
-    return true;
-  } catch {
-    return false;
-  }
-}
+export const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+});

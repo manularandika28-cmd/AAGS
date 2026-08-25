@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
-import { 
-  AlertTriangle, 
-  Calendar, 
-  ShieldCheck, 
-  ArrowRight, 
-  ChevronDown, 
+import {
+  AlertTriangle,
+  Calendar,
+  ShieldCheck,
+  ArrowRight,
+  ChevronDown,
   BellRing,
   Info,
   UserCheck,
@@ -15,19 +15,17 @@ import {
 } from 'lucide-react';
 
 const StudentDashboard = () => {
-  const [activeTab, setActiveTab] = useState('Dashboard');
-
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      {/* Sidebar */}
-      <Sidenavbar activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Sidenavbar */}
+      <Sidenavbar />
 
-      {/* Main Content Area */}
+      {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
+        {/* Topnavbar */}
         <Topnavbar />
 
-        {/* Dashboard Body */}
+        {/* Dashboard Content */}
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
           {/* Welcome Header */}
           <div>
@@ -42,7 +40,7 @@ const StudentDashboard = () => {
           {/* Top 3 Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Attendance */}
-            <div className="relative bg-white border border-amber-400/80 rounded-xl p-5 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div className="relative bg-white border border-amber-400 rounded-xl p-5 shadow-xs overflow-hidden flex flex-col justify-between">
               <div className="absolute right-4 top-4 text-amber-100 pointer-events-none">
                 <UserCheck className="w-20 h-20 opacity-40" />
               </div>
@@ -57,14 +55,14 @@ const StudentDashboard = () => {
                 </p>
               </div>
 
-              {/* Progress Bar */}
+              {/* Attendance Progress Bar */}
               <div className="w-full bg-blue-100 rounded-full h-1.5 mt-5 overflow-hidden flex">
                 <div className="bg-amber-500 h-full rounded-full w-[73%]" />
               </div>
             </div>
 
             {/* Card 2: Upcoming Meetings */}
-            <div className="relative bg-white border border-slate-200 rounded-xl p-5 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div className="relative bg-white border border-slate-200 rounded-xl p-5 shadow-xs overflow-hidden flex flex-col justify-between">
               <div className="absolute right-4 top-4 text-slate-200 pointer-events-none">
                 <Users className="w-20 h-20 opacity-50" />
               </div>
@@ -79,8 +77,8 @@ const StudentDashboard = () => {
                 </p>
               </div>
 
-              <a 
-                href="#schedule" 
+              <a
+                href="#schedule"
                 className="text-xs font-semibold text-slate-800 hover:text-blue-600 flex items-center space-x-1 mt-5 group"
               >
                 <span>View Schedule</span>
@@ -89,7 +87,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* Card 3: Medical Status */}
-            <div className="relative bg-white border border-emerald-400 rounded-xl p-5 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div className="relative bg-white border border-emerald-400 rounded-xl p-5 shadow-xs overflow-hidden flex flex-col justify-between">
               <div className="absolute right-4 top-4 text-emerald-100 pointer-events-none">
                 <Shield className="w-20 h-20 opacity-30" />
               </div>
@@ -112,10 +110,10 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* Lower Grid: Timetable (Left) & Alerts (Right) */}
+          {/* Lower Grid: Weekly Timetable & Recent Alerts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Weekly Timetable */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
               <div className="flex items-center justify-between pb-4">
                 <h3 className="font-bold text-base text-slate-900">Weekly Timetable</h3>
                 <button className="flex items-center space-x-1 text-xs font-semibold text-slate-700 hover:text-slate-900">
@@ -124,7 +122,6 @@ const StudentDashboard = () => {
                 </button>
               </div>
 
-              {/* Timetable Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -173,7 +170,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* Recent Alerts */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
               <div className="flex items-center space-x-2 font-bold text-base text-slate-900 pb-1">
                 <BellRing className="w-4 h-4 text-slate-800" />
                 <h3>Recent Alerts</h3>

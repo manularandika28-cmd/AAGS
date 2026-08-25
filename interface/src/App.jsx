@@ -1,17 +1,29 @@
 import React from 'react';
-import StudentDashboard from './pages/Student/StudentDashboard.jsx';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Demo from './pages/Student/Demo.jsx';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import StudentDashboard from './pages/Student/StudentDashboard';
+import Login from './pages/Login';
+import Demo from './pages/Student/Demo';
 
 function App() {
   return (
     <BrowserRouter>
+      <AuthProvider>
         <Routes>
-          {/* Main Routes */}
-        <Route path="/dashboard" element={<StudentDashboard />} />
-        <Route path="/" element={<Demo />} />
+          {/* Public Routes */}
+          <Route path="/" element={<Demo />} />
+          <Route path="/login" element={<Login />} />
 
+          {/* Protected Routes for Students */}
+          <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
+            <Route path="/dashboard" element={<StudentDashboard />} />
+          </Route>
+
+          {/* Default Catch-all Redirect */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
