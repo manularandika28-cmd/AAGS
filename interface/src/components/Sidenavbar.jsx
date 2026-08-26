@@ -10,14 +10,14 @@ import {
 
 const Sidenavbar = () => {
   const navItems = [
-    { name: 'DASHBOARD', icon: LayoutGrid, path: '/dashboard' },
-    { name: 'MEETING SCHEDULER', icon: CalendarDays, path: '/meeting-scheduler' },
-    { name: 'MEDICAL HUB', icon: BriefcaseMedical, path: '/medical-hub' },
-    { name: 'ACADEMIC RECORDS', icon: GraduationCap, path: '/academic-records' },
-  ];
+  { name: 'DASHBOARD', icon: LayoutGrid, path: '/Student/dashboard' },
+  { name: 'MEETING SCHEDULER', icon: CalendarDays, path: '/Student/meetings' },
+  { name: 'MEDICAL HUB', icon: BriefcaseMedical, path: '/Student/medical' },
+  { name: 'ACADEMIC RECORDS', icon: GraduationCap, path: '/Student/academic-records' },
+];
 
   return (
-    <aside className="w-64 bg-surface-sidebar text-text-inverse flex flex-col justify-between min-h-screen shrink-0 select-none">
+    <aside className="w-64 bg-[#051E3D] text-white flex flex-col justify-between min-h-screen shrink-0 select-none">
       <div>
         {/* Brand Header */}
         <div className="p-6 flex items-center space-x-3 border-b border-neutral-800">

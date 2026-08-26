@@ -7,9 +7,10 @@ import MeetingRequests from './pages/HOD/Meeting_requests';
 import MedicalReview from './pages/HOD/Medical_review';
 
 //students paths
-import StudentDashboard from './pages/student/StudentDashboard';
-import MeetingScheduler from './pages/student/MeetingScheduler';
-
+import StudentDashboard from './pages/Student/StudentDashboard';
+import MeetingScheduler from './pages/Student/MeetingScheduler';
+import MedicalHub from './pages/Student/MedicalHub';
+import AcademicRecords from './pages/Student/AcademicRecords';
 
 function App() {
   return (
@@ -38,13 +39,23 @@ function App() {
             STUDENT ROUTES
         ========================== */}
         <Route
-          path="/student/dashboard"
+          path="/Student/dashboard"
           element={<StudentDashboard />}
         />
 
         <Route
-          path="/student/meetings"
+          path="/Student/meetings"
           element={<MeetingScheduler />}
+        />
+
+        <Route
+          path="/Student/medical"
+          element={<MedicalHub />}
+        />
+
+        <Route
+          path="/Student/academic-records"
+          element={<AcademicRecords />}
         />
 
         {/* =========================
@@ -52,7 +63,7 @@ function App() {
         ========================== */}
         <Route
           path="*"
-          element={<Navigate to="/student/dashboard" replace />}
+          element={<Navigate to="/Student/dashboard" replace />}
         />
 
       </Routes>
