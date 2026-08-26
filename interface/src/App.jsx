@@ -12,6 +12,13 @@ import MeetingScheduler from './pages/Student/MeetingScheduler';
 import MedicalHub from './pages/Student/MedicalHub';
 import AcademicRecords from './pages/Student/AcademicRecords';
 
+//admin paths
+import AdminDashboard from './pages/Administrator/AdminDashboard';
+import UserManagement from './pages/Administrator/UserManagement';
+import AuditTrail from './pages/Administrator/AuditTrail';
+import SystemConfiguration from './pages/Administrator/SysConfig';
+import RolesAndPermissions from './pages/Administrator/RoleSettings';
+
 function App() {
   return (
     <BrowserRouter>
@@ -56,6 +63,34 @@ function App() {
         <Route
           path="/Student/academic-records"
           element={<AcademicRecords />}
+        />
+
+        {/* =========================
+            ADMIN ROUTES
+        ========================== */}
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboard />}
+        />
+
+        <Route
+          path="/admin/users"
+          element={<UserManagement />}
+        />
+
+        <Route
+          path="/admin/audit-logs"
+          element={<AuditTrail />}
+        />
+
+        <Route
+          path="/admin/system-configuration"
+          element={<SystemConfiguration />}
+        />
+
+        <Route
+          path="/admin/Roles-And-Permissions"
+          element={<RolesAndPermissions />}
         />
 
         {/* =========================
