@@ -40,7 +40,7 @@ const AdminSidenavbar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-[#051E3D] text-white flex flex-col justify-between min-h-screen shrink-0 select-none">
+    <aside className="w-64 bg-[#051E3D]/80 text-white flex flex-col justify-between min-h-screen shrink-0 select-none">
       <div>
         {/* Brand Header */}
         <div className="p-6 flex items-center space-x-3 border-b border-neutral-800">
@@ -49,13 +49,13 @@ const AdminSidenavbar = () => {
           </div>
 
           <div>
-            <h2 className="text-body font-bold tracking-tight text-text-inverse leading-tight">
+            <h2 className="text-body font-bold tracking-tight text-text-inverse leading-loose">
               Faculty of
-              <br />
+              
               Technology
             </h2>
 
-            <p className="text-caption text-neutral-400 font-light mt-0.5">
+            <p className="text-caption text-neutral-400 text-white font-light mt-0.5">
               University of Colombo
             </p>
           </div>

@@ -55,7 +55,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
 
       {/* Admin Sidebar */}
       <AdminSidenavbar />
@@ -72,11 +72,11 @@ const AdminDashboard = () => {
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-3xl font-extrabold  text-white text-slate-900 tracking-tight">
                 System Administration
               </h1>
 
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <p className="text-sm text-white text-slate-500 mt-1 font-medium">
                 Manage users, roles, and monitor system health.
               </p>
             </div>
@@ -84,13 +84,13 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-3">
 
               {/* Export Report */}
-              <button className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
+              <button className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-slate-700 border border px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
                 <Download className="w-4 h-4" />
                 Export Report
               </button>
 
               {/* Add User */}
-              <button className="flex items-center gap-2 bg-[#0A192F] hover:bg-[#1E3A8A] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
+              <button className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
                 <UserPlus className="w-4 h-4" />
                 Add User
               </button>

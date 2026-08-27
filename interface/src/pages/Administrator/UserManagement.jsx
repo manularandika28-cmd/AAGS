@@ -32,7 +32,7 @@ const RolesAndPermissions = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
       <Sidenavbar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -41,13 +41,13 @@ const RolesAndPermissions = () => {
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Roles & Permissions</h1>
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <h1 className="text-3xl font-extrabold text-slate-900 text-white tracking-tight">Roles & Permissions</h1>
+              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
                 Manage role-based access control (RBAC) across faculty modules.
               </p>
             </div>
 
-            <button className="flex items-center gap-2 bg-[#0A192F] hover:bg-[#1E3A8A] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
+            <button className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
               <Plus className="w-4 h-4" />
               Create New Role
             </button>
@@ -101,7 +101,7 @@ const RolesAndPermissions = () => {
             </div>
 
             <div className="lg:col-span-7 space-y-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between  min-h-40">
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-base">{selectedRole}</h3>

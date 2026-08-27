@@ -94,7 +94,7 @@ const AuditLog = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
       <Sidenavbar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -103,13 +103,13 @@ const AuditLog = () => {
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Audit Trail</h1>
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <h1 className="text-3xl font-extrabold text-slate-900 text-white tracking-tight">Audit Trail</h1>
+              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
                 Chronological record of system events and user actions.
               </p>
             </div>
 
-            <button className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
+            <button className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
               <Download className="w-4 h-4" />
               Export CSV
             </button>

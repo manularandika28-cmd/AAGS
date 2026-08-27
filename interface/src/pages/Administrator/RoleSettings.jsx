@@ -283,7 +283,7 @@ const RoleSettings = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
 
       {/* Sidebar */}
       <AdminSidenavbar />
@@ -301,11 +301,11 @@ const RoleSettings = () => {
           <div className="flex items-center justify-between">
 
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-3xl font-extrabold text-white text-slate-900 tracking-tight">
                 Role Settings
               </h1>
 
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
                 Manage role-based permissions and access control.
               </p>
             </div>
@@ -314,7 +314,7 @@ const RoleSettings = () => {
 
               <button
                 onClick={handleReset}
-                className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
+                className="flex items-center gap-2 bg-white hover:bg-rose-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
                 Reset
@@ -322,7 +322,7 @@ const RoleSettings = () => {
 
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-[#0A192F] hover:bg-[#1E3A8A] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
+                className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
               >
                 <Save className="w-4 h-4" />
                 Save Changes
