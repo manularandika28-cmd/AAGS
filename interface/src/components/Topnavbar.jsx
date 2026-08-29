@@ -3,9 +3,9 @@ import { Bell, HelpCircle } from 'lucide-react';
 
 const Topnavbar = () => {
   return (
-    <header className="h-16 bg-surface-card border-b border-border-subtle px-8 flex items-center justify-between sticky top-0 z-20 select-none">
+   <header className="h-16 bg-[#051E3D]/75 border-b border-white/20 px-8 flex items-center justify-between sticky top-0 z-20 select-none">
       {/* Title */}
-      <h1 className="text-h3 font-bold text-brand-navy-800 tracking-tight">
+      <h1 className="text-h3 font-bold text-white text-brand-navy-800 tracking-tight">
         AAGS Student Dashboard
       </h1>
 
@@ -13,7 +13,7 @@ const Topnavbar = () => {
       <div className="flex items-center space-x-5">
         {/* Notification Bell */}
         <button
-          className="p-1 text-text-muted hover:text-brand-navy-800 transition-colors focus:outline-none"
+          className="p-1 text-white hover:text-slate-200 transition-colors focus:outline-none"
           aria-label="Notifications"
         >
           <Bell className="w-5 h-5" />
@@ -21,7 +21,7 @@ const Topnavbar = () => {
 
         {/* Help / Support */}
         <button
-          className="p-1 text-text-muted hover:text-brand-navy-800 transition-colors focus:outline-none"
+          className="p-1 text-white hover:text-slate-200 transition-colors focus:outline-none"
           aria-label="Help"
         >
           <HelpCircle className="w-5 h-5" />
@@ -31,7 +31,7 @@ const Topnavbar = () => {
         <div className="h-5 w-[1px] bg-border-default" />
 
         {/* Settings Button */}
-        <button className="text-body font-medium text-text-secondary hover:text-text-accent transition-colors">
+        <button className="text-body font-medium text-text-secondary text-white hover:text-text-accent transition-colors">
           Settings
         </button>
 
