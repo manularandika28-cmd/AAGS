@@ -1,6 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import backgroundVideo from './Assets/BackgroundVideo.mp4';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
 
 // HOD
 import HODDashboard from './pages/HOD/HOD_dashboard';
@@ -28,6 +31,7 @@ import RolesAndPermissions from './pages/Administrator/RoleSettings';
 function App() {
   return (
     <BrowserRouter>
+    <AuthProvider>
       {/* =========================================
           GLOBAL BACKGROUND VIDEO
       ========================================= */}
@@ -66,6 +70,10 @@ function App() {
             path="/hod/medical"
             element={<MedicalReview />}
           />
+
+          //Login
+          <Route path="/login" element={<Login />} />
+
 
           {/* =====================================
               LECTURER ROUTES
@@ -136,6 +144,7 @@ function App() {
           />
         </Routes>
       </div>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
