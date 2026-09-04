@@ -20,6 +20,9 @@ import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
+//login
+import Login from './pages/login';
+
 function App() {
   return (
     <BrowserRouter>
@@ -49,8 +52,14 @@ function App() {
           APPLICATION CONTENT
       ========================================= */}
       <div className="relative z-10 min-h-screen">
-
-        <Routes>
+      
+      <Routes>
+          <Route
+            path="/Login"
+            element={<Login />}
+          /> 
+       
+        
 
           {/* =========================
               HOD ROUTES
@@ -133,7 +142,7 @@ function App() {
 
           <Route
             path="*"
-            element={<Navigate to="/Student/dashboard" replace />}
+            element={<Navigate to="login" replace />}
           />
 
         </Routes>

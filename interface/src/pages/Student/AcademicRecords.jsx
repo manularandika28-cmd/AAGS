@@ -22,7 +22,7 @@ const AcademicRecords = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
       {/* Sidenavbar */}
       <Sidenavbar />
 
@@ -38,7 +38,7 @@ const AcademicRecords = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Academic Profile</h1>
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
                 Student ID: FOT/2020/IT/045 | BSc (Hons) in Information Technology
               </p>
             </div>

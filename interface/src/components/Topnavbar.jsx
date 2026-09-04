@@ -3,7 +3,7 @@ import { Bell, HelpCircle } from 'lucide-react';
 
 const Topnavbar = () => {
   return (
-   <header className="h-16 bg-[#051E3D]/75 border-b border-white/20 px-8 flex items-center justify-between sticky top-0 z-20 select-none">
+   <header className="h-16 bg-black/35 border-b border-white/20 px-8 flex items-center justify-between sticky top-2 z-20 select-none rounded-xl">
       {/* Title */}
       <h1 className="text-h3 font-bold text-white text-brand-navy-800 tracking-tight">
         AAGS Student Dashboard

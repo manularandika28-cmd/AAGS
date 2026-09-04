@@ -19,7 +19,7 @@ const Sidenavbar = () => {
 ];
 
   return (
-    <aside className="w-64 bg-[#051E3D] text-white flex flex-col justify-between min-h-screen shrink-0 select-none">
+    <aside className="w-64 bg-[black]/30 text-white flex flex-col justify-between min-h-[calc(100vh-2rem)] shrink-0 select-none rounded-xl my-4 ml-4">
       <div>
         {/* Brand Header */}
         <div className="p-6 flex items-center space-x-3 border-b border-neutral-800">
