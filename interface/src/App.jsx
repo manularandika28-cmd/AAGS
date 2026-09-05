@@ -11,11 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 
-// =========================================
-// AUTH
-// =========================================
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
+
 
 // =========================================
 // HOD
@@ -23,6 +19,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HODDashboard from './pages/HOD/HOD_dashboard';
 import MeetingRequests from './pages/HOD/Meeting_requests';
 import MedicalReview from './pages/HOD/Medical_review';
+
+
 
 // Lecturer
 import LecturerDashboard from './pages/Lecturer/LecturerDashboard';
