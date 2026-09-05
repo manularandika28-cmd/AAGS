@@ -132,7 +132,7 @@ function App() {
           ===================================== */}
           <Route
             path="*"
-            element={<Navigate to="/Student/dashboard" replace />}
+            element={<Navigate to="/login" replace />}
           />
         </Routes>
       </div>
