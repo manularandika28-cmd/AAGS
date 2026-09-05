@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Layout from './Layout';
+import Sidenavbar from '../../components/Sidenavbar';
+import Topnavbar from '../../components/Topnavbar';
+
 import { 
   Users, 
   FileClock, 
@@ -54,8 +56,14 @@ export default function DepartmentOverview() {
     setMedicalQueue((prev) => prev.filter((item) => item.id !== id));
   };
 
-  return (
-    <Layout>
+        return (
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      <Sidenavbar />
+
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        <Topnavbar />
+
+        <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Department Overview</h2>
@@ -216,7 +224,9 @@ export default function DepartmentOverview() {
             Go to Medical Hub →
           </Link>
         </div>
+            </div>
+        </main>
       </div>
-    </Layout>
+    </div>
   );
 }

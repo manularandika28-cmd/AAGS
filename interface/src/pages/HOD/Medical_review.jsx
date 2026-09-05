@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import Layout from './Layout';
+import Sidenavbar from '../../components/Sidenavbar';
+import Topnavbar from '../../components/Topnavbar';
+
 import { 
   Plus, 
   Search, 
@@ -70,10 +72,16 @@ export default function MeetingRequests() {
     }
   };
 
-  return (
-    <Layout>
-      {/* Search Header Bar */}
-      <div className="flex justify-between items-center mb-6">
+      return (
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      <Sidenavbar />
+
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        <Topnavbar />
+
+        <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+      <div className="flex justify-between items-start mb-6">
+
         <div className="relative w-80">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
@@ -296,7 +304,9 @@ export default function MeetingRequests() {
             </div>
           </div>
         </div>
+            </div>
+        </main>
       </div>
-    </Layout>
+    </div>
   );
 }
