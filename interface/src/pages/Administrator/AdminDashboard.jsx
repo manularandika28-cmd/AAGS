@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminSidenavbar from '../../components/AdminSidenavbar';
+import Sidenavbar from '../../components/AdminSidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import {
   Users,
