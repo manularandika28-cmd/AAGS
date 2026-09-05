@@ -21,7 +21,7 @@ import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
 //login
-import Login from './pages/login';
+import Login from './pages/Login';
 
 function App() {
   return (

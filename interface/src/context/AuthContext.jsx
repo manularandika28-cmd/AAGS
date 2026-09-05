@@ -1,64 +1,200 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-    const [auth, setAuth] = useState(null);
+
+const DEMO_USERS = [
+    {
+        id: 'STU001',
+        username: 'student',
+        password: 'student123',
+        name: 'Demo Student',
+        role: 'Student',
+        roles: ['Student'],
+        dashboard: '/student/dashboard',
+    },
+    {
+        id: 'HOD001',
+        username: 'hod',
+        password: 'hod123',
+        name: 'Demo Head of Department',
+        role: 'HOD',
+        roles: ['HOD'],
+        dashboard: '/hod/dashboard',
+    },
+    {
+        id: 'DEAN001',
+        username: 'dean',
+        password: 'dean123',
+        name: 'Demo Dean',
+        role: 'Dean',
+        roles: ['Dean'],
+        dashboard: '/dean/dashboard',
+    },
+    {
+        id: 'ADM001',
+        username: 'admin',
+        password: 'admin123',
+        name: 'Demo Administrator',
+        role: 'Admin',
+        roles: ['Admin'],
+        dashboard: '/admin/dashboard',
+    },
+    {
+        id: 'LEC001',
+        username: 'lecturer',
+        password: 'lecturer123',
+        name: 'Demo Lecturer',
+        role: 'Lecturer',
+        roles: ['Lecturer'],
+        dashboard: '/lecturer/dashboard',
+    },
+];
+
+/*
+|--------------------------------------------------------------------------
+| SESSION CONFIGURATION
+|--------------------------------------------------------------------------
+*/
+
+const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Check auth session on startup via refresh cookie
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const res = await axios.get('http://localhost:3000/api/auth/refresh', {
-                    withCredentials: true,
-                });
-                setAuth({
-                    accessToken: res.data.accessToken,
-                    user: res.data.user,
-                });
-            } catch (err) {
-                setAuth(null);
-            } finally {
-                setLoading(false);
-            }
-        };
+    /*
+    |--------------------------------------------------------------------------
+    | Restore existing session
+    |--------------------------------------------------------------------------
+    */
 
-        checkAuth();
+    useEffect(() => {
+        const storedSession = sessionStorage.getItem('demoSession');
+
+        if (!storedSession) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const session = JSON.parse(storedSession);
+
+            if (Date.now() > session.expiresAt) {
+                sessionStorage.removeItem('demoSession');
+                setUser(null);
+            } else {
+                setUser(session.user);
+            }
+        } catch (error) {
+            console.error('Invalid session:', error);
+            sessionStorage.removeItem('demoSession');
+            setUser(null);
+        }
+
+        setLoading(false);
     }, []);
 
-    // Login handler
-    const loginUser = async (email, password) => {
-        const res = await axios.post(
-            'http://localhost:3000/api/auth/login',
-            { email, password },
-            { withCredentials: true }
+    /*
+    |--------------------------------------------------------------------------
+    | LOGIN
+    |--------------------------------------------------------------------------
+    */
+
+    const loginUser = async (identifier, password) => {
+        // Simulates API delay
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const foundUser = DEMO_USERS.find(
+            (demoUser) =>
+                demoUser.username.toLowerCase() === identifier.toLowerCase() &&
+                demoUser.password === password
         );
-        setAuth({
-            accessToken: res.data.accessToken,
-            user: res.data.user,
-        });
-        return res.data.user;
+
+        if (!foundUser) {
+            const error = new Error('Invalid username or password.');
+            error.response = {
+                data: {
+                    error: 'Invalid username or password.',
+                },
+            };
+            throw error;
+        }
+
+        const sessionUser = {
+            id: foundUser.id,
+            username: foundUser.username,
+            name: foundUser.name,
+            role: foundUser.role,
+            roles: foundUser.roles,
+            dashboard: foundUser.dashboard,
+        };
+
+        const session = {
+            user: sessionUser,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + SESSION_DURATION,
+        };
+
+        sessionStorage.setItem('demoSession', JSON.stringify(session));
+
+        setUser(sessionUser);
+
+        return sessionUser;
     };
 
-    // Logout handler
-    const logoutUser = async () => {
+    /*
+    |--------------------------------------------------------------------------
+    | LOGOUT
+    |--------------------------------------------------------------------------
+    */
+
+    const logout = () => {
+        sessionStorage.removeItem('demoSession');
+        setUser(null);
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | SESSION CHECK
+    |--------------------------------------------------------------------------
+    */
+
+    const isSessionValid = () => {
+        const storedSession = sessionStorage.getItem('demoSession');
+
+        if (!storedSession) {
+            return false;
+        }
+
         try {
-            await axios.post(
-                'http://localhost:3000/api/auth/logout',
-                {},
-                { withCredentials: true }
-            );
-        } catch (e) {
-            console.error('Logout error:', e);
-        } finally {
-            setAuth(null);
+            const session = JSON.parse(storedSession);
+
+            if (Date.now() > session.expiresAt) {
+                sessionStorage.removeItem('demoSession');
+                setUser(null);
+                return false;
+            }
+
+            return true;
+        } catch {
+            sessionStorage.removeItem('demoSession');
+            setUser(null);
+            return false;
         }
     };
 
     return (
-        <AuthContext.Provider value={{ auth, setAuth, loading, loginUser, logoutUser }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                loginUser,
+                logout,
+                isSessionValid,
+                isAuthenticated: !!user,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -66,8 +202,12 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
+
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
+
     return context;
 };
+
+export { AuthProvider };
