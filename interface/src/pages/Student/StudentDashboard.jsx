@@ -16,7 +16,7 @@ import {
 
 const StudentDashboard = () => {
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
       {/* Sidenavbar */}
       <Sidenavbar />
 
@@ -32,7 +32,7 @@ const StudentDashboard = () => {
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
               Welcome back, Alex.
             </h2>
-            <p className="text-sm text-slate-500 mt-1 font-medium">
+            <p className="text-sm text-slate-500 text-white mt-1 font-medium">
               Here is your academic overview for the week.
             </p>
           </div>

@@ -1,11 +1,25 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom';
+
 import backgroundVideo from './Assets/BackgroundVideo.mp4';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 
+// =========================================
+// AUTH
+// =========================================
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// =========================================
 // HOD
+// =========================================
 import HODDashboard from './pages/HOD/HOD_dashboard';
 import MeetingRequests from './pages/HOD/Meeting_requests';
 import MedicalReview from './pages/HOD/Medical_review';
@@ -16,12 +30,15 @@ import AttendanceManager from './pages/Lecturer/AttendanceManager';
 import MeetingManagement from './pages/Lecturer/MeetingManagement';
 
 // Student
+// =========================================
 import StudentDashboard from './pages/Student/StudentDashboard';
 import MeetingScheduler from './pages/Student/MeetingScheduler';
 import MedicalHub from './pages/Student/MedicalHub';
 import AcademicRecords from './pages/Student/AcademicRecords';
 
+// =========================================
 // Administrator
+// =========================================
 import AdminDashboard from './pages/Administrator/AdminDashboard';
 import UserManagement from './pages/Administrator/UserManagement';
 import AuditTrail from './pages/Administrator/AuditTrail';

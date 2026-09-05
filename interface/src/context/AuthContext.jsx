@@ -1,64 +1,100 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-    const [auth, setAuth] = useState(null);
+const API_BASE = 'http://localhost:3000/api/auth';
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [accessToken, setAccessToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Check auth session on startup via refresh cookie
+    /*
+    |--------------------------------------------------------------------------
+    | Restore existing session on page load
+    |--------------------------------------------------------------------------
+    */
     useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const res = await axios.get('http://localhost:3000/api/auth/refresh', {
-                    withCredentials: true,
-                });
-                setAuth({
-                    accessToken: res.data.accessToken,
-                    user: res.data.user,
-                });
-            } catch (err) {
-                setAuth(null);
-            } finally {
-                setLoading(false);
-            }
-        };
+        const storedSession = sessionStorage.getItem('authSession');
 
-        checkAuth();
+        if (!storedSession) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const session = JSON.parse(storedSession);
+            setUser(session.user);
+            setAccessToken(session.accessToken);
+        } catch (error) {
+            console.error('Invalid session:', error);
+            sessionStorage.removeItem('authSession');
+        }
+
+        setLoading(false);
     }, []);
 
-    // Login handler
+    /*
+    |--------------------------------------------------------------------------
+    | LOGIN
+    |--------------------------------------------------------------------------
+    */
     const loginUser = async (email, password) => {
-        const res = await axios.post(
-            'http://localhost:3000/api/auth/login',
-            { email, password },
-            { withCredentials: true }
-        );
-        setAuth({
-            accessToken: res.data.accessToken,
-            user: res.data.user,
+        const response = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // sends/receives the httpOnly refresh cookie
+            body: JSON.stringify({ email, password }),
         });
-        return res.data.user;
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+        }
+
+        sessionStorage.setItem(
+            'authSession',
+            JSON.stringify({ user: data.user, accessToken: data.accessToken })
+        );
+
+        setUser(data.user);
+        setAccessToken(data.accessToken);
+
+        return data.user;
     };
 
-    // Logout handler
-    const logoutUser = async () => {
+    /*
+    |--------------------------------------------------------------------------
+    | LOGOUT
+    |--------------------------------------------------------------------------
+    */
+    const logout = async () => {
         try {
-            await axios.post(
-                'http://localhost:3000/api/auth/logout',
-                {},
-                { withCredentials: true }
-            );
-        } catch (e) {
-            console.error('Logout error:', e);
-        } finally {
-            setAuth(null);
+            await fetch(`${API_BASE}/logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch (error) {
+            console.error('Logout request failed:', error);
         }
+
+        sessionStorage.removeItem('authSession');
+        setUser(null);
+        setAccessToken(null);
     };
 
     return (
-        <AuthContext.Provider value={{ auth, setAuth, loading, loginUser, logoutUser }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                accessToken,
+                loading,
+                loginUser,
+                logout,
+                isAuthenticated: !!user,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -66,8 +102,12 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
+
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
+
     return context;
 };
+
+export { AuthProvider };

@@ -58,7 +58,7 @@ const MeetingScheduler = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen">
 
       {/* =========================================
           EXISTING SIDE NAVBAR
