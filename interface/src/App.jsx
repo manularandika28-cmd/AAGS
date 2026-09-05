@@ -69,41 +69,40 @@ function App() {
           APPLICATION CONTENT
       ========================================= */}
       <div className="relative z-10 min-h-screen">
-        <Routes>
+                <Routes>
+          {/* Login */}
+          <Route path="/login" element={<Login />} />
+
           {/* =====================================
               HOD ROUTES
           ===================================== */}
           <Route
             path="/hod/dashboard"
-            element={<HODDashboard />}
+            element={<ProtectedRoute allowedRoles={['HOD']}><HODDashboard /></ProtectedRoute>}
           />
           <Route
             path="/hod/meetings"
-            element={<MeetingRequests />}
+            element={<ProtectedRoute allowedRoles={['HOD']}><MeetingRequests /></ProtectedRoute>}
           />
           <Route
             path="/hod/medical"
-            element={<MedicalReview />}
+            element={<ProtectedRoute allowedRoles={['HOD']}><MedicalReview /></ProtectedRoute>}
           />
-
-          //Login
-          <Route path="/login" element={<Login />} />
-
 
           {/* =====================================
               LECTURER ROUTES
           ===================================== */}
           <Route
             path="/lecturer/dashboard"
-            element={<LecturerDashboard />}
+            element={<ProtectedRoute allowedRoles={['Lecturer']}><LecturerDashboard /></ProtectedRoute>}
           />
           <Route
             path="/lecturer/attendance"
-            element={<AttendanceManager />}
+            element={<ProtectedRoute allowedRoles={['Lecturer']}><AttendanceManager /></ProtectedRoute>}
           />
           <Route
             path="/lecturer/meetings"
-            element={<MeetingManagement />}
+            element={<ProtectedRoute allowedRoles={['Lecturer']}><MeetingManagement /></ProtectedRoute>}
           />
 
           {/* =====================================
@@ -111,19 +110,19 @@ function App() {
           ===================================== */}
           <Route
             path="/Student/dashboard"
-            element={<StudentDashboard />}
+            element={<ProtectedRoute allowedRoles={['Student']}><StudentDashboard /></ProtectedRoute>}
           />
           <Route
             path="/Student/meetings"
-            element={<MeetingScheduler />}
+            element={<ProtectedRoute allowedRoles={['Student']}><MeetingScheduler /></ProtectedRoute>}
           />
           <Route
             path="/Student/medical"
-            element={<MedicalHub />}
+            element={<ProtectedRoute allowedRoles={['Student']}><MedicalHub /></ProtectedRoute>}
           />
           <Route
             path="/Student/academic-records"
-            element={<AcademicRecords />}
+            element={<ProtectedRoute allowedRoles={['Student']}><AcademicRecords /></ProtectedRoute>}
           />
 
           {/* =====================================
@@ -131,23 +130,23 @@ function App() {
           ===================================== */}
           <Route
             path="/admin/dashboard"
-            element={<AdminDashboard />}
+            element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>}
           />
           <Route
             path="/admin/users"
-            element={<UserManagement />}
+            element={<ProtectedRoute allowedRoles={['Admin']}><UserManagement /></ProtectedRoute>}
           />
           <Route
             path="/admin/audit-logs"
-            element={<AuditTrail />}
+            element={<ProtectedRoute allowedRoles={['Admin']}><AuditTrail /></ProtectedRoute>}
           />
           <Route
             path="/admin/system-configuration"
-            element={<SystemConfiguration />}
+            element={<ProtectedRoute allowedRoles={['Admin']}><SystemConfiguration /></ProtectedRoute>}
           />
           <Route
             path="/admin/Roles-And-Permissions"
-            element={<RolesAndPermissions />}
+            element={<ProtectedRoute allowedRoles={['Admin']}><RolesAndPermissions /></ProtectedRoute>}
           />
 
           {/* =====================================
@@ -155,7 +154,7 @@ function App() {
           ===================================== */}
           <Route
             path="*"
-            element={<Navigate to="/Student/dashboard" replace />}
+            element={<Navigate to="/login" replace />}
           />
         </Routes>
       </div>
