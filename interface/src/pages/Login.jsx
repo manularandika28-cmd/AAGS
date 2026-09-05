@@ -76,7 +76,7 @@ const Login = () => {
             const target = staffRoleOptions.find((r) => r.key === staffRole);
             navigate(target.path);
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+            setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setIsSubmitting(false);
         }

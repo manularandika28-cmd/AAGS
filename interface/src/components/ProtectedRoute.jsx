@@ -6,6 +6,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
     const location = useLocation();
 
+    // =========================================
+    // CHECKING AUTHENTICATION
+    // =========================================
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -16,35 +19,40 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | NOT LOGGED IN
-    |--------------------------------------------------------------------------
-    */
-
+    // =========================================
+    // NOT LOGGED IN
+    // =========================================
     if (!user) {
         return (
             <Navigate
-                to="/login"
+                to="/Login"
                 replace
                 state={{ from: location.pathname }}
             />
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ROLE AUTHORIZATION
-    |--------------------------------------------------------------------------
-    */
-
+    // =========================================
+    // ROLE AUTHORIZATION
+    // =========================================
     if (
         allowedRoles &&
         !allowedRoles.includes(user.role)
     ) {
-        return <Navigate to={user.dashboard} replace />;
+        // User is logged in but doesn't have
+        // permission to access this page.
+
+        return (
+            <Navigate
+                to={user.dashboard || '/Login'}
+                replace
+            />
+        );
     }
 
+    // =========================================
+    // AUTHORIZED
+    // =========================================
     return children;
 };
 

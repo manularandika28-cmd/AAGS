@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Sidenavbar from '../../components/AdminSidenavbar';
+import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import {
   Plus,

@@ -2,75 +2,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext(null);
 
-
-const DEMO_USERS = [
-    {
-        id: 'STU001',
-        username: 'student',
-        password: 'student123',
-        name: 'Demo Student',
-        role: 'Student',
-        roles: ['Student'],
-        dashboard: '/student/dashboard',
-    },
-    {
-        id: 'HOD001',
-        username: 'hod',
-        password: 'hod123',
-        name: 'Demo Head of Department',
-        role: 'HOD',
-        roles: ['HOD'],
-        dashboard: '/hod/dashboard',
-    },
-    {
-        id: 'DEAN001',
-        username: 'dean',
-        password: 'dean123',
-        name: 'Demo Dean',
-        role: 'Dean',
-        roles: ['Dean'],
-        dashboard: '/dean/dashboard',
-    },
-    {
-        id: 'ADM001',
-        username: 'admin',
-        password: 'admin123',
-        name: 'Demo Administrator',
-        role: 'Admin',
-        roles: ['Admin'],
-        dashboard: '/admin/dashboard',
-    },
-    {
-        id: 'LEC001',
-        username: 'lecturer',
-        password: 'lecturer123',
-        name: 'Demo Lecturer',
-        role: 'Lecturer',
-        roles: ['Lecturer'],
-        dashboard: '/lecturer/dashboard',
-    },
-];
-
-/*
-|--------------------------------------------------------------------------
-| SESSION CONFIGURATION
-|--------------------------------------------------------------------------
-*/
-
-const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+const API_BASE = 'http://localhost:3000/api/auth';
 
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [accessToken, setAccessToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
     /*
     |--------------------------------------------------------------------------
-    | Restore existing session
+    | Restore existing session on page load
     |--------------------------------------------------------------------------
     */
-
     useEffect(() => {
-        const storedSession = sessionStorage.getItem('demoSession');
+        const storedSession = sessionStorage.getItem('authSession');
 
         if (!storedSession) {
             setLoading(false);
@@ -79,17 +24,11 @@ const AuthProvider = ({ children }) => {
 
         try {
             const session = JSON.parse(storedSession);
-
-            if (Date.now() > session.expiresAt) {
-                sessionStorage.removeItem('demoSession');
-                setUser(null);
-            } else {
-                setUser(session.user);
-            }
+            setUser(session.user);
+            setAccessToken(session.accessToken);
         } catch (error) {
             console.error('Invalid session:', error);
-            sessionStorage.removeItem('demoSession');
-            setUser(null);
+            sessionStorage.removeItem('authSession');
         }
 
         setLoading(false);
@@ -100,47 +39,29 @@ const AuthProvider = ({ children }) => {
     | LOGIN
     |--------------------------------------------------------------------------
     */
+    const loginUser = async (email, password) => {
+        const response = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // sends/receives the httpOnly refresh cookie
+            body: JSON.stringify({ email, password }),
+        });
 
-    const loginUser = async (identifier, password) => {
-        // Simulates API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        const data = await response.json();
 
-        const foundUser = DEMO_USERS.find(
-            (demoUser) =>
-                demoUser.username.toLowerCase() === identifier.toLowerCase() &&
-                demoUser.password === password
-        );
-
-        if (!foundUser) {
-            const error = new Error('Invalid username or password.');
-            error.response = {
-                data: {
-                    error: 'Invalid username or password.',
-                },
-            };
-            throw error;
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
         }
 
-        const sessionUser = {
-            id: foundUser.id,
-            username: foundUser.username,
-            name: foundUser.name,
-            role: foundUser.role,
-            roles: foundUser.roles,
-            dashboard: foundUser.dashboard,
-        };
+        sessionStorage.setItem(
+            'authSession',
+            JSON.stringify({ user: data.user, accessToken: data.accessToken })
+        );
 
-        const session = {
-            user: sessionUser,
-            createdAt: Date.now(),
-            expiresAt: Date.now() + SESSION_DURATION,
-        };
+        setUser(data.user);
+        setAccessToken(data.accessToken);
 
-        sessionStorage.setItem('demoSession', JSON.stringify(session));
-
-        setUser(sessionUser);
-
-        return sessionUser;
+        return data.user;
     };
 
     /*
@@ -148,50 +69,29 @@ const AuthProvider = ({ children }) => {
     | LOGOUT
     |--------------------------------------------------------------------------
     */
-
-    const logout = () => {
-        sessionStorage.removeItem('demoSession');
-        setUser(null);
-    };
-
-    /*
-    |--------------------------------------------------------------------------
-    | SESSION CHECK
-    |--------------------------------------------------------------------------
-    */
-
-    const isSessionValid = () => {
-        const storedSession = sessionStorage.getItem('demoSession');
-
-        if (!storedSession) {
-            return false;
-        }
-
+    const logout = async () => {
         try {
-            const session = JSON.parse(storedSession);
-
-            if (Date.now() > session.expiresAt) {
-                sessionStorage.removeItem('demoSession');
-                setUser(null);
-                return false;
-            }
-
-            return true;
-        } catch {
-            sessionStorage.removeItem('demoSession');
-            setUser(null);
-            return false;
+            await fetch(`${API_BASE}/logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch (error) {
+            console.error('Logout request failed:', error);
         }
+
+        sessionStorage.removeItem('authSession');
+        setUser(null);
+        setAccessToken(null);
     };
 
     return (
         <AuthContext.Provider
             value={{
                 user,
+                accessToken,
                 loading,
                 loginUser,
                 logout,
-                isSessionValid,
                 isAuthenticated: !!user,
             }}
         >
