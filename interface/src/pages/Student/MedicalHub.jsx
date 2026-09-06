@@ -59,7 +59,7 @@ const MedicalHub = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen ">
 
       {/* SIDE NAVBAR */}
       <Sidenavbar />
@@ -79,7 +79,7 @@ const MedicalHub = () => {
               Medical Submission Hub
             </h1>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 text-white mt-1">
               Submit and track your medical certificates for approved absences.
             </p>
           </div>

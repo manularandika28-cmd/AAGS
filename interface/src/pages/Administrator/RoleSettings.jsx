@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AdminSidenavbar from '../../components/AdminSidenavbar';
+import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import {
   ShieldCheck,
@@ -286,7 +286,7 @@ const RoleSettings = () => {
     <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
 
       {/* Sidebar */}
-      <AdminSidenavbar />
+      <Sidenavbar />
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
