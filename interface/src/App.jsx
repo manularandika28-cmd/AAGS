@@ -7,6 +7,9 @@ import {
 } from 'react-router-dom';
 
 import backgroundVideo from './Assets/BackgroundVideo.mp4';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
 
 // =========================================
 // AUTH
