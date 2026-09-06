@@ -1,4 +1,6 @@
 import React from "react";
+import Sidenavbar from "../../components/Sidenavbar";
+import Topnavbar from "../../components/Topnavbar";
 
 import {
   LayoutDashboard,
@@ -25,166 +27,18 @@ import {
 
 const AttendanceManager = () => {
   return (
-    <div className="min-h-screen flex bg-[#F8FAFC] text-[#071B38]">
+    <div className="min-h-screen flex text-[#071B38]">
 
       {/* =====================================================
           SIDEBAR
       ====================================================== */}
-      <aside className="w-[280px] min-h-screen bg-[#062746] text-white flex flex-col shrink-0">
-
-        {/* Faculty Logo */}
-        <div className="px-5 pt-7 pb-5 flex items-center gap-3">
-
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0">
-            <GraduationCap
-              size={22}
-              className="text-[#062746]"
-            />
-          </div>
-
-          <div>
-            <h2 className="text-[20px] font-bold leading-tight">
-              Faculty of
-              <br />
-              Technology
-            </h2>
-
-            <p className="text-[11px] tracking-wide text-[#A9BDD4] mt-1">
-              UNIVERSITY OF COLOMBO
-            </p>
-          </div>
-
-        </div>
-
-
-        {/* Navigation */}
-        <nav className="mt-3 px-5 space-y-2">
-
-          {/* Dashboard */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] cursor-pointer hover:bg-white/10">
-
-            <LayoutDashboard size={21} />
-
-            <span className="text-[12px] font-semibold">
-              DASHBOARD
-            </span>
-
-          </div>
-
-
-          {/* Meeting Requests */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] cursor-pointer hover:bg-white/10">
-
-            <CalendarDays size={21} />
-
-            <span className="text-[12px] font-semibold">
-              MEETING REQUESTS
-            </span>
-
-          </div>
-
-
-          {/* Medical Review */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] cursor-pointer hover:bg-white/10">
-
-            <BriefcaseMedical size={21} />
-
-            <span className="text-[12px] font-semibold">
-              MEDICAL REVIEW
-            </span>
-
-          </div>
-
-
-          {/* Academic Records - ACTIVE */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md bg-[#FF5B4F] text-[#111827] cursor-pointer">
-
-            <GraduationCap size={21} />
-
-            <span className="text-[12px] font-semibold">
-              ACADEMIC RECORDS
-            </span>
-
-          </div>
-
-
-          {/* Governance */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] cursor-pointer hover:bg-white/10">
-
-            <Landmark size={21} />
-
-            <span className="text-[12px] font-semibold">
-              GOVERNANCE
-            </span>
-
-          </div>
-
-        </nav>
-
-
-        {/* Logout */}
-        <div className="mt-auto px-12 pb-10 flex items-center gap-4 text-[#D7E3F0]">
-
-          <LogOut size={20} />
-
-          <span className="text-[12px] font-semibold">
-            LOG OUT
-          </span>
-
-        </div>
-
-      </aside>
+      <Sidenavbar />
 
 
       {/* =====================================================
           MAIN AREA
       ====================================================== */}
       <div className="flex-1 min-w-0">
-
-
-        {/* ===================================================
-            TOP HEADER
-        ==================================================== */}
-        <header className="h-[65px] bg-white border-b border-[#D0D5DD] flex items-center justify-between px-7">
-
-          <h1 className="text-[24px] font-bold text-[#071B38]">
-            AAGS Faculty System
-          </h1>
-
-
-          <div className="flex items-center gap-7">
-
-            {/* Notification */}
-            <button className="text-[#344054] hover:text-[#071B38]">
-              <Bell size={21} />
-            </button>
-
-
-            {/* Help */}
-            <button className="text-[#344054] hover:text-[#071B38]">
-              <CircleHelp size={21} />
-            </button>
-
-
-            {/* Settings */}
-            <span className="text-[12px] font-semibold text-[#071B38]">
-              Settings
-            </span>
-
-
-            {/* Profile */}
-            <div className="w-8 h-8 rounded-full bg-[#E6EBF0] flex items-center justify-center overflow-hidden">
-
-              <UserRound
-                size={18}
-                className="text-[#344054]"
-              />
-
-            </div>
-
-          </div>
-
-        </header>
 
 
         {/* ===================================================

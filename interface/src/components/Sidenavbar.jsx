@@ -134,9 +134,9 @@ const Sidenavbar = () => {
     // LECTURER
     // =========================
     {
-      name: 'STUDENTS',
+    name: 'ATTENDANCE MANAGEMENT',
       icon: Users,
-      path: '/lecturer/students',
+      path: '/lecturer/attendance',
       roles: ['Lecturer'],
     },
     {

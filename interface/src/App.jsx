@@ -14,8 +14,7 @@ import Login from './pages/Login';
 // =========================================
 // AUTH
 // =========================================
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
+
 
 // =========================================
 // HOD
@@ -48,7 +47,6 @@ import RolesAndPermissions from './pages/Administrator/RoleSettings';
 // =========================================
 // Login
 // =========================================
-import Login from './pages/Login';
 
 
 function App() {
@@ -263,24 +261,31 @@ function App() {
 
             {/* =========================================
                 LECTURER
-                Currently no page imported
             ========================================= */}
 
             <Route
               path="/lecturer/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['Lecturer']}>
-                  <div className="min-h-screen flex items-center justify-center">
-                    <div className="bg-white rounded-xl p-8 shadow-lg">
-                      <h1 className="text-xl font-bold text-[#071B38]">
-                        Lecturer Dashboard
-                      </h1>
+                  <LecturerDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-                      <p className="text-sm text-slate-500 mt-2">
-                        Lecturer dashboard is not implemented yet.
-                      </p>
-                    </div>
-                  </div>
+            <Route
+              path="/lecturer/attendance"
+              element={
+                <ProtectedRoute allowedRoles={['Lecturer']}>
+                  <AttendanceManager />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/lecturer/meetings"
+              element={
+                <ProtectedRoute allowedRoles={['Lecturer']}>
+                  <MeetingManagement />
                 </ProtectedRoute>
               }
             />
