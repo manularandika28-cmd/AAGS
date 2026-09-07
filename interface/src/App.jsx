@@ -44,6 +44,11 @@ import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
+// Dean
+// =========================================
+import DeanDashboard from './pages/Dean/DeanDashboard';
+import DeanMeetingRequests from './pages/Dean/MeetingRequests';
+
 // =========================================
 // Login
 // =========================================
@@ -234,29 +239,30 @@ function App() {
             />
 
 
-            {/* =========================================
-                DEAN
-                Currently no page imported
+           
+
+             {/* =========================================
+                DEAN ROUTES
             ========================================= */}
 
             <Route
               path="/dean/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['Dean']}>
-                  <div className="min-h-screen flex items-center justify-center">
-                    <div className="bg-white rounded-xl p-8 shadow-lg">
-                      <h1 className="text-xl font-bold text-[#071B38]">
-                        Dean Dashboard
-                      </h1>
-
-                      <p className="text-sm text-slate-500 mt-2">
-                        Dean dashboard is not implemented yet.
-                      </p>
-                    </div>
-                  </div>
+                  <DeanDashboard />
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/dean/meetings"
+              element={
+                <ProtectedRoute allowedRoles={['Dean']}>
+                  <DeanMeetingRequests />
+                </ProtectedRoute>
+              }
+            />
+
 
 
             {/* =========================================
