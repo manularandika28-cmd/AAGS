@@ -125,9 +125,9 @@ const Sidenavbar = () => {
     // DEAN
     // =========================
     {
-      name: 'ACADEMIC OVERVIEW',
+      name: 'MEETING REQUESTS',
       icon: BookOpen,
-      path: '/dean/academic-overview',
+      path: '/dean/meetings',
       roles: ['Dean'],
     },
 

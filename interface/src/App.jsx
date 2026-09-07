@@ -44,6 +44,11 @@ import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
+// Dean
+// =========================================
+import DeanDashboard from './pages/Dean/DeanDashboard';
+import DeanMeetingRequests from './pages/Dean/MeetingRequests';
+
 // =========================================
 // Dean
 // =========================================
@@ -241,7 +246,10 @@ function App() {
               }
             />
 
- {/* =========================================
+
+           
+
+             {/* =========================================
                 DEAN ROUTES
             ========================================= */}
 

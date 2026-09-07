@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import Sidenavbar from '../../components/Sidenavbar';
+import Topnavbar from '../../components/Topnavbar';
+import { useAuth } from '../../context/AuthContext';
 
 import { 
   LayoutDashboard, 
@@ -19,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function HODDashboard() {
-  const [activeNav, setActiveNav] = useState('Dashboard');
+  const { user } = useAuth();
 
   const modules = [
     { code: 'IT3010', lecturer: 'Dr. A. Perera', students: 120, avgAttendance: 92, status: 'up', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
@@ -30,85 +33,15 @@ export default function HODDashboard() {
   return (
     /* min-h-screen ensures the dark navy sidebar extends all the way to the bottom */
     <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
-      
       {/* Sidebar Navigation */}
-      <aside className="w-64 bg-[#051E3D] text-white flex flex-col justify-between shrink-0 min-h-screen">
-        <div>
-          <div className="p-6 flex flex-col items-center border-b border-slate-700/50">
-            <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center p-2 mb-3 shadow-inner">
-              <div className="w-full h-full rounded-full border-2 border-[#051E3D] flex items-center justify-center font-bold text-xs text-[#051E3D]">
-                UOC
-              </div>
-            </div>
-            <h1 className="text-base font-bold text-center leading-tight">Faculty of Technology</h1>
-            <p className="text-[10px] tracking-widest uppercase text-slate-400 mt-1">University of Colombo</p>
-          </div>
-
-          <nav className="mt-6 px-3 space-y-1">
-            {[
-              { name: 'Dashboard', icon: LayoutDashboard },
-              { name: 'Meeting Requests', icon: Calendar },
-              { name: 'Medical Review', icon: PlusSquare },
-            ].map((item) => {
-              const Icon = item.icon;
-              const isActive = activeNav === item.name;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => setActiveNav(item.name)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all ${
-                    isActive 
-                      ? 'bg-rose-500 text-white rounded-lg shadow-sm' 
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.name}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="p-4 border-t border-slate-700/50 mt-auto">
-          <button 
-            onClick={() => alert('Logged out successfully!')}
-            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-slate-400 hover:text-white uppercase tracking-wider transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log Out</span>
-          </button>
-        </div>
-      </aside>
+      <Sidenavbar />
+      
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
-          <h2 className="text-lg font-bold text-slate-900">AAGS Faculty System</h2>
-          
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-slate-500 border-r border-slate-200 pr-6">
-              <button className="relative p-1.5 hover:bg-slate-100 rounded-full">
-                <Bell className="w-5 h-5 text-rose-500" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
-              </button>
-              <button className="p-1.5 hover:bg-slate-100 rounded-full">
-                <HelpCircle className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button className="text-xs font-semibold text-slate-600 hover:text-slate-900">Settings</button>
-              <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80"
-                alt="Profile"
-                className="w-8 h-8 rounded-full border border-slate-200 object-cover"
-              />
-            </div>
-          </div>
-        </header>
+        <Topnavbar />
 
         {/* Dashboard Body */}
         <main className="p-8 space-y-6 flex-1">
