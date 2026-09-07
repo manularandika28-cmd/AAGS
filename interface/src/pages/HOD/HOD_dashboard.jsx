@@ -32,7 +32,7 @@ export default function HODDashboard() {
 
   return (
     /* min-h-screen ensures the dark navy sidebar extends all the way to the bottom */
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
       {/* Sidebar Navigation */}
       <Sidenavbar />
       

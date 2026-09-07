@@ -42,7 +42,7 @@ export default function MedicalReview() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen text-slate-800 font-sans antialiased overflow-hidden">
       
       {/* Sidebar Navigation */}
       <Sidenavbar />
