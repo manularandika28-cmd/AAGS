@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import logo from '../Assets/logo.svg';
 
 import {
   LayoutGrid,
@@ -164,7 +165,7 @@ const Sidenavbar = () => {
         <div className="p-6 flex items-center space-x-3 border-b border-neutral-800">
 
           <div className="w-10 h-10 rounded-full bg-brand-navy-50 flex items-center justify-center text-brand-navy-800 shrink-0">
-            <GraduationCap className="w-6 h-6" />
+            <img src={logo} alt="University Logo" className="w-8 h-8" />
           </div>
 
           <div>

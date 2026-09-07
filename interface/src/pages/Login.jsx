@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap, Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
+import logo from '../Assets/logo.svg'; // Adjust the path to your logo image
 
 const staffRoleOptions = [
     { key: 'HOD', label: 'Head of Department', path: '/hod/dashboard' },
@@ -88,8 +89,8 @@ const Login = () => {
 
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#071B38] mx-auto">
-                        <GraduationCap className="w-7 h-7" />
+                    <div className="w-15 h-15 rounded-full bg-blue-50 flex items-center justify-center text-[#071B38] mx-auto">
+                        <img src={logo} alt="University Logo" className="w-13 h-13" />
                     </div>
                     <h2 className="text-2xl font-bold text-[#071B38]">
                         {step === 'choose-type' && 'Universal Login'}
