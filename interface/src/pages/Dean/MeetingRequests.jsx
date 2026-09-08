@@ -165,10 +165,10 @@ export default function DeanMeetingRequests() {
           {/* Page header */}
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-[#071B38]">
+              <h1 className="text-2xl font-bold text-white tracking-tight">
                 Dean's Meeting Requests
               </h1>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-white mt-1">
                 Review, approve, and delegate high-level academic
                 appointments.
               </p>
@@ -194,14 +194,14 @@ export default function DeanMeetingRequests() {
                 return (
                   <div
                     key={stat.id}
-                    className={`rounded-xl p-5 shadow-sm border ${
-                      stat.highlight
-                        ? 'bg-red-50/60 border-red-100'
-                        : 'bg-white border-slate-100'
-                    }`}
+                    className={`rounded-2xl p-5 shadow-sm border backdrop-blur-md ${
+  stat.highlight
+    ? 'bg-red-100/30 border-white/70'
+    : 'bg-white/30 border-white/70'
+}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-500">
+                      <span className="text-xs font-medium text-white">
                         {stat.label}
                       </span>
                       <span
@@ -210,11 +210,11 @@ export default function DeanMeetingRequests() {
                         <Icon size={16} className={stat.iconColor} />
                       </span>
                     </div>
-                    <div className="text-3xl font-bold text-[#071B38] mt-3">
+                    <div className="text-3xl  font-bold text-white mt-3">
                       {stat.value}
                     </div>
                     <div
-                      className={`text-xs font-medium mt-2 ${stat.footerColor}`}
+                      className={`text-xs text-white font-medium mt-2 ${stat.footerColor}`}
                     >
                       {stat.footer}
                     </div>
@@ -223,7 +223,15 @@ export default function DeanMeetingRequests() {
               })}
             </div>
 
-            <div className="bg-[#071B38] rounded-xl p-5 text-white">
+            <div className="
+  bg-[#071B38]/55
+  backdrop-blur-xl
+  border border-white/25
+  rounded-2xl
+  p-5
+  text-white
+  shadow-lg
+">
               <span className="text-xs font-medium text-slate-300">
                 Quick Filters
               </span>
@@ -240,18 +248,18 @@ export default function DeanMeetingRequests() {
             </div>
           </div>
 
-          {/* Main content: priority requests + calendar/schedule */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Priority Requests */}
-            <div className="lg:col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-[#071B38]">
-                  Priority Requests
+      {/* Main content: priority requests + calendar/schedule */}
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  {/* Priority Requests */}
+  <div className="lg:col-span-2 bg-white/15 backdrop-blur-xl border border-white/30 rounded-xl shadow-sm p-5">
+  <div className="flex items-center justify-between mb-4">
+    <h2 className="font-semibold text-white tracking-tight">
+      Priority Requests
                 </h2>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-xs text-slate-500 border border-slate-200 rounded-md px-2 py-1"
+                  className="text-xs text-white border border-white/30 rounded-md px-2 py-1"
                 >
                   <option value="urgency">Sort by Urgency</option>
                   <option value="date">Sort by Date</option>
@@ -284,7 +292,7 @@ export default function DeanMeetingRequests() {
                           )}
                         </div>
 
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-black mt-1">
                           Requested by {req.requestedBy}
                         </p>
 
@@ -294,7 +302,7 @@ export default function DeanMeetingRequests() {
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 text-xs text-slate-400 mt-2">
+                        <div className="flex items-center gap-4 text-xs text-black mt-2">
                           {req.meta.map((m) => (
                             <span
                               key={m}
@@ -327,12 +335,12 @@ export default function DeanMeetingRequests() {
             </div>
 
             {/* Calendar + Today's Schedule */}
-            <div className="space-y-6">
+            <div className="space-y-6 ">
               {/* Calendar */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold text-[#071B38] text-sm">
-                    October 2023
+             <div className="bg-white/60 backdrop-blur-xl rounded-xl border border-slate-100 shadow-sm p-5">
+  <div className="flex items-center justify-between mb-3">
+    <h2 className="font-semibold text-[#071B38] text-sm">
+      October 2023
                   </h2>
                   <div className="flex items-center gap-1">
                     <button className="p-1 rounded hover:bg-slate-100">
@@ -344,9 +352,9 @@ export default function DeanMeetingRequests() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-y-2 text-center text-[11px]">
+                <div className="grid grid-cols-7 gap-y-2 text-white text-center text-[11px]">
                   {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
-                    <span key={d} className="text-slate-400 font-medium">
+                    <span key={d} className="text-black font-medium">
                       {d}
                     </span>
                   ))}
@@ -374,7 +382,7 @@ export default function DeanMeetingRequests() {
               </div>
 
               {/* Today's Schedule */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+              <div className="bg-white/60 backdrop-blur-xl rounded-xl border border-slate-100 shadow-sm p-5">
                 <h2 className="font-semibold text-[#071B38] text-sm mb-4">
                   Today's Schedule
                 </h2>
@@ -392,11 +400,11 @@ export default function DeanMeetingRequests() {
                         }`}
                       />
                       <div>
-                        <p className="text-xs text-slate-400">{item.time}</p>
+                        <p className="text-xs text-black">{item.time}</p>
                         <p className="text-sm font-medium text-[#071B38]">
                           {item.title}
                         </p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-black">
                           {item.location}
                         </p>
                       </div>
