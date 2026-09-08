@@ -69,17 +69,17 @@ function App() {
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
 
           <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-90"
-          >
-            <source
-              src={backgroundVideo}
-              type="video/mp4"
-            />
-          </video>
+  autoPlay
+  loop
+  muted
+  playsInline
+  className="w-full h-full object-cover blur-sm"
+>
+  <source
+    src={backgroundVideo}
+    type="video/mp4"
+  />
+</video>
 
           {/* Video Overlay */}
           <div className="absolute inset-0 bg-black/40" />

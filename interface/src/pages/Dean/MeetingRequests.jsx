@@ -168,14 +168,14 @@ export default function DeanMeetingRequests() {
               <h1 className="text-2xl font-bold text-white tracking-tight">
                 Dean's Meeting Requests
               </h1>
-              <p className="text-sm text-white mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 Review, approve, and delegate high-level academic
                 appointments.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 border border-slate-300 text-slate-700 text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-50">
+              <button className="flex items-center gap-2 bg-[#071B38] hover:bg-[#0a2549] text-white text-sm font-medium px-4 py-2.5 rounded-lg">
                 <Download size={16} />
                 Export
               </button>
