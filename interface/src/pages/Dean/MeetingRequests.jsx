@@ -159,13 +159,7 @@ export default function DeanMeetingRequests() {
 
       <div className="flex-1 flex flex-col">
         {/* Shared topbar */}
-        <Topnavbar
-          title="Meeting Management - Dean's Dashboard"
-          searchPlaceholder="Search meeting requests..."
-          userName="Prof. N. Perera"
-          userRole="Dean, FOT"
-          hasNotification
-        />
+        
 
         <main className="flex-1 p-8">
           {/* Page header */}

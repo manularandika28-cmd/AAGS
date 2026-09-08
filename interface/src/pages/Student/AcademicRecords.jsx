@@ -29,7 +29,7 @@ const AcademicRecords = () => {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Topnavbar */}
-        <Topnavbar />
+       
 
         {/* Dashboard Content */}
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">

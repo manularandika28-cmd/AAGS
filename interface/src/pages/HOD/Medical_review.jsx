@@ -51,7 +51,7 @@ export default function MedicalReview() {
       <div className="flex-1 flex flex-col overflow-y-auto">
         
         {/* Top Header */}
-        <Topnavbar />
+        
 
         {/* Dashboard Body */}
         <main className="p-8 space-y-6 max-w-7xl">

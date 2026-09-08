@@ -68,7 +68,7 @@ const MedicalHub = () => {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* TOP NAVBAR */}
-        <Topnavbar />
+        
 
         {/* PAGE CONTENT */}
         <main className="p-8 max-w-[1400px] w-full mx-auto">

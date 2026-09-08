@@ -73,7 +73,7 @@ function App() {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover opacity-90"
           >
             <source
               src={backgroundVideo}
@@ -82,7 +82,7 @@ function App() {
           </video>
 
           {/* Video Overlay */}
-          <div className="absolute inset-0 bg-white/10" />
+          <div className="absolute inset-0 bg-black/50" />
 
         </div>
 
