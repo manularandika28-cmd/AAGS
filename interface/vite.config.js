@@ -8,4 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  optimizeDeps: {
+    include: ['react/jsx-runtime', 'react/jsx-dev-runtime', 'framer-motion'],
+  },
 });

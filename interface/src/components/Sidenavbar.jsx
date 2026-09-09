@@ -1,4 +1,4 @@
- import { useState } from 'react';
+import { useState } from 'react';
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../Assets/logo.svg';
@@ -18,7 +18,6 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +26,7 @@ const Sidenavbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+
   const handleLogout = () => {
     logout();
     navigate('/Login', { replace: true });
@@ -36,7 +36,6 @@ const Sidenavbar = () => {
     return null;
   }
 
-  // Get the correct base URL for each role
   const roleBasePaths = {
     Student: '/Student',
     HOD: '/hod',
@@ -47,21 +46,13 @@ const Sidenavbar = () => {
 
   const basePath = roleBasePaths[user.role];
 
-  // All navigation items
   const allNavItems = [
-    // =========================
-    // DASHBOARD
-    // =========================
     {
       name: 'DASHBOARD',
       icon: LayoutGrid,
       path: `${basePath}/dashboard`,
       roles: ['Student', 'HOD', 'Admin', 'Dean', 'Lecturer'],
     },
-
-    // =========================
-    // STUDENT
-    // =========================
     {
       name: 'MEETING SCHEDULER',
       icon: CalendarDays,
@@ -80,10 +71,6 @@ const Sidenavbar = () => {
       path: '/Student/academic-records',
       roles: ['Student'],
     },
-
-    // =========================
-    // HOD
-    // =========================
     {
       name: 'MEETING REQUESTS',
       icon: CalendarDays,
@@ -96,10 +83,6 @@ const Sidenavbar = () => {
       path: '/hod/medical',
       roles: ['HOD'],
     },
-
-    // =========================
-    // ADMIN
-    // =========================
     {
       name: 'USER MANAGEMENT',
       icon: Users,
@@ -124,22 +107,14 @@ const Sidenavbar = () => {
       path: '/admin/system-configuration',
       roles: ['Admin'],
     },
-
-    // =========================
-    // DEAN
-    // =========================
     {
       name: 'MEETING REQUESTS',
       icon: BookOpen,
       path: '/dean/meetings',
       roles: ['Dean'],
     },
-
-    // =========================
-    // LECTURER
-    // =========================
     {
-    name: 'ATTENDANCE MANAGEMENT',
+      name: 'ATTENDANCE MANAGEMENT',
       icon: Users,
       path: '/lecturer/attendance',
       roles: ['Lecturer'],
@@ -152,113 +127,111 @@ const Sidenavbar = () => {
     },
   ];
 
-  // Only show navigation items allowed for the current role
   const navItems = allNavItems.filter((item) =>
     item.roles.includes(user.role)
   );
 
- return (
-  <div className="relative flex">
-    <AnimatePresence>
-      {collapsed && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          onClick={() => setCollapsed(false)}
-          className="mt-[9px] ml-4 h-16 w-16 flex items-center justify-center rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 text-white/80 hover:text-white hover:bg-white/20 shrink-0"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </motion.button>
-      )}
-    </AnimatePresence>
+  return (
+    <div className="relative flex">
+      <AnimatePresence>
+        {collapsed && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            onClick={() => setCollapsed(false)}
+            className="mt-[9px] ml-4 h-16 w-16 flex items-center justify-center rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 text-white/80 hover:text-white hover:bg-white/20 shrink-0"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-    <motion.aside
-      animate={{
-        width: collapsed ? 0 : 256,
-        opacity: collapsed ? 0 : 1,
-      }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="bg-white/10 backdrop-blur-xl border border-white/20 text-white flex flex-col justify-between min-h-[calc(100vh-2rem)] shrink-0 select-none rounded-xl mt-[9px] mr-4 mb-8 ml-4 shadow-lg overflow-hidden"
-    >
-      {/* TOP SECTION */}
-      <div>
-        {/* Brand Header */}
-        <div className="p-6 flex items-center justify-between border-b border-white/15">
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
-              <img src={logo} alt="University Logo" className="w-8 h-8" />
+      <motion.aside
+        animate={{
+          width: collapsed ? 0 : 256,
+          opacity: collapsed ? 0 : 1,
+        }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="bg-white/10 backdrop-blur-xl border border-white/20 text-white flex flex-col justify-between min-h-[calc(100vh-2rem)] shrink-0 select-none rounded-xl mt-[9px] mr-4 mb-8 ml-4 shadow-lg overflow-hidden"
+      >
+        {/* TOP SECTION */}
+        <div>
+          {/* Brand Header */}
+          <div className="p-6 flex items-center justify-between border-b border-white/15">
+            <div className="flex items-center space-x-3 overflow-hidden min-w-0">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+                <img src={logo} alt="University Logo" className="w-8 h-8" />
+              </div>
+
+              <div className="min-w-0">
+                <h2 className="text-h3 font-bold tracking-tight text-white leading-loose truncate">
+                  Faculty of Technology
+                </h2>
+                <p className="text-caption text-white/60 font-light mt-0.5 truncate">
+                  University of Colombo
+                </p>
+              </div>
             </div>
 
-            <div>
-              <h2 className="text-h3 font-bold tracking-tight text-white leading-loose whitespace-nowrap">
-                Faculty of Technology
-              </h2>
-              <p className="text-caption text-white/60 font-light mt-0.5 whitespace-nowrap">
-                University of Colombo
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="text-white/70 hover:text-white shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
           </div>
 
+          {/* User Info */}
+          <div className="px-5 py-4 border-b border-white/15">
+            <p className="text-xs font-semibold text-white truncate">
+              {user.name}
+            </p>
+            <p className="text-[10px] text-white/60 mt-1 uppercase tracking-wider">
+              {user.role}
+            </p>
+          </div>
+
+          {/* Navigation */}
+          <nav className="mt-6 px-3 space-y-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={`${item.name}-${item.path}`}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `w-full flex items-center space-x-3 px-4 py-3 rounded-md text-caption font-semibold tracking-wider transition-all duration-150 ${
+                      isActive
+                        ? 'bg-brand-orange-500 text-white shadow-sm'
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    }`
+                  }
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.name}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* LOGOUT */}
+        <div className="p-4 mb-4">
           <button
             type="button"
-            onClick={() => setCollapsed(true)}
-            className="text-white/70 hover:text-white shrink-0"
+            onClick={handleLogout}
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-md text-caption font-semibold tracking-wider text-white/70 hover:bg-red-500/20 hover:text-white transition-colors"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <LogOut className="w-4 h-4 shrink-0 rotate-180" />
+            <span>LOG OUT</span>
           </button>
         </div>
-
-        {/* User Info */}
-        <div className="px-5 py-4 border-b border-white/15">
-          <p className="text-xs font-semibold text-white truncate">
-            {user.name}
-          </p>
-          <p className="text-[10px] text-white/60 mt-1 uppercase tracking-wider">
-            {user.role}
-          </p>
-        </div>
-
-        {/* Navigation */}
-        <nav className="mt-6 px-3 space-y-1.5">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={`${item.name}-${item.path}`}
-                to={item.path}
-                className={({ isActive }) =>
-                  `w-full flex items-center space-x-3 px-4 py-3 rounded-md text-caption font-semibold tracking-wider transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-orange-500 text-white shadow-sm'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`
-                }
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.name}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* LOGOUT */}
-      <div className="p-4 mb-4">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-md text-caption font-semibold tracking-wider text-white/70 hover:bg-red-500/20 hover:text-white transition-colors"
-        >
-          <LogOut className="w-4 h-4 shrink-0 rotate-180" />
-          <span>LOG OUT</span>
-        </button>
-      </div>
-    </motion.aside>
-  </div>
-);
+      </motion.aside>
+    </div>
+  );
 };
 
 export default Sidenavbar;
-
