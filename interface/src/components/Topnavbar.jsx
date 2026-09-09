@@ -6,7 +6,7 @@ const Topnavbar = () => {
   const { user } = useAuth();
 
   return (
- <header className="h-16 mt-[9px] mx-4 shrink-0 bg-white/10 backdrop-blur-xl border border-white/20 px-8 pl-6 flex items-center justify-between z-20 select-none rounded-xl shadow-lg">
+ <header className="h-16 mt-[9px] ml-4 mr-4 shrink-0 bg-white/10 backdrop-blur-xl border border-white/20 px-8 pl-6 flex items-center justify-between z-20 select-none rounded-xl shadow-lg">
       {/* Title */}
       <h1 className="text-h3 font-bold text-white tracking-tight">
         AAGS {user.role} Dashboard

@@ -159,14 +159,14 @@ const Sidenavbar = () => {
  return (
   <div className="relative flex">
     {collapsed && (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        className="fixed top-4 left-4 z-50 w-9 h-9 flex items-center justify-center rounded-md bg-white/10 backdrop-blur-xl border border-white/20 text-white/80 hover:text-white hover:bg-white/20 transition-colors shadow-lg"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-    )}
+  <button
+    type="button"
+    onClick={() => setCollapsed(false)}
+    className="mt-[9px] ml-4 mb-4 w-9 h-16 flex items-center justify-center rounded-md bg-white/10 backdrop-blur-xl border border-white/20 text-white/80 hover:text-white hover:bg-white/20 transition-colors shadow-lg shrink-0"
+  >
+    <ChevronRight className="w-4 h-4" />
+  </button>
+)}
 
     <aside
       className={`${

@@ -4,9 +4,7 @@
 @theme {
   --font-sans: "Plus Jakarta Sans", sans-serif;
 
-  /* ============================================
-     Typography
-     ============================================ */
+  /* Typography */
   --text-h1: 32px;
   --text-h1--line-height: 1.25;
   --text-h2: 24px;
@@ -19,9 +17,7 @@
   --text-body: 12px;
   --text-caption: 10px;
 
-  /* ============================================
-     Brand — Navy (from #233D4D)
-     ============================================ */
+  /* Brand — Navy */
   --color-brand-navy-50: #F1F6F9;
   --color-brand-navy-100: #DFEAF1;
   --color-brand-navy-200: #C0D5E2;
@@ -31,37 +27,26 @@
   --color-brand-navy-600: #39647E;
   --color-brand-navy-700: #2E5166;
   --color-brand-navy-800: #233D4D;
-  /* palette base */
   --color-brand-navy-900: #182A35;
 
-  /* ============================================
-     Brand — Orange (from #FE7F2D)
-     ============================================ */
+  /* Brand — Orange */
   --color-brand-orange-50: #FFF3EB;
   --color-brand-orange-100: #FFE3D1;
   --color-brand-orange-200: #FFC49F;
   --color-brand-orange-300: #FEA56C;
   --color-brand-orange-400: #FE934D;
   --color-brand-orange-500: #FE7F2D;
-  /* palette base */
   --color-brand-orange-600: #F46001;
   --color-brand-orange-700: #C14C01;
   --color-brand-orange-800: #933A01;
   --color-brand-orange-900: #6B2A01;
 
-  /* ============================================
-     Brand — Black
-     ============================================ */
   --color-brand-black: #000000;
-  /* palette base */
 
-  /* ============================================
-     Neutral / Grey (palette base #EAECF0 = neutral-200)
-     ============================================ */
+  /* Neutral / Grey */
   --color-neutral-50: #F9FAFB;
   --color-neutral-100: #F2F4F7;
   --color-neutral-200: #EAECF0;
-  /* palette base */
   --color-neutral-300: #D0D5DD;
   --color-neutral-400: #98A2B3;
   --color-neutral-500: #667085;
@@ -70,9 +55,7 @@
   --color-neutral-800: #1D2939;
   --color-neutral-900: #101828;
 
-  /* ============================================
-     Semantic status colors (attendance / approval states)
-     ============================================ */
+  /* Semantic status colors */
   --color-success-50: #ECFDF3;
   --color-success-500: #12B76A;
   --color-success-700: #027A48;
@@ -89,36 +72,7 @@
   --color-info-500: #4980A1;
   --color-info-700: #2E5166;
 
-  /* ============================================
-     Surfaces
-     ============================================ */
-  --color-surface-background: #F9FAFB;
-  --color-surface-card: #FFFFFF;
-  --color-surface-subtle: #EAECF0;
-  --color-surface-sidebar: #000000;
-  --color-surface-header: #233D4D;
-  --color-surface-overlay: rgba(0, 0, 0, 0.5);
-
-  /* ============================================
-     Borders
-     ============================================ */
-  --color-border-default: #D0D5DD;
-  --color-border-subtle: #EAECF0;
-  --color-border-strong: #233D4D;
-
-  /* ============================================
-     Text
-     ============================================ */
-  --color-text-primary: #000000;
-  --color-text-secondary: #2E5166;
-  --color-text-muted: #667085;
-  --color-text-inverse: #FFFFFF;
-  --color-text-link: #F46001;
-  --color-text-accent: #FE7F2D;
-
-  /* ============================================
-     Radius & Shadow
-     ============================================ */
+  /* Radius & Shadow */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -127,4 +81,25 @@
   --shadow-sm: 0 1px 2px rgba(23, 41, 53, 0.08);
   --shadow-md: 0 4px 12px rgba(23, 41, 53, 0.12);
   --shadow-lg: 0 12px 32px rgba(23, 41, 53, 0.18);
+}
+
+/* Non-theme tokens (things NOT meant to generate utility classes) stay in :root */
+:root {
+  --color-surface-background: #F9FAFB;
+  --color-surface-card: #FFFFFF;
+  --color-surface-subtle: #EAECF0;
+  --color-surface-sidebar: #000000;
+  --color-surface-header: #233D4D;
+  --color-surface-overlay: rgba(0, 0, 0, 0.5);
+
+  --color-border-default: #D0D5DD;
+  --color-border-subtle: #EAECF0;
+  --color-border-strong: #233D4D;
+
+  --color-text-primary: #000000;
+  --color-text-secondary: #2E5166;
+  --color-text-muted: #667085;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: #F46001;
+  --color-text-accent: #FE7F2D;
 }
