@@ -119,3 +119,11 @@
 .rounded-2xl:hover {
   transform: scale(1.03);
 }
+
+.rounded-xl {
+  transition: transform 0.2s ease;
+}
+
+.rounded-xl:hover {
+  transform: scale(1.02);
+}
