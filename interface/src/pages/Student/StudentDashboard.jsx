@@ -1,6 +1,7 @@
 import React from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
+import { useAuth } from '../../context/AuthContext';
 import {
   AlertTriangle,
   Calendar,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
   return (
     <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
       {/* Sidenavbar */}
@@ -29,8 +31,8 @@ const StudentDashboard = () => {
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           {/* Welcome Header */}
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Welcome back, Alex.
+            <h2 className="text-3xl font-extrabold text-white tracking-tight">
+              Welcome back, {user.name}
             </h2>
             <p className="text-sm text-slate-500 text-white mt-1 font-medium">
               Here is your academic overview for the week.

@@ -1,4 +1,6 @@
 import React from "react";
+import Sidenavbar from "../../components/Sidenavbar";
+import Topnavbar from "../../components/Topnavbar";
 
 import {
   LayoutDashboard,
@@ -30,196 +32,18 @@ import {
 
 const MeetingManagement = () => {
   return (
-    <div className="min-h-screen flex bg-[#F8FAFC] text-[#071B38]">
+    <div className="min-h-screen flex text-[#071B38]">
 
       {/* =====================================================
           SIDEBAR
       ====================================================== */}
-      <aside className="w-[280px] min-h-screen bg-[#062746] text-white flex flex-col shrink-0">
-
-        {/* Faculty Header */}
-        <div className="px-5 pt-7 pb-5 flex items-center gap-3">
-
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-            <GraduationCap
-              size={22}
-              className="text-[#062746]"
-            />
-          </div>
-
-          <div>
-            <h2 className="text-[20px] font-bold leading-tight">
-              Faculty of
-              <br />
-              Technology
-            </h2>
-
-            <p className="text-[11px] tracking-wide text-[#A9BDD4] mt-1">
-              UNIVERSITY OF COLOMBO
-            </p>
-          </div>
-
-        </div>
-
-
-        {/* Navigation */}
-        <nav className="mt-3 px-5 space-y-2">
-
-          {/* Dashboard */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] hover:bg-white/10 cursor-pointer">
-
-            <LayoutDashboard size={21} />
-
-            <span className="text-[12px] font-semibold">
-              DASHBOARD
-            </span>
-
-          </div>
-
-
-          {/* Meeting Requests - ACTIVE */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md bg-[#FF5B4F] text-[#111827] cursor-pointer">
-
-            <CalendarDays size={21} />
-
-            <span className="text-[12px] font-semibold">
-              MEETING REQUESTS
-            </span>
-
-          </div>
-
-
-          {/* Medical Review */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] hover:bg-white/10 cursor-pointer">
-
-            <BriefcaseMedical size={21} />
-
-            <span className="text-[12px] font-semibold">
-              MEDICAL REVIEW
-            </span>
-
-          </div>
-
-
-          {/* Academic Records */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] hover:bg-white/10 cursor-pointer">
-
-            <GraduationCap size={21} />
-
-            <span className="text-[12px] font-semibold">
-              ACADEMIC RECORDS
-            </span>
-
-          </div>
-
-
-          {/* Governance */}
-          <div className="h-[43px] flex items-center gap-4 px-4 rounded-md text-[#D7E3F0] hover:bg-white/10 cursor-pointer">
-
-            <Landmark size={21} />
-
-            <span className="text-[12px] font-semibold">
-              GOVERNANCE
-            </span>
-
-          </div>
-
-        </nav>
-
-
-        {/* Logout */}
-        <div className="mt-auto px-12 pb-10 flex items-center gap-4 text-[#D7E3F0]">
-
-          <LogOut size={20} />
-
-          <span className="text-[12px] font-semibold">
-            LOG OUT
-          </span>
-
-        </div>
-
-      </aside>
+      <Sidenavbar />
 
 
       {/* =====================================================
           MAIN CONTENT
       ====================================================== */}
       <div className="flex-1 min-w-0">
-
-
-        {/* ===================================================
-            TOP HEADER
-        ==================================================== */}
-        <header className="h-[65px] bg-white border-b border-[#D0D5DD] flex items-center justify-between px-7">
-
-          <h1 className="text-[24px] font-bold text-[#071B38]">
-            AAGS Faculty System
-          </h1>
-
-
-          <div className="flex items-center gap-7">
-
-            {/* Search */}
-            <div className="hidden lg:flex items-center w-[405px] h-[40px] border border-[#D0D5DD] rounded-full px-4">
-
-              <svg
-                className="w-5 h-5 text-[#667085] mr-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-
-              <input
-                type="text"
-                placeholder="Search students, topics, or meetings..."
-                className="w-full outline-none text-[13px] text-[#344054] placeholder:text-[#667085]"
-              />
-
-            </div>
-
-
-            {/* Notification */}
-            <button className="relative text-[#344054]">
-
-              <Bell size={21} />
-
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#F04438]"></span>
-
-            </button>
-
-
-            {/* Help */}
-            <button className="text-[#344054]">
-              <CircleHelp size={21} />
-            </button>
-
-
-            <div className="h-7 w-px bg-[#D0D5DD]"></div>
-
-
-            {/* Settings */}
-            <span className="text-[12px] font-semibold">
-              Settings
-            </span>
-
-
-            {/* Profile */}
-            <div className="w-8 h-8 rounded-full bg-[#E6EBF0] flex items-center justify-center">
-
-              <UserRound
-                size={18}
-                className="text-[#344054]"
-              />
-
-            </div>
-
-          </div>
-
-        </header>
 
 
         {/* ===================================================
@@ -241,13 +65,13 @@ const MeetingManagement = () => {
 
                 <div>
 
-                  <h2 className="text-[38px] leading-[1.05] font-bold text-[#071B38]">
+                  <h2 className="text-[38px] leading-[1.05] font-bold text-white">
                     Meeting Management
                     <br />
                     Hub
                   </h2>
 
-                  <p className="mt-3 text-[16px] text-[#475467]">
+                  <p className="mt-3 text-[16px] text-white/70 max-w-[600px]">
                     Manage student consultations, thesis reviews, and lab
                     <br className="hidden md:block" />
                     guidance sessions.

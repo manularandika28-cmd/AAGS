@@ -7,7 +7,7 @@ const REFRESH_SECRET = process.env.REFRESH_SECRET || 'your_jwt_refresh_secret_ke
 
 // Universal login searching actor tables
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, role: requestedRole } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
@@ -18,53 +18,101 @@ export const login = async (req, res) => {
         let role = null;
         let idColumn = '';
 
-        // 1. Check Student
-        const studentRes = await pool.query('SELECT * FROM students WHERE email = $1', [email]);
-        if (studentRes.rows.length > 0) {
-            user = studentRes.rows[0];
+        if (!requestedRole) {
+    return res.status(400).json({
+        error: 'Login role is required'
+    });
+}
+
+// Check the table according to the selected login role
+switch (requestedRole) {
+
+    case 'Student': {
+        const result = await pool.query(
+            'SELECT * FROM students WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
             role = 'Student';
             idColumn = 'student_id';
         }
 
-        // 2. Check Lecturer
-        if (!user) {
-            const lecturerRes = await pool.query('SELECT * FROM lecturers WHERE email = $1', [email]);
-            if (lecturerRes.rows.length > 0) {
-                user = lecturerRes.rows[0];
-                role = 'Lecturer';
-                idColumn = 'lecturer_id';
-            }
+        break;
+    }
+
+    case 'Lecturer': {
+        const result = await pool.query(
+            'SELECT * FROM lecturers WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+            role = 'Lecturer';
+            idColumn = 'lecturer_id';
         }
 
-        // 3. Check HOD
-        if (!user) {
-            const hodRes = await pool.query('SELECT * FROM hods WHERE email = $1', [email]);
-            if (hodRes.rows.length > 0) {
-                user = hodRes.rows[0];
-                role = 'HOD';
-                idColumn = 'hod_id';
-            }
+        break;
+    }
+
+    case 'HOD': {
+        const result = await pool.query(
+            'SELECT * FROM hods WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+            role = 'HOD';
+            idColumn = 'hod_id';
         }
 
-        // 4. Check Dean
-        if (!user) {
-            const deanRes = await pool.query('SELECT * FROM deans WHERE email = $1', [email]);
-            if (deanRes.rows.length > 0) {
-                user = deanRes.rows[0];
-                role = 'Dean';
-                idColumn = 'dean_id';
-            }
+        break;
+    }
+
+    case 'Dean': {
+        const result = await pool.query(
+            'SELECT * FROM deans WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+            role = 'Dean';
+            idColumn = 'dean_id';
         }
 
-        // 5. Check Admin
-        if (!user) {
-            const adminRes = await pool.query('SELECT * FROM admins WHERE email = $1', [email]);
-            if (adminRes.rows.length > 0) {
-                user = adminRes.rows[0];
-                role = 'Admin';
-                idColumn = 'admin_id';
-            }
+        break;
+    }
+
+    case 'Admin': {
+        const result = await pool.query(
+            'SELECT * FROM admins WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+            role = 'Admin';
+            idColumn = 'admin_id';
         }
+
+        break;
+    }
+
+    default:
+        return res.status(400).json({
+            error: 'Invalid login role'
+        });
+}
+
+if (!user) {
+    return res.status(401).json({
+        error: `This account is not authorized to log in as ${requestedRole}.`
+    });
+}
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });

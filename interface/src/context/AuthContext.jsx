@@ -39,30 +39,37 @@ const AuthProvider = ({ children }) => {
     | LOGIN
     |--------------------------------------------------------------------------
     */
-    const loginUser = async (email, password) => {
-        const response = await fetch(`${API_BASE}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // sends/receives the httpOnly refresh cookie
-            body: JSON.stringify({ email, password }),
-        });
+    const loginUser = async (email, password, role) => {
+    const response = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            email,
+            password,
+            role
+        }),
+    });
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Login failed');
-        }
+    if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+    }
 
-        sessionStorage.setItem(
-            'authSession',
-            JSON.stringify({ user: data.user, accessToken: data.accessToken })
-        );
+    sessionStorage.setItem(
+        'authSession',
+        JSON.stringify({
+            user: data.user,
+            accessToken: data.accessToken
+        })
+    );
 
-        setUser(data.user);
-        setAccessToken(data.accessToken);
+    setUser(data.user);
+    setAccessToken(data.accessToken);
 
-        return data.user;
-    };
+    return data.user;
+};
 
     /*
     |--------------------------------------------------------------------------

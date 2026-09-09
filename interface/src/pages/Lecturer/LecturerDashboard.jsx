@@ -1,6 +1,7 @@
 import React from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
+import { useAuth } from '../../context/AuthContext';
 
 import {
   UserRoundCheck,
@@ -14,8 +15,9 @@ import {
 } from "lucide-react";
 
 const LecturerDashboard = () => {
+  const { user } = useAuth();
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen">
 
       {/* ================= SIDEBAR ================= */}
       <Sidenavbar />
@@ -31,12 +33,12 @@ const LecturerDashboard = () => {
 
           {/* ================= PAGE TITLE ================= */}
           <div>
-            <h1 className="text-4xl font-bold text-[#06264A] tracking-tight">
+            <h1 className="text-4xl font-bold text-white tracking-tight">
               Overview
             </h1>
 
-            <p className="text-[15px] text-slate-600 mt-2">
-              Welcome back, Dr. Silva. Here is your daily digest.
+            <p className="text-[15px] text-white/80 mt-2">
+              Welcome back, {user.name}. Here is your daily digest.
             </p>
           </div>
 
