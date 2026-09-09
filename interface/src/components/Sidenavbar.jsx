@@ -2,7 +2,7 @@ import { useState } from 'react';
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../Assets/logo.svg';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 import {
   LayoutGrid,
