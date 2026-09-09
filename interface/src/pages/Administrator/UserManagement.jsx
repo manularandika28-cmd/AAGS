@@ -36,7 +36,7 @@ const RolesAndPermissions = () => {
       <Sidenavbar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        <Topnavbar />
+        
 
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           <div className="flex items-center justify-between">
