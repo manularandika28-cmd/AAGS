@@ -1,4 +1,4 @@
-
+ import { useState } from 'react';
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../Assets/logo.svg';
@@ -15,6 +15,8 @@ import {
   BriefcaseMedical,
   Stethoscope,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   
 } from 'lucide-react';
 
@@ -23,7 +25,7 @@ import { useAuth } from '../context/AuthContext';
 const Sidenavbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
+  const [collapsed, setCollapsed] = useState(false);
   const handleLogout = () => {
     logout();
     navigate('/Login', { replace: true });
@@ -154,27 +156,52 @@ const Sidenavbar = () => {
     item.roles.includes(user.role)
   );
 
-  return (
-    <aside className="w-64 bg-white/10 backdrop-blur-xl border border-white/20 text-white flex flex-col justify-between min-h-[calc(100vh-2rem)] shrink-0 select-none rounded-xl mt-[9px] mr-4 mb-8 ml-4 shadow-lg">
+ return (
+  <div className="relative flex">
+    {collapsed && (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        className="fixed top-4 left-4 z-50 w-9 h-9 flex items-center justify-center rounded-md bg-white/10 backdrop-blur-xl border border-white/20 text-white/80 hover:text-white hover:bg-white/20 transition-colors shadow-lg"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    )}
 
+    <aside
+      className={`${
+        collapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-64 opacity-100'
+      } bg-white/10 backdrop-blur-xl border border-white/20 text-white flex flex-col justify-between min-h-[calc(100vh-2rem)] shrink-0 select-none rounded-xl mt-[9px] mr-4 mb-8 ml-4 shadow-lg transition-all duration-300 overflow-hidden`}
+    >
+   
   {/* TOP SECTION */}
   <div>
 
     {/* Brand Header */}
-    <div className="p-6 flex items-center space-x-3 border-b border-white/15">
-      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
-        <img src={logo} alt="University Logo" className="w-8 h-8" />
-      </div>
-
-      <div>
-        <h2 className="text-body font-bold tracking-tight text-white leading-loose">
-          Faculty of Technology
-        </h2>
-        <p className="text-caption text-white/60 font-light mt-0.5">
-          University of Colombo
-        </p>
-      </div>
+<div className="p-6 flex items-center justify-between border-b border-white/15">
+  <div className="flex items-center space-x-3 overflow-hidden">
+    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+      <img src={logo} alt="University Logo" className="w-8 h-8" />
     </div>
+
+    <div>
+      <h2 className="text-body font-bold tracking-tight text-white leading-loose whitespace-nowrap">
+        Faculty of Technology
+      </h2>
+      <p className="text-caption text-white/60 font-light mt-0.5 whitespace-nowrap">
+        University of Colombo
+      </p>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => setCollapsed(true)}
+    className="text-white/70 hover:text-white shrink-0"
+  >
+    <ChevronLeft className="w-5 h-5" />
+  </button>
+</div>
 
     {/* User Info */}
     <div className="px-5 py-4 border-b border-white/15">
@@ -224,6 +251,7 @@ const Sidenavbar = () => {
   </div>
 
 </aside>
+</div>
   );
 };
 
