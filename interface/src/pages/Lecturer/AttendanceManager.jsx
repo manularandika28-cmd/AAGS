@@ -15,7 +15,7 @@ import {
   Search,
   Fingerprint,
   Pause,
-  CirclePlay
+  CirclePlay,
   CircleStop,
   CheckCircle2,
   Timer,
