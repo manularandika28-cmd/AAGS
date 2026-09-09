@@ -134,6 +134,7 @@ const Sidenavbar = () => {
     <aside
       className={`
         shrink-0
+          self-stretch
         ${collapsed ? 'w-[80px]' : 'w-[272px]'}
       `}
     >
