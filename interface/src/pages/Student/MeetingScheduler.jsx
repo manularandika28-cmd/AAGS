@@ -79,6 +79,7 @@ const MeetingScheduler = () => {
         <main className="p-8 max-w-[1400px] w-full mx-auto">
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_330px] gap-6 items-start">
+            <div>
 
             {/* =====================================
                 CALENDAR CARD
@@ -351,6 +352,41 @@ const MeetingScheduler = () => {
 
             </section>
 
+                {/* STATUS LEGEND */}
+    <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm px-5 py-4">
+      <div className="flex items-center justify-between">
+
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          Status Legend
+        </h3>
+
+        <div className="flex items-center gap-6">
+
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="text-sm text-slate-700">Confirmed</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-amber-500" />
+            <span className="text-sm text-slate-700">
+              Pending Approval
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="w-1 h-4 rounded-sm bg-red-500" />
+            <span className="text-sm text-slate-700">
+              Conflict / Action Required
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
             {/* =====================================
                 RIGHT SIDE
             ====================================== */}
@@ -361,7 +397,7 @@ const MeetingScheduler = () => {
               ================================== */}
               <form
                 onSubmit={handleSubmit}
-                className="bg-white border border-slate-200 rounded-xl shadow-sm p-6"
+                className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 h-[691px]"
               >
 
                 <h2 className="text-[20px] font-bold text-slate-900 mb-5">
@@ -557,52 +593,7 @@ const MeetingScheduler = () => {
 
               </form>
 
-              {/* =================================
-                  STATUS LEGEND
-              ================================== */}
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
-
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-4">
-                  Status Legend
-                </h3>
-
-                <div className="space-y-3">
-
-                  {/* Confirmed */}
-                  <div className="flex items-center gap-3">
-
-                    <span className="w-3 h-3 rounded-full bg-green-500" />
-
-                    <span className="text-sm text-slate-700">
-                      Confirmed
-                    </span>
-
-                  </div>
-
-                  {/* Pending */}
-                  <div className="flex items-center gap-3">
-
-                    <span className="w-3 h-3 rounded-full bg-amber-500" />
-
-                    <span className="text-sm text-slate-700">
-                      Pending Approval
-                    </span>
-
-                  </div>
-
-                  {/* Conflict */}
-                  <div className="flex items-center gap-3">
-
-                    <span className="w-1 h-4 rounded-sm bg-red-500" />
-
-                    <span className="text-sm text-slate-700">
-                      Conflict / Action Req.
-                    </span>
-
-                  </div>
-
-                </div>
-              </div>
+              
 
             </div>
 
