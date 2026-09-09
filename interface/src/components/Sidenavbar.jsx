@@ -15,8 +15,7 @@ import {
   BriefcaseMedical,
   Stethoscope,
   BookOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
+  
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
