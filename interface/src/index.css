@@ -103,3 +103,19 @@
   --color-text-link: #F46001;
   --color-text-accent: #FE7F2D;
 }
+
+.dashboard-cards > div {
+  transition: transform 0.25s ease;
+}
+
+.dashboard-cards > div:hover {
+  transform: scale(1.03);
+}
+
+.rounded-2xl {
+  transition: transform 0.25s ease;
+}
+
+.rounded-2xl:hover {
+  transform: scale(1.03);
+}
