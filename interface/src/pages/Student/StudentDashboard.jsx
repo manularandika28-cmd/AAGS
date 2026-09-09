@@ -31,7 +31,7 @@ const StudentDashboard = () => {
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           {/* Welcome Header */}
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight">
               Welcome back, {user.name}
             </h2>
             <p className="text-sm text-slate-500 text-white mt-1 font-medium">

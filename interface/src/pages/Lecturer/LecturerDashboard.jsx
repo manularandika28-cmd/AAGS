@@ -33,11 +33,11 @@ const LecturerDashboard = () => {
 
           {/* ================= PAGE TITLE ================= */}
           <div>
-            <h1 className="text-4xl font-bold text-[#06264A] tracking-tight">
+            <h1 className="text-4xl font-bold text-white tracking-tight">
               Overview
             </h1>
 
-            <p className="text-[15px] text-slate-600 mt-2">
+            <p className="text-[15px] text-white/80 mt-2">
               Welcome back, {user.name}. Here is your daily digest.
             </p>
           </div>

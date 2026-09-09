@@ -75,7 +75,7 @@ const MedicalHub = () => {
 
           {/* PAGE HEADER */}
           <div className="mb-6">
-            <h1 className="text-[26px] font-bold text-slate-900">
+            <h1 className="text-[26px] font-bold text-white">
               Medical Submission Hub
             </h1>
 

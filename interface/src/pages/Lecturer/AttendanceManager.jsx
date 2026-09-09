@@ -67,7 +67,7 @@ const AttendanceManager = () => {
 
 
               {/* Module */}
-              <h2 className="text-[36px] leading-tight font-bold text-[#071B38] max-w-[650px]">
+              <h2 className="text-[36px] leading-tight font-bold text-white max-w-[650px]">
                 IT3045: Advanced Database
                 <br />
                 Systems
@@ -75,7 +75,7 @@ const AttendanceManager = () => {
 
 
               {/* Session details */}
-              <p className="mt-3 text-[15px] text-[#475467]">
+              <p className="mt-3 text-[15px] text-white/70">
                 Lecture • Week 7 • Dr. A. Perera
               </p>
 
