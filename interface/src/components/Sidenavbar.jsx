@@ -15,6 +15,7 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from 'lucide-react';
 
 import logo from '../Assets/logo.svg';
@@ -88,6 +89,12 @@ const Sidenavbar = () => {
       path: '/admin/users',
       roles: ['Admin'],
     },
+    {
+  name: 'PENDING APPROVALS',
+  icon: Clock,
+  path: '/admin/pending-approvals',
+  roles: ['Admin'],
+},
     {
       name: 'ROLE SETTINGS',
       icon: SlidersHorizontal,
