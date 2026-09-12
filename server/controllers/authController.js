@@ -113,6 +113,12 @@ if (!user) {
         error: `This account is not authorized to log in as ${requestedRole}.`
     });
 }
+// Block pending (unapproved) accounts
+if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
+    return res.status(403).json({
+        error: 'Your account is pending Admin approval.'
+    });
+}
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -203,6 +209,52 @@ export const refreshToken = (req, res) => {
         const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
         return res.status(200).json({ accessToken: newAccessToken, user: payload });
     });
+};
+
+// Self-registration for Student / Lecturer only
+// Creates a PENDING account (is_active = false) — requires Admin approval
+export const register = async (req, res) => {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    if (!['Student', 'Lecturer'].includes(role)) {
+        return res.status(400).json({
+            error: 'Self-registration is only available for Students and Lecturers.'
+        });
+    }
+
+    try {
+        const table = role === 'Student' ? 'students' : 'lecturers';
+        const nameColumn = role === 'Student' ? 'student_name' : 'name';
+        const roleId = role === 'Student' ? 5 : 4; // Student = 5, Lecturer = 4
+
+        const existing = await pool.query(
+            `SELECT 1 FROM ${table} WHERE email = $1`,
+            [email]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'An account with this email already exists.' });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        await pool.query(
+            `INSERT INTO ${table} (${nameColumn}, email, password_hash, role_id, is_active)
+             VALUES ($1, $2, $3, $4, false)`,
+            [name, email, passwordHash, roleId]
+        );
+
+        return res.status(201).json({
+            message: 'Registration submitted. Awaiting Admin approval.'
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 // Logout
