@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     GraduationCap,
@@ -378,7 +378,7 @@ const Login = () => {
                             {/* MFA MESSAGE FOR STAFF */}
                             {role === 'Staff' && (
                                 <div className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-lg p-3 flex gap-2.5 items-start">
-
+                                    
                                     <ShieldCheck className="w-4 h-4 text-[#1E40AF] mt-0.5 flex-shrink-0" />
 
                                     <div className="space-y-0.5">
@@ -423,7 +423,12 @@ const Login = () => {
                     SUPPORT LINK
                 ----------------------------------------------------------------- */}
                 <div className="border-t border-slate-100 pt-4 text-center space-y-1">
-
+                        <p className="text-xs text-slate-500">
+    Don't have an account?{' '}
+    <Link to="/Register" className="font-semibold text-[#071B38] hover:underline">
+        Create one
+    </Link>
+</p>
                     <p className="text-xs text-slate-500">
                         Need access assistance?
                     </p>
