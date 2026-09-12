@@ -10,6 +10,7 @@ import backgroundVideo from './Assets/BackgroundVideo.mp4';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import Register from './pages/Register';
 
 // =========================================
 // AUTH
@@ -107,7 +108,7 @@ function App() {
                 />
               }
             />
-
+          <Route path="/Register" element={<Register />} />
 
             {/* =========================================
                 LOGIN
