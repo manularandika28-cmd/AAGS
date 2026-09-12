@@ -41,6 +41,7 @@ import AcademicRecords from './pages/Student/AcademicRecords';
 // =========================================
 import AdminDashboard from './pages/Administrator/AdminDashboard';
 import UserManagement from './pages/Administrator/UserManagement';
+import PendingApprovals from './pages/Administrator/PendingApprovals';
 import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
@@ -205,6 +206,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+            path="/admin/pending-approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <PendingApprovals />
+              </ProtectedRoute>
+            }
+          />
 
             <Route
               path="/admin/users"
