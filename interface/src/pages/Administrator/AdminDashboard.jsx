@@ -40,42 +40,20 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const users = [
-    {
-      initials: 'Dr',
-      name: 'Dr. Anil Perera',
-      email: 'anil.p@fot.cmb.ac.lk',
-      role: 'Faculty Member',
-      status: 'Active',
-      statusBg:
-        'bg-emerald-50 text-emerald-600 border border-emerald-100',
-      mfa: true,
-      avatarBg: 'bg-blue-900'
-    },
-    {
-      initials: 'SW',
-      name: 'Sarah Wijesinghe',
-      email: 'sarah.w@admin.cmb.ac.lk',
-      role: 'System Admin',
-      status: 'Active',
-      statusBg:
-        'bg-emerald-50 text-emerald-600 border border-emerald-100',
-      mfa: true,
-      avatarBg: 'bg-rose-500'
-    },
-    {
-      initials: 'KJ',
-      name: 'Kamal Jayathilake',
-      email: 'kamal.j@fot.cmb.ac.lk',
-      role: 'Data Entry Staff',
-      status: 'Pending',
-      statusBg:
-        'bg-amber-50 text-amber-600 border border-amber-100',
-      mfa: false,
-      avatarBg: 'bg-indigo-300'
-    }
-  ];
+    const avatarColors = ['bg-blue-900', 'bg-rose-500', 'bg-indigo-300', 'bg-emerald-600', 'bg-amber-500'];
 
+  const users = (stats?.userList ?? []).map((u, idx) => ({
+    initials: u.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    status: u.is_active ? 'Active' : 'Pending',
+    statusBg: u.is_active
+      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+      : 'bg-amber-50 text-amber-600 border border-amber-100',
+    mfa: u.is_active, // no real MFA data exists — using is_active as a stand-in visual only
+    avatarBg: avatarColors[idx % avatarColors.length],
+  }));
   return (
     <div className="flex min-h-screen text-slate-800 font-sans antialiased">
 
