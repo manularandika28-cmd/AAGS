@@ -74,11 +74,44 @@ export const rejectUser = async (req, res) => {
 };
 export const getDashboardStats = async (req, res) => {
     try {
-        const studentCount = await pool.query(`SELECT COUNT(*) FROM students WHERE is_active = true`);
-        const lecturerCount = await pool.query(`SELECT COUNT(*) FROM lecturers WHERE is_active = true`);
-        const hodCount = await pool.query(`SELECT COUNT(*) FROM hods`);
-        const deanCount = await pool.query(`SELECT COUNT(*) FROM deans`);
-        const adminCount = await pool.query(`SELECT COUNT(*) FROM admins`);
+        const studentCount = await pool.query(`
+            SELECT COUNT(*)
+            FROM students
+            WHERE is_active = true
+        `);
+
+        const lecturerCount = await pool.query(`
+            SELECT COUNT(*)
+            FROM lecturers
+            WHERE is_active = true
+        `);
+
+        const hodCount = await pool.query(`
+            SELECT COUNT(*)
+            FROM hods
+        `);
+
+        const deanCount = await pool.query(`
+            SELECT COUNT(*)
+            FROM deans
+        `);
+
+        const adminCount = await pool.query(`
+            SELECT COUNT(*)
+            FROM admins
+        `);
+
+        const pendingStudents = await pool.query(`
+            SELECT COUNT(*)
+            FROM students
+            WHERE is_active = false
+        `);
+
+        const pendingLecturers = await pool.query(`
+            SELECT COUNT(*)
+            FROM lecturers
+            WHERE is_active = false
+        `);
 
         const totalActiveUsers =
             parseInt(studentCount.rows[0].count) +
@@ -87,25 +120,94 @@ export const getDashboardStats = async (req, res) => {
             parseInt(deanCount.rows[0].count) +
             parseInt(adminCount.rows[0].count);
 
-        const recentStudents = await pool.query(`
-            SELECT student_name AS name, email, 'Student' AS role, is_active
-            FROM students ORDER BY created_at DESC LIMIT 5
-        `);
-        const recentLecturers = await pool.query(`
-            SELECT name, email, 'Lecturer' AS role, is_active
-            FROM lecturers ORDER BY created_at DESC LIMIT 5
+        const pendingUsers =
+            parseInt(pendingStudents.rows[0].count) +
+            parseInt(pendingLecturers.rows[0].count);
+
+        const userListResult = await pool.query(`
+            SELECT
+                student_id AS id,
+                student_name AS name,
+                email,
+                'Student' AS role,
+                is_active,
+                created_at
+            FROM students
+
+            UNION ALL
+
+            SELECT
+                lecturer_id AS id,
+                name,
+                email,
+                'Lecturer' AS role,
+                is_active,
+                created_at
+            FROM lecturers
+
+            UNION ALL
+
+            SELECT
+                hod_id AS id,
+                name,
+                email,
+                'HOD' AS role,
+                true AS is_active,
+                created_at
+            FROM hods
+
+            UNION ALL
+
+            SELECT
+                dean_id AS id,
+                name,
+                email,
+                'Dean' AS role,
+                true AS is_active,
+                created_at
+            FROM deans
+
+            UNION ALL
+
+            SELECT
+                admin_id AS id,
+                admin_name AS name,
+                email,
+                'Admin' AS role,
+                true AS is_active,
+                created_at
+            FROM admins
+
+            ORDER BY created_at DESC
+            
         `);
 
-        const userList = [...recentStudents.rows, ...recentLecturers.rows].slice(0, 5);
-
-        res.status(200).json({
+        return res.status(200).json({
             totalActiveUsers,
-            systemAdminsCount: parseInt(adminCount.rows[0].count),
-            userList,
+
+            systemAdminsCount: parseInt(
+                adminCount.rows[0].count
+            ),
+
+            pendingUsers,
+
+            roleCounts: {
+                Student: parseInt(studentCount.rows[0].count),
+                Lecturer: parseInt(lecturerCount.rows[0].count),
+                HOD: parseInt(hodCount.rows[0].count),
+                Dean: parseInt(deanCount.rows[0].count),
+                Admin: parseInt(adminCount.rows[0].count)
+            },
+
+            userList: userListResult.rows
         });
+
     } catch (error) {
         console.error('Dashboard stats error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
     }
 };
 export const addUser = async (req, res) => {
