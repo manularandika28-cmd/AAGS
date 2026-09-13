@@ -210,6 +210,98 @@ export const getDashboardStats = async (req, res) => {
         });
     }
 };
+export const getRoles = async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                role_id,
+                role_name,
+                description,
+                created_at
+            FROM roles
+            ORDER BY role_id
+        `);
+
+        return res.status(200).json(result.rows);
+
+    } catch (error) {
+        console.error('Fetch roles error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
+
+export const addRole = async (req, res) => {
+    try {
+        const { role_name, description } = req.body;
+
+        if (!role_name || !role_name.trim()) {
+            return res.status(400).json({
+                error: 'Role name is required'
+            });
+        }
+
+        if (!description || !description.trim()) {
+            return res.status(400).json({
+                error: 'Role description is required'
+            });
+        }
+
+        const existingRole = await pool.query(
+            `
+            SELECT role_id
+            FROM roles
+            WHERE LOWER(role_name) = LOWER($1)
+            `,
+            [role_name.trim()]
+        );
+
+        if (existingRole.rows.length > 0) {
+            return res.status(409).json({
+                error: 'A role with this name already exists'
+            });
+        }
+
+        const result = await pool.query(
+            `
+            INSERT INTO roles
+                (role_name, description)
+            VALUES
+                ($1, $2)
+            RETURNING
+                role_id,
+                role_name,
+                description,
+                created_at
+            `,
+            [
+                role_name.trim(),
+                description.trim()
+            ]
+        );
+
+        return res.status(201).json({
+            message: 'Role created successfully',
+            role: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Add role error:', error);
+
+        if (error.code === '23505') {
+            return res.status(409).json({
+                error: 'A role with this name already exists'
+            });
+        }
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
 export const addUser = async (req, res) => {
     const client = await pool.connect();
 

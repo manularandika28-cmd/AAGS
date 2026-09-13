@@ -22,8 +22,19 @@ const API_BASE = 'http://localhost:3000/api/admin';
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [roles, setRoles] = useState([]);
+  const [showAddRole, setShowAddRole] = useState(false);
+  const [roleForm, setRoleForm] = useState({
+  role_name: '',
+  description: ''
+});
+
+const [addingRole, setAddingRole] = useState(false);
+const [addRoleError, setAddRoleError] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
-const [userForm, setUserForm] = useState({
+  const [showAllUsers, setShowAllUsers] = useState(false);
+const [showAllRoles, setShowAllRoles] = useState(false);
+  const [userForm, setUserForm] = useState({
     name: '',
     email: '',
     password: '',
@@ -33,80 +44,87 @@ const [userForm, setUserForm] = useState({
 
 const [addingUser, setAddingUser] = useState(false);
 const [addUserError, setAddUserError] = useState('');
-const handleAddUser = async (e) => {
-    e.preventDefault();
-
-    setAddingUser(true);
-    setAddUserError('');
-
+const fetchRoles = async () => {
     try {
-        const res = await fetch(`${API_BASE}/users`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                ...userForm,
-                department_id: userForm.department_id
-                    ? Number(userForm.department_id)
-                    : null
-            })
+        const res = await fetch(`${API_BASE}/roles`, {
+            credentials: 'include'
         });
 
         const data = await res.json();
 
-        if (!res.ok) {
-            throw new Error(data.error || 'Failed to add user');
+        if (res.ok) {
+            setRoles(data);
         }
-
-        // Refresh dashboard data
-        const statsRes = await fetch(`${API_BASE}/dashboard-stats`, {
-            credentials: 'include'
-        });
-
-        const statsData = await statsRes.json();
-
-        if (statsRes.ok) {
-            setStats(statsData);
-        }
-
-        // Reset form
-        setUserForm({
-            name: '',
-            email: '',
-            password: '',
-            role: 'Student',
-            department_id: ''
-        });
-
-        setShowAddUser(false);
-
     } catch (error) {
-        console.error('Add user error:', error);
-        setAddUserError(error.message);
-    } finally {
-        setAddingUser(false);
+        console.error('Fetch roles error:', error);
     }
+};
+const handleAddRole = async (e) => {
+  e.preventDefault();
+
+  setAddingRole(true);
+  setAddRoleError('');
+
+  try {
+    const res = await fetch(`${API_BASE}/roles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(roleForm)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create role');
+    }
+
+    setRoles((currentRoles) => [
+      ...currentRoles,
+      data.role
+    ]);
+
+    setRoleForm({
+      role_name: '',
+      description: ''
+    });
+
+    setShowAddRole(false);
+
+  } catch (error) {
+    console.error('Add role error:', error);
+    setAddRoleError(error.message);
+  } finally {
+    setAddingRole(false);
+  }
 };
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/dashboard-stats`, {
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (res.ok) setStats(data);
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      }
+        try {
+            const res = await fetch(`${API_BASE}/dashboard-stats`, {
+                credentials: 'include',
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setStats(data);
+            }
+        } catch (err) {
+            console.error('Dashboard fetch error:', err);
+        }
     };
 
     fetchStats();
+    fetchRoles();
+
     const interval = setInterval(fetchStats, 30000);
+
     return () => clearInterval(interval);
-  }, []);
+}, []);
 
     const avatarColors = ['bg-blue-900', 'bg-rose-500', 'bg-indigo-300', 'bg-emerald-600', 'bg-amber-500'];
 
@@ -323,7 +341,7 @@ const handleAddUser = async (e) => {
 
                     <tbody className="divide-y divide-slate-100 text-slate-700">
 
-                      {filteredUsers.map((user, index) => (
+                      {(showAllUsers ? filteredUsers : filteredUsers.slice(0, 5)).map((user, index) => (
                         <tr
                           key={index}
                           className="hover:bg-slate-50/50"
@@ -412,12 +430,13 @@ const handleAddUser = async (e) => {
               {/* View All Users */}
               <div className="pt-4 border-t border-slate-100 text-center">
 
-                <a
-                  href="/Admin/users"
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900"
-                >
-                  View All Users
-                </a>
+                 <button
+    type="button"
+    onClick={() => setShowAllUsers((current) => !current)}
+    className="text-xs font-bold text-slate-700 hover:text-slate-900"
+  >
+    {showAllUsers ? 'Show Less' : 'View All Users'}
+  </button>
 
               </div>
 
@@ -427,70 +446,85 @@ const handleAddUser = async (e) => {
             <div className="space-y-6">
 
               {/* Role Settings */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
 
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
 
-                  <h3 className="font-bold text-slate-900 text-base">
-                    Role Settings
-                  </h3>
+    <h3 className="font-bold text-slate-900 text-base">
+      Role Settings
+    </h3>
 
-                  <Settings className="w-4 h-4 text-slate-400" />
+    <Settings className="w-4 h-4 text-slate-400" />
 
-                </div>
+  </div>
 
-                <div className="space-y-3">
+  <div className="space-y-3">
 
-                  {/* System Admin */}
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+    {roles.length === 0 ? (
 
-                    <div className="flex items-center justify-between">
+      <p className="text-xs text-slate-400 text-center py-4">
+        No roles found.
+      </p>
 
-                      <span className="font-bold text-xs text-slate-900">
-                        System Admin
-                      </span>
+    ) : (
 
-                      <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded">
-                        Full Access
-                      </span>
+      (showAllRoles ? roles : roles.slice(0, 3)).map((role) => (
 
-                    </div>
+        <div
+          key={role.role_id}
+          className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1"
+        >
 
-                    <p className="text-[11px] text-slate-500">
-                      Manage users, global settings, audit logs.
-                    </p>
+          <div className="flex items-center justify-between gap-2">
 
-                  </div>
+            <span className="font-bold text-xs text-slate-900">
+              {role.role_name}
+            </span>
 
-                  {/* Faculty Member */}
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+            <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded">
+              Role
+            </span>
 
-                    <div className="flex items-center justify-between">
+          </div>
 
-                      <span className="font-bold text-xs text-slate-900">
-                        Faculty Member
-                      </span>
+          <p className="text-[11px] text-slate-500">
+            {role.description}
+          </p>
 
-                      <span className="bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-bold px-2 py-0.5 rounded">
-                        Restricted
-                      </span>
+        </div>
 
-                    </div>
+      ))
 
-                    <p className="text-[11px] text-slate-500">
-                      View academic records, schedule meetings.
-                    </p>
+    )}
 
-                  </div>
+  </div>
+  
 
-                </div>
+  <button
+    onClick={() => {
+      setAddRoleError('');
+      setRoleForm({
+        role_name: '',
+        description: ''
+      });
+      setShowAddRole(true);
+    }}
+    className="w-full py-2.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+  >
+    <Plus className="w-3.5 h-3.5" />
+    New Role
+  </button>
+  {roles.length > 3 && (
+  <button
+    type="button"
+    onClick={() => setShowAllRoles((current) => !current)}
+    className="w-full text-xs font-bold text-slate-700 hover:text-slate-900"
+  >
+    {showAllRoles ? 'Show Less' : 'View All Roles'}
+  </button>
+)}
 
-                <button className="w-full py-2.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5">
-                  <Plus className="w-3.5 h-3.5" />
-                  New Role
-                </button>
-
-              </div>
+</div>
 
               {/* Recent Audit Logs */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
@@ -733,6 +767,115 @@ const handleAddUser = async (e) => {
         </div>
 
     </div>
+)}
+{showAddRole && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+
+    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6">
+
+      <div className="flex items-center justify-between mb-6">
+
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Create New Role
+          </h2>
+
+          <p className="text-xs text-slate-500 mt-1">
+            Add a new role to the AAGS system
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowAddRole(false)}
+          className="text-slate-400 hover:text-slate-700 text-xl"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <form onSubmit={handleAddRole} className="space-y-4">
+
+        {/* Role Name */}
+        <div>
+
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            Role Name
+          </label>
+
+          <input
+            type="text"
+            value={roleForm.role_name}
+            onChange={(e) =>
+              setRoleForm({
+                ...roleForm,
+                role_name: e.target.value
+              })
+            }
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+            placeholder="e.g. Registrar"
+          />
+
+        </div>
+
+        {/* Description */}
+        <div>
+
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            Description
+          </label>
+
+          <textarea
+            value={roleForm.description}
+            onChange={(e) =>
+              setRoleForm({
+                ...roleForm,
+                description: e.target.value
+              })
+            }
+            required
+            rows={4}
+            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 resize-none"
+            placeholder="Describe what this role is responsible for"
+          />
+
+        </div>
+
+        {/* Error */}
+        {addRoleError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-3 py-2.5 text-xs font-medium">
+            {addRoleError}
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="flex gap-3 pt-2">
+
+          <button
+            type="button"
+            onClick={() => setShowAddRole(false)}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={addingRole}
+            className="flex-1 py-2.5 rounded-xl bg-[#051E3D] text-white text-sm font-bold hover:bg-[#0A2B54] disabled:opacity-50"
+          >
+            {addingRole ? 'Creating...' : 'Create Role'}
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
 )}
 
         </main>
