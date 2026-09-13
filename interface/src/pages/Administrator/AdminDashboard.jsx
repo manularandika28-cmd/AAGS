@@ -21,6 +21,74 @@ const API_BASE = 'http://localhost:3000/api/admin';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [showAddUser, setShowAddUser] = useState(false);
+
+const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'Student',
+    department_id: ''
+});
+
+const [addingUser, setAddingUser] = useState(false);
+const [addUserError, setAddUserError] = useState('');
+const handleAddUser = async (e) => {
+    e.preventDefault();
+
+    setAddingUser(true);
+    setAddUserError('');
+
+    try {
+        const res = await fetch(`${API_BASE}/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                ...userForm,
+                department_id: userForm.department_id
+                    ? Number(userForm.department_id)
+                    : null
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to add user');
+        }
+
+        // Refresh dashboard data
+        const statsRes = await fetch(`${API_BASE}/dashboard-stats`, {
+            credentials: 'include'
+        });
+
+        const statsData = await statsRes.json();
+
+        if (statsRes.ok) {
+            setStats(statsData);
+        }
+
+        // Reset form
+        setUserForm({
+            name: '',
+            email: '',
+            password: '',
+            role: 'Student',
+            department_id: ''
+        });
+
+        setShowAddUser(false);
+
+    } catch (error) {
+        console.error('Add user error:', error);
+        setAddUserError(error.message);
+    } finally {
+        setAddingUser(false);
+    }
+};
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -90,7 +158,12 @@ const AdminDashboard = () => {
               </button>
 
               {/* Add User */}
-              <button className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
+              <button 
+               onClick={() => {
+        setAddUserError('');
+        setShowAddUser(true);
+    }}
+    className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
                 <UserPlus className="w-4 h-4" />
                 Add User
               </button>
@@ -468,6 +541,187 @@ const AdminDashboard = () => {
             </div>
 
           </div>
+          {showAddUser && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+
+        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6">
+
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                        Add New User
+                    </h2>
+
+                    <p className="text-xs text-slate-500 mt-1">
+                        Create a new AAGS system account
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setShowAddUser(false)}
+                    className="text-slate-400 hover:text-slate-700 text-xl"
+                >
+                    ×
+                </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="space-y-4">
+
+                {/* Name */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        value={userForm.name}
+                        onChange={(e) =>
+                            setUserForm({
+                                ...userForm,
+                                name: e.target.value
+                            })
+                        }
+                        required
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        placeholder="Enter full name"
+                    />
+                </div>
+
+                {/* Email */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        value={userForm.email}
+                        onChange={(e) =>
+                            setUserForm({
+                                ...userForm,
+                                email: e.target.value
+                            })
+                        }
+                        required
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        placeholder="user@uoc.lk"
+                    />
+                </div>
+
+                {/* Password */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Temporary Password
+                    </label>
+
+                    <input
+                        type="password"
+                        value={userForm.password}
+                        onChange={(e) =>
+                            setUserForm({
+                                ...userForm,
+                                password: e.target.value
+                            })
+                        }
+                        required
+                        minLength={6}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        placeholder="Minimum 6 characters"
+                    />
+                </div>
+
+                {/* Role */}
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Role
+                    </label>
+
+                    <select
+                        value={userForm.role}
+                        onChange={(e) =>
+                            setUserForm({
+                                ...userForm,
+                                role: e.target.value
+                            })
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                    >
+                        <option value="Student">Student</option>
+                        <option value="Lecturer">Lecturer</option>
+                        <option value="HOD">HOD</option>
+                        <option value="Dean">Dean</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+
+                {/* Department */}
+                {(userForm.role === 'Student' ||
+                    userForm.role === 'Lecturer') && (
+                    <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Department
+                        </label>
+
+                        <select
+                            value={userForm.department_id}
+                            onChange={(e) =>
+                                setUserForm({
+                                    ...userForm,
+                                    department_id: e.target.value
+                                })
+                            }
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        >
+                            <option value="">Select department</option>
+                            <option value="1">
+                                Department of Information and Communication Technology
+                            </option>
+                            <option value="2">
+                                Department of Biosystems Technology
+                            </option>
+                            <option value="3">
+                                Department of Instrumentation & Automation
+                            </option>
+                        </select>
+                    </div>
+                )}
+
+                {/* Error */}
+                {addUserError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-3 py-2.5 text-xs font-medium">
+                        {addUserError}
+                    </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-2">
+
+                    <button
+                        type="button"
+                        onClick={() => setShowAddUser(false)}
+                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        disabled={addingUser}
+                        className="flex-1 py-2.5 rounded-xl bg-[#051E3D] text-white text-sm font-bold hover:bg-[#0A2B54] disabled:opacity-50"
+                    >
+                        {addingUser ? 'Creating...' : 'Create User'}
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+)}
 
         </main>
 
