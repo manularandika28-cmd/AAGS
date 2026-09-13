@@ -22,7 +22,7 @@ const API_BASE = 'http://localhost:3000/api/admin';
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [showAddUser, setShowAddUser] = useState(false);
-
+  const [roleFilter, setRoleFilter] = useState('All');
 const [userForm, setUserForm] = useState({
     name: '',
     email: '',
@@ -122,6 +122,10 @@ const handleAddUser = async (e) => {
     mfa: u.is_active, // no real MFA data exists — using is_active as a stand-in visual only
     avatarBg: avatarColors[idx % avatarColors.length],
   }));
+  const filteredUsers =
+  roleFilter === 'All'
+    ? users
+    : users.filter((user) => user.role === roleFilter);
   return (
     <div className="flex min-h-screen text-slate-800 font-sans antialiased">
 
@@ -271,10 +275,18 @@ const handleAddUser = async (e) => {
                     User Management
                   </h3>
 
-                  <button className="flex items-center space-x-1 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
-                    <span>All Roles</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
+                  <select
+  value={roleFilter}
+  onChange={(e) => setRoleFilter(e.target.value)}
+  className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg outline-none cursor-pointer"
+>
+  <option value="All">All Roles</option>
+  <option value="Student">Student</option>
+  <option value="Lecturer">Lecturer</option>
+  <option value="HOD">HOD</option>
+  <option value="Dean">Dean</option>
+  <option value="Admin">Admin</option>
+</select>
 
                 </div>
 
@@ -311,7 +323,7 @@ const handleAddUser = async (e) => {
 
                     <tbody className="divide-y divide-slate-100 text-slate-700">
 
-                      {users.map((user, index) => (
+                      {filteredUsers.map((user, index) => (
                         <tr
                           key={index}
                           className="hover:bg-slate-50/50"
