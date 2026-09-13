@@ -72,3 +72,39 @@ export const rejectUser = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+export const getDashboardStats = async (req, res) => {
+    try {
+        const studentCount = await pool.query(`SELECT COUNT(*) FROM students WHERE is_active = true`);
+        const lecturerCount = await pool.query(`SELECT COUNT(*) FROM lecturers WHERE is_active = true`);
+        const hodCount = await pool.query(`SELECT COUNT(*) FROM hods`);
+        const deanCount = await pool.query(`SELECT COUNT(*) FROM deans`);
+        const adminCount = await pool.query(`SELECT COUNT(*) FROM admins`);
+
+        const totalActiveUsers =
+            parseInt(studentCount.rows[0].count) +
+            parseInt(lecturerCount.rows[0].count) +
+            parseInt(hodCount.rows[0].count) +
+            parseInt(deanCount.rows[0].count) +
+            parseInt(adminCount.rows[0].count);
+
+        const recentStudents = await pool.query(`
+            SELECT student_name AS name, email, 'Student' AS role, is_active
+            FROM students ORDER BY created_at DESC LIMIT 5
+        `);
+        const recentLecturers = await pool.query(`
+            SELECT name, email, 'Lecturer' AS role, is_active
+            FROM lecturers ORDER BY created_at DESC LIMIT 5
+        `);
+
+        const userList = [...recentStudents.rows, ...recentLecturers.rows].slice(0, 5);
+
+        res.status(200).json({
+            totalActiveUsers,
+            systemAdminsCount: parseInt(adminCount.rows[0].count),
+            userList,
+        });
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
