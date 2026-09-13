@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import {
@@ -17,7 +17,29 @@ import {
   Plus
 } from 'lucide-react';
 
+const API_BASE = 'http://localhost:3000/api/admin';
+
 const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/dashboard-stats`, {
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (res.ok) setStats(data);
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const users = [
     {
       initials: 'Dr',
@@ -117,7 +139,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="text-3xl font-black text-slate-900 mt-4">
-                1,248
+                 {stats?.totalActiveUsers ?? '1,248'}
               </div>
             </div>
 
@@ -150,7 +172,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="text-3xl font-black text-slate-900 mt-4">
-                12
+                 {stats?.systemAdminsCount ?? 12}
               </div>
 
             </div>
