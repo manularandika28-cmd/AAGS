@@ -214,12 +214,20 @@ export const getRoles = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT
-                role_id,
-                role_name,
-                description,
-                created_at
-            FROM roles
-            ORDER BY role_id
+                r.role_id,
+                r.role_name,
+                r.description,
+                r.created_at,
+                CASE r.role_name
+                    WHEN 'Student' THEN (SELECT COUNT(*) FROM students WHERE role_id = r.role_id)
+                    WHEN 'Lecturer' THEN (SELECT COUNT(*) FROM lecturers WHERE role_id = r.role_id)
+                    WHEN 'HOD' THEN (SELECT COUNT(*) FROM hods WHERE role_id = r.role_id)
+                    WHEN 'Dean' THEN (SELECT COUNT(*) FROM deans WHERE role_id = r.role_id)
+                    WHEN 'Admin' THEN (SELECT COUNT(*) FROM admins WHERE role_id = r.role_id)
+                    ELSE 0
+                END AS user_count
+            FROM roles r
+            ORDER BY r.role_id
         `);
 
         return res.status(200).json(result.rows);
@@ -637,5 +645,30 @@ export const getAuditLogs = async (req, res) => {
         return res.status(500).json({
             error: 'Internal server error'
         });
+    }
+};
+
+export const getUsersByRole = async (req, res) => {
+    const { roleName } = req.params;
+
+    const queries = {
+        Student: `SELECT student_id AS id, student_name AS name, email, is_active FROM students`,
+        Lecturer: `SELECT lecturer_id AS id, name, email, is_active FROM lecturers`,
+        HOD: `SELECT hod_id AS id, name, email FROM hods`,
+        Dean: `SELECT dean_id AS id, name, email FROM deans`,
+        Admin: `SELECT admin_id AS id, admin_name AS name, email FROM admins`,
+    };
+
+    const query = queries[roleName];
+    if (!query) {
+        return res.status(400).json({ error: 'Invalid role name' });
+    }
+
+    try {
+        const result = await pool.query(query);
+        return res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Get users by role error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };

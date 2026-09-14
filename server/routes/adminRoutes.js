@@ -6,7 +6,8 @@ import { getPendingUsers,
      addUser, 
      getRoles, 
      addRole,
-     getAuditLogs } from '../controllers/adminController.js';
+     getAuditLogs,
+     getUsersByRole } from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -18,4 +19,6 @@ router.post('/users', addUser);
 router.get('/roles', getRoles);
 router.post('/roles', addRole);
 router.get('/audit-logs', getAuditLogs);
+router.get('/users/role/:roleName', getUsersByRole);
+
 export default router;
