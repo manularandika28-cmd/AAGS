@@ -1,6 +1,6 @@
 import express from 'express';
 import { getPendingUsers, 
-    approveUser,
+     approveUser,
      rejectUser, 
      getDashboardStats, 
      addUser, 
@@ -9,8 +9,12 @@ import { getPendingUsers,
      getAuditLogs,
      getUsersByRole,
      getRolePermissions,
-     updateRolePermissions
-
+     updateRolePermissions,
+     updateUserStatus,
+     deleteUser,
+     deleteRole,
+    
+    
       
     } from '../controllers/adminController.js';
 
@@ -28,5 +32,8 @@ router.get('/audit-logs', getAuditLogs);
 router.get('/users/role/:roleName', getUsersByRole);
 router.get('/roles/:roleId/permissions', getRolePermissions);
 router.put('/roles/:roleId/permissions', updateRolePermissions);
+router.patch('/users/:role/:id/status', updateUserStatus);
+router.delete('/users/:role/:id', deleteUser);
+router.delete('/roles/:roleId', deleteRole);
 
 export default router;

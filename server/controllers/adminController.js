@@ -43,7 +43,34 @@ export const approveUser = async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        return res.status(200).json({ message: 'User approved', user: result.rows[0] });
+        const approvedUser = result.rows[0];
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'User approved',
+                role === 'Student'
+                    ? approvedUser.student_name
+                    : approvedUser.name,
+                req.body?.userId || null,
+                req.ip,
+                role,
+                'Info',
+                'User Management',
+                `${role} account approved by Admin`
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'User approved',
+            user: approvedUser
+        });
+
     } catch (error) {
         console.error('Approve user error:', error);
         return res.status(500).json({ error: 'Internal server error' });
@@ -61,12 +88,50 @@ export const rejectUser = async (req, res) => {
         const table = role === 'Student' ? 'students' : 'lecturers';
         const idColumn = role === 'Student' ? 'student_id' : 'lecturer_id';
 
+        const result = await pool.query(
+            `SELECT * FROM ${table} WHERE ${idColumn} = $1 AND is_active = false`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Pending user not found' });
+        }
+
+        const rejectedUser = result.rows[0];
+
         await pool.query(
             `DELETE FROM ${table} WHERE ${idColumn} = $1 AND is_active = false`,
             [id]
         );
 
-        return res.status(200).json({ message: 'User rejected and removed' });
+        const userName =
+            role === 'Student'
+                ? rejectedUser.student_name
+                : rejectedUser.name;
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'User rejected',
+                userName,
+                req.body?.userId || null,
+                req.ip,
+                role,
+                'Warning',
+                'User Management',
+                `${role} account rejected and removed by Admin`
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'User rejected and removed'
+        });
+
     } catch (error) {
         console.error('Reject user error:', error);
         return res.status(500).json({ error: 'Internal server error' });
@@ -367,11 +432,30 @@ export const updateRolePermissions = async (req, res) => {
             );
         }
 
-        await client.query('COMMIT');
+        await client.query(
+    `
+    INSERT INTO audit_logs
+        (action, target, performed_by, ip_address, role, severity, module, details)
+    VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+        'Permissions updated',
+        role.role_name,
+        req.body?.userId || null,
+        req.ip,
+        'Admin',
+        'Info',
+        'Roles & Permissions',
+        `Permissions updated for role "${role.role_name}"`
+    ]
+);
 
-        return res.status(200).json({
-            message: 'Role permissions updated successfully'
-        });
+await client.query('COMMIT');
+
+return res.status(200).json({
+    message: 'Role permissions updated successfully'
+});
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -438,9 +522,30 @@ export const addRole = async (req, res) => {
             ]
         );
 
+        const createdRole = result.rows[0];
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'Role created',
+                createdRole.role_name,
+                req.body?.userId || null,
+                req.ip,
+                'Admin',
+                'Info',
+                'Roles & Permissions',
+                `Role "${createdRole.role_name}" was created`
+            ]
+        );
+
         return res.status(201).json({
             message: 'Role created successfully',
-            role: result.rows[0]
+            role: createdRole
         });
 
     } catch (error) {
@@ -731,15 +836,36 @@ export const addUser = async (req, res) => {
             );
         }
 
-        await client.query('COMMIT');
+       const createdUser = result.rows[0];
 
-        return res.status(201).json({
-            message: `${role} created successfully`,
-            user: {
-                ...result.rows[0],
-                role
-            }
-        });
+await client.query(
+    `
+    INSERT INTO audit_logs
+        (action, target, performed_by, ip_address, role, severity, module, details)
+    VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+        'User created',
+        createdUser.name,
+        registeredBy,
+        req.ip,
+        role,
+        'Info',
+        'User Management',
+        `${role} account created by Admin`
+    ]
+);
+
+await client.query('COMMIT');
+
+return res.status(201).json({
+    message: `${role} created successfully`,
+    user: {
+        ...createdUser,
+        role
+    }
+});
 
     } catch (error) {
 
@@ -772,19 +898,78 @@ export const addUser = async (req, res) => {
 
 export const getAuditLogs = async (req, res) => {
     try {
-        const result = await pool.query(`
+        const { startDate, endDate, role, severity, action } = req.query;
+
+        const conditions = [];
+        const values = [];
+
+        if (startDate) {
+            values.push(startDate);
+            conditions.push(`created_at >= $${values.length}::date`);
+        }
+
+        if (endDate) {
+            values.push(endDate);
+            conditions.push(
+                `created_at < ($${values.length}::date + INTERVAL '1 day')`
+            );
+        }
+
+        if (role) {
+            values.push(role);
+            conditions.push(`role = $${values.length}`);
+        }
+
+        if (severity) {
+            values.push(severity);
+            conditions.push(`severity = $${values.length}`);
+        }
+
+        if (action) {
+            values.push(action);
+            conditions.push(`action = $${values.length}`);
+        }
+
+        const whereClause =
+            conditions.length > 0
+                ? `WHERE ${conditions.join(' AND ')}`
+                : '';
+
+        const result = await pool.query(
+            `
             SELECT
                 audit_id,
                 action,
                 target,
+                performed_by,
                 ip_address,
-                created_at
+                created_at,
+                role,
+                severity,
+                module,
+                details
             FROM audit_logs
+            ${whereClause}
             ORDER BY created_at DESC
-            LIMIT 10
-        `);
+            LIMIT 100
+            `,
+            values
+        );
 
-        return res.status(200).json(result.rows);
+        const logs = result.rows.map((log) => ({
+            audit_id: log.audit_id,
+            timestamp: log.created_at,
+            user_name: log.target || 'Unknown User',
+            action: log.action,
+            module: log.module || 'System',
+            details: log.details || '-',
+            ip_address: log.ip_address,
+            performed_by: log.performed_by,
+            role: log.role || 'Unknown',
+            severity: log.severity || 'Info'
+        }));
+
+        return res.status(200).json(logs);
 
     } catch (error) {
         console.error('Fetch audit logs error:', error);
@@ -817,5 +1002,224 @@ export const getUsersByRole = async (req, res) => {
     } catch (error) {
         console.error('Get users by role error:', error);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+export const updateUserStatus = async (req, res) => {
+    const { role, id } = req.params;
+    const { is_active } = req.body;
+
+    if (!['Student', 'Lecturer'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    if (typeof is_active !== 'boolean') {
+        return res.status(400).json({
+            error: 'is_active must be true or false'
+        });
+    }
+
+    try {
+        const table = role === 'Student' ? 'students' : 'lecturers';
+        const idColumn = role === 'Student' ? 'student_id' : 'lecturer_id';
+
+        const result = await pool.query(
+            `
+            UPDATE ${table}
+            SET is_active = $1
+            WHERE ${idColumn} = $2
+            RETURNING *
+            `,
+            [is_active, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'User not found'
+            });
+        }
+
+        const updatedUser = result.rows[0];
+
+        const userName =
+            role === 'Student'
+                ? updatedUser.student_name
+                : updatedUser.name;
+
+        const action = is_active
+            ? 'User activated'
+            : 'User deactivated';
+
+        const details = is_active
+            ? `${role} account activated by Admin`
+            : `${role} account deactivated by Admin`;
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                action,
+                userName,
+                req.body?.userId || null,
+                req.ip,
+                role,
+                is_active ? 'Info' : 'Warning',
+                'User Management',
+                details
+            ]
+        );
+
+        return res.status(200).json({
+            message: action,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Update user status error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
+
+export const deleteUser = async (req, res) => {
+    const { role, id } = req.params;
+
+    if (!['Student', 'Lecturer'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    try {
+        const table = role === 'Student' ? 'students' : 'lecturers';
+        const idColumn = role === 'Student' ? 'student_id' : 'lecturer_id';
+
+        const result = await pool.query(
+            `
+            SELECT *
+            FROM ${table}
+            WHERE ${idColumn} = $1
+            `,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'User not found'
+            });
+        }
+
+        const deletedUser = result.rows[0];
+
+        const userName =
+            role === 'Student'
+                ? deletedUser.student_name
+                : deletedUser.name;
+
+        await pool.query(
+            `
+            DELETE FROM ${table}
+            WHERE ${idColumn} = $1
+            `,
+            [id]
+        );
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'User deleted',
+                userName,
+                req.body?.userId || null,
+                req.ip,
+                role,
+                'Critical',
+                'User Management',
+                `${role} account deleted by Admin`
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'User deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete user error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
+export const deleteRole = async (req, res) => {
+    const { roleId } = req.params;
+
+    try {
+        const roleResult = await pool.query(
+            `
+            SELECT role_id, role_name
+            FROM roles
+            WHERE role_id = $1
+            `,
+            [roleId]
+        );
+
+        if (roleResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Role not found'
+            });
+        }
+
+        const role = roleResult.rows[0];
+
+        if (role.role_name === 'Admin') {
+            return res.status(403).json({
+                error: 'The Admin role cannot be deleted'
+            });
+        }
+
+        await pool.query(
+            `DELETE FROM roles WHERE role_id = $1`,
+            [roleId]
+        );
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'Role deleted',
+                role.role_name,
+                req.body?.userId || null,
+                req.ip,
+                'Admin',
+                'Critical',
+                'Roles & Permissions',
+                `Role "${role.role_name}" was deleted by Admin`
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'Role deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete role error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
     }
 };
