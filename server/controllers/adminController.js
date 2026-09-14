@@ -241,7 +241,154 @@ export const getRoles = async (req, res) => {
     }
 };
 
+export const getRolePermissions = async (req, res) => {
+    const { roleId } = req.params;
 
+    try {
+        const result = await pool.query(`
+            SELECT
+                m.module_id,
+                m.module_name,
+                m.description,
+                COALESCE(rp.can_view, false) AS can_view,
+                COALESCE(rp.can_create, false) AS can_create,
+                COALESCE(rp.can_delete, false) AS can_delete,
+                COALESCE(rp.can_approve, false) AS can_approve
+            FROM modules m
+            LEFT JOIN role_permissions rp
+                ON rp.module_id = m.module_id
+                AND rp.role_id = $1
+            ORDER BY m.module_id
+        `, [roleId]);
+
+        return res.status(200).json({
+            permissions: result.rows
+        });
+
+    } catch (error) {
+        console.error('Fetch role permissions error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
+export const updateRolePermissions = async (req, res) => {
+    const { roleId } = req.params;
+    const { permissions } = req.body;
+
+    if (!Array.isArray(permissions)) {
+        return res.status(400).json({
+            error: 'Permissions must be an array'
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        /*
+         * Find the role first.
+         */
+        const roleResult = await client.query(
+            `
+            SELECT role_id, role_name
+            FROM roles
+            WHERE role_id = $1
+            `,
+            [roleId]
+        );
+
+        if (roleResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Role not found'
+            });
+        }
+
+        const role = roleResult.rows[0];
+
+        /*
+         * Admin is a protected system role.
+         *
+         * This check is intentionally performed on the backend.
+         * Disabling the buttons in React alone is not sufficient.
+         */
+        if (role.role_name === 'Admin') {
+            return res.status(403).json({
+                error: 'Admin permissions are protected and cannot be modified'
+            });
+        }
+
+        await client.query('BEGIN');
+
+        /*
+         * Update each module permission.
+         *
+         * ON CONFLICT requires the database to have a unique
+         * constraint on (role_id, module_id).
+         */
+        for (const permission of permissions) {
+            const {
+                module_id,
+                can_view = false,
+                can_create = false,
+                can_delete = false,
+                can_approve = false
+            } = permission;
+
+            await client.query(
+                `
+                INSERT INTO role_permissions
+                (
+                    role_id,
+                    module_id,
+                    can_view,
+                    can_create,
+                    can_delete,
+                    can_approve
+                )
+                VALUES ($1, $2, $3, $4, $5, $6)
+
+                ON CONFLICT (role_id, module_id)
+                DO UPDATE SET
+                    can_view = EXCLUDED.can_view,
+                    can_create = EXCLUDED.can_create,
+                    can_delete = EXCLUDED.can_delete,
+                    can_approve = EXCLUDED.can_approve
+                `,
+                [
+                    roleId,
+                    module_id,
+                    Boolean(can_view),
+                    Boolean(can_create),
+                    Boolean(can_delete),
+                    Boolean(can_approve)
+                ]
+            );
+        }
+
+        await client.query('COMMIT');
+
+        return res.status(200).json({
+            message: 'Role permissions updated successfully'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+
+        console.error(
+            'Update role permissions error:',
+            error
+        );
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+
+    } finally {
+        client.release();
+    }
+};
 export const addRole = async (req, res) => {
     try {
         const { role_name, description } = req.body;
