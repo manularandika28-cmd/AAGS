@@ -614,3 +614,28 @@ export const addUser = async (req, res) => {
         client.release();
     }
 };
+
+export const getAuditLogs = async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                audit_id,
+                action,
+                target,
+                ip_address,
+                created_at
+            FROM audit_logs
+            ORDER BY created_at DESC
+            LIMIT 10
+        `);
+
+        return res.status(200).json(result.rows);
+
+    } catch (error) {
+        console.error('Fetch audit logs error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

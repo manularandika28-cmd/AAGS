@@ -1,5 +1,12 @@
 import express from 'express';
-import { getPendingUsers, approveUser, rejectUser, getDashboardStats, addUser,getRoles, addRole } from '../controllers/adminController.js';
+import { getPendingUsers, 
+    approveUser,
+     rejectUser, 
+     getDashboardStats, 
+     addUser, 
+     getRoles, 
+     addRole,
+     getAuditLogs } from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -10,4 +17,5 @@ router.get('/dashboard-stats', getDashboardStats);
 router.post('/users', addUser);
 router.get('/roles', getRoles);
 router.post('/roles', addRole);
+router.get('/audit-logs', getAuditLogs);
 export default router;

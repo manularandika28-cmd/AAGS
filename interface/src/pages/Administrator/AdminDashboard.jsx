@@ -21,6 +21,7 @@ const API_BASE = 'http://localhost:3000/api/admin';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [showAddUser, setShowAddUser] = useState(false);
   const [roles, setRoles] = useState([]);
   const [showAddRole, setShowAddRole] = useState(false);
@@ -44,6 +45,21 @@ const [showAllRoles, setShowAllRoles] = useState(false);
 
 const [addingUser, setAddingUser] = useState(false);
 const [addUserError, setAddUserError] = useState('');
+const fetchAuditLogs = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/audit-logs`, {
+      credentials: 'include'
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setAuditLogs(data);
+    }
+  } catch (error) {
+    console.error('Fetch audit logs error:', error);
+  }
+};
 const fetchRoles = async () => {
     try {
         const res = await fetch(`${API_BASE}/roles`, {
@@ -100,7 +116,57 @@ const handleAddRole = async (e) => {
     setAddingRole(false);
   }
 };
+const handleAddUser = async (e) => {
+  e.preventDefault();
 
+  setAddingUser(true);
+  setAddUserError('');
+
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(userForm)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create user');
+    }
+
+    // Refresh dashboard data so the new user appears immediately
+    const statsRes = await fetch(`${API_BASE}/dashboard-stats`, {
+      credentials: 'include'
+    });
+
+    const statsData = await statsRes.json();
+
+    if (statsRes.ok) {
+      setStats(statsData);
+    }
+
+    // Reset form
+    setUserForm({
+      name: '',
+      email: '',
+      password: '',
+      role: 'Student',
+      department_id: ''
+    });
+
+    setShowAddUser(false);
+
+  } catch (error) {
+    console.error('Add user error:', error);
+    setAddUserError(error.message);
+  } finally {
+    setAddingUser(false);
+  }
+};
   useEffect(() => {
     const fetchStats = async () => {
         try {
@@ -120,6 +186,7 @@ const handleAddRole = async (e) => {
 
     fetchStats();
     fetchRoles();
+    fetchAuditLogs();
 
     const interval = setInterval(fetchStats, 30000);
 
@@ -527,62 +594,66 @@ const handleAddRole = async (e) => {
 </div>
 
               {/* Recent Audit Logs */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
 
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
 
-                  <h3 className="font-bold text-slate-900 text-base">
-                    Recent Audit Logs
-                  </h3>
+    <h3 className="font-bold text-slate-900 text-base">
+      Recent Audit Logs
+    </h3>
 
-                  <ExternalLink className="w-4 h-4 text-slate-400" />
+    <ExternalLink className="w-4 h-4 text-slate-400" />
 
-                </div>
+  </div>
 
-                <div className="space-y-3 text-xs">
+  <div className="space-y-4">
 
-                  {/* Audit 1 */}
-                  <div className="border-l-2 border-indigo-600 pl-3 space-y-0.5">
+    {auditLogs.length === 0 ? (
 
-                    <p className="font-bold text-slate-900">
-                      Role updated: Faculty Member
-                    </p>
+      <div className="text-center py-6 text-sm text-slate-400">
+        No audit activity yet.
+      </div>
 
-                    <p className="text-[11px] text-slate-400">
-                      By S. Wijesinghe • 10:42 AM
-                    </p>
+    ) : (
 
-                  </div>
+      auditLogs.slice(0, 3).map((log, index) => (
 
-                  {/* Audit 2 */}
-                  <div className="border-l-2 border-emerald-500 pl-3 space-y-0.5">
+        <div
+          key={log.audit_id}
+          className={`border-l-2 pl-3 space-y-0.5 ${
+            index === 0
+              ? 'border-indigo-600'
+              : index === 1
+              ? 'border-emerald-500'
+              : 'border-amber-500'
+          }`}
+        >
 
-                    <p className="font-bold text-slate-900">
-                      User login successful
-                    </p>
+          <p className=" text-[13px] text-slate-900">
+            {log.action}
+            {log.target && `: ${log.target}`}
+          </p>
 
-                    <p className="text-[11px] text-slate-400">
-                      Dr. A. Perera (IP: 192.168.1.45) • 09:15 AM
-                    </p>
+          <p className="text-[11px] text-slate-400">
+            {log.ip_address
+              ? `${log.target || 'Unknown User'} (IP: ${log.ip_address})`
+              : log.target || 'System'}
+            {' • '}
+            {new Date(log.created_at).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </p>
 
-                  </div>
+        </div>
 
-                  {/* Audit 3 */}
-                  <div className="border-l-2 border-amber-500 pl-3 space-y-0.5">
+      ))
 
-                    <p className="font-bold text-slate-900">
-                      Failed login attempt
-                    </p>
+    )}
 
-                    <p className="text-[11px] text-slate-400">
-                      Unknown User (IP: 45.33.22.1) • 08:02 AM
-                    </p>
+  </div>
 
-                  </div>
-
-                </div>
-
-              </div>
+</div>
 
             </div>
 
