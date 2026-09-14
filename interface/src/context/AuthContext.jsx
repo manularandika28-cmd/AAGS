@@ -91,20 +91,28 @@ const AuthProvider = ({ children }) => {
     | LOGOUT
     |--------------------------------------------------------------------------
     */
-    const logout = async () => {
-        try {
-            await fetch(`${API_BASE}/logout`, {
-                method: 'POST',
-                credentials: 'include',
-            });
-        } catch (error) {
-            console.error('Logout request failed:', error);
-        }
+   const logout = async () => {
+    try {
+        await fetch(`${API_BASE}/logout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                userId: user?.userId,
+                name: user?.name,
+                role: user?.role,
+            }),
+        });
+    } catch (error) {
+        console.error('Logout request failed:', error);
+    }
 
-        sessionStorage.removeItem('authSession');
-        setUser(null);
-        setAccessToken(null);
-    };
+    sessionStorage.removeItem('authSession');
+    setUser(null);
+    setAccessToken(null);
+};
 
     return (
         <AuthContext.Provider
