@@ -11,12 +11,14 @@ import {
   Users,
   Calendar,
   FileText,
-  UserCheck
+  UserCheck,
+  UserX,
+  Trash2
 } from 'lucide-react';
 
 const RolesAndPermissions = () => {
   const [selectedRole, setSelectedRole] = useState('');
-   const [dbRoles, setDbRoles] = useState([]);
+  const [dbRoles, setDbRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
   const [showAddRole, setShowAddRole] = useState(false);
   const [roleForm, setRoleForm] = useState({ role_name: '', description: '' });
@@ -31,6 +33,10 @@ const RolesAndPermissions = () => {
   const [loadingRoleUsers, setLoadingRoleUsers] = useState(false);
   const [showAllRoles, setShowAllRoles] = useState(false);
   const [temporaryRoles, setTemporaryRoles] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showDeleteRoleConfirm, setShowDeleteRoleConfirm] = useState(false);
+  const [deletingRole, setDeletingRole] = useState(false);
+  
   
 
   
@@ -46,6 +52,32 @@ const moduleIcons = {
   'Medical Submissions': FileText,
   'Meeting Scheduler': Calendar,
   'User Management': Users,
+};
+const fetchRoleUsers = async (roleName) => {
+  if (!roleName) return;
+
+  setLoadingUsers(true);
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/users/role/${encodeURIComponent(roleName)}`,
+      {
+        credentials: 'include',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+
+    const data = await response.json();
+    setRoleUsers(data);
+  } catch (error) {
+    console.error('Fetch role users error:', error);
+    setRoleUsers([]);
+  } finally {
+    setLoadingUsers(false);
+  }
 };
       const fetchRoles = async () => {
     try {
@@ -97,10 +129,11 @@ const moduleIcons = {
     fetchRoles();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
   if (!selectedRole && dbRoles.length > 0) {
     setSelectedRole(dbRoles[0].role_name);
     fetchRolePermissions(dbRoles[0].role_id);
+    fetchRoleUsers(dbRoles[0].role_name);
   }
 }, [dbRoles, selectedRole]);
 
@@ -141,6 +174,47 @@ const moduleIcons = {
       setAddingRole(false);
     }
   };
+
+  const handleDeleteRole = async () => {
+  const role = dbRoles.find((r) => r.role_name === selectedRole);
+
+  if (!role) return;
+
+  setDeletingRole(true);
+  setPermissionMessage('');
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/roles/${role.role_id}`,
+      {
+        method: 'DELETE',
+        credentials: 'include',
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || data.message || 'Failed to delete role'
+      );
+    }
+
+    setShowDeleteRoleConfirm(false);
+    setSelectedRole('');
+    setPermissions([]);
+    setRoleUsers([]);
+
+    await fetchRoles();
+
+    setPermissionMessage('Role deleted successfully.');
+  } catch (error) {
+    console.error('Delete role error:', error);
+    setPermissionMessage(error.message);
+  } finally {
+    setDeletingRole(false);
+  }
+};
 
   const handleViewRoleUsers = async (roleName) => {
     setModalRoleName(roleName);
@@ -395,6 +469,7 @@ const togglePermission = (moduleId, permission) => {
                         onClick={() => {
   setSelectedRole(r.role_name);
   fetchRolePermissions(r.role_id);
+  fetchRoleUsers(r.role_name);
 }}
                         className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 ${
                           isSelected
@@ -456,11 +531,24 @@ const togglePermission = (moduleId, permission) => {
                     This role grants comprehensive read, write, execution, and administrative privileges across all system components. Handle with extreme care.
                   </p>
                 </div>
+<div className="flex items-center gap-2">
+  <button
+    type="button"
+    onClick={() => setShowDeleteRoleConfirm(true)}
+    disabled={
+      deletingRole ||
+      !selectedRole ||
+      selectedRole === 'Admin'
+    }
+    className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+    Delete Role
+  </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-  type="button"
-  onClick={handleDuplicateRole}
+  <button
+    type="button"
+    onClick={handleDuplicateRole}
   disabled={duplicatingRole || !selectedRole}
   className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
 >
@@ -480,149 +568,234 @@ const togglePermission = (moduleId, permission) => {
               </div>
 
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <h3 className="font-bold text-slate-900 text-base">Module Permissions Matrix</h3>
-                  <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-500" /> Granted</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-slate-200" /> Denied</span>
+  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+    <div>
+      <h3 className="font-bold text-slate-900 text-base">
+        User Account Management
+      </h3>
+      <p className="text-xs text-slate-400 mt-1">
+        Activate, deactivate, or permanently remove user accounts
+      </p>
+    </div>
+
+    <div className="text-xs font-medium text-slate-500">
+      {roleUsers.length} user{roleUsers.length !== 1 ? 's' : ''}
+    </div>
+  </div>
+
+  <div className="overflow-x-auto">
+    <table className="w-full text-left text-xs border-collapse">
+      <thead>
+        <tr className="text-slate-400 font-semibold border-b border-slate-100 uppercase tracking-wider text-[10px]">
+          <th className="py-3 px-3">USER</th>
+          <th className="py-3 px-3">EMAIL</th>
+          <th className="py-3 px-3 text-center">STATUS</th>
+          <th className="py-3 px-3 text-right">ACTIONS</th>
+        </tr>
+      </thead>
+
+      <tbody className="divide-y divide-slate-100 text-slate-700">
+        {loadingUsers ? (
+          <tr>
+            <td
+              colSpan={4}
+              className="py-8 text-center text-xs text-slate-400"
+            >
+              Loading users...
+            </td>
+          </tr>
+        ) : roleUsers.length === 0 ? (
+          <tr>
+            <td
+              colSpan={4}
+              className="py-8 text-center text-xs text-slate-400"
+            >
+              No users found.
+            </td>
+          </tr>
+        ) : (
+          roleUsers.map((user) => (
+            <tr
+              key={user.id}
+              className="hover:bg-slate-50/50 transition-colors"
+            >
+              {/* USER */}
+              <td className="py-3 px-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#0A192F] text-white flex items-center justify-center text-[10px] font-bold">
+                    {user.name
+                      ?.split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()}
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {user.name}
+                    </p>
                   </div>
                 </div>
+              </td>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="text-slate-400 font-semibold border-b border-slate-100 uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-3">MODULE / RESOURCE</th>
-                        <th className="py-3 px-3 text-center">VIEW</th>
-                        <th className="py-3 px-3 text-center">CREATE/EDIT</th>
-                        <th className="py-3 px-3 text-center">DELETE</th>
-                        <th className="py-3 px-3 text-center">APPROVE</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-  {loadingPermissions ? (
-    <tr>
-      <td
-        colSpan={5}
-        className="py-8 text-center text-xs text-slate-400"
-      >
-        Loading permissions...
-      </td>
-    </tr>
-  ) : permissions.length === 0 ? (
-    <tr>
-      <td
-        colSpan={5}
-        className="py-8 text-center text-xs text-slate-400"
-      >
-        No permissions found.
-      </td>
-    </tr>
-  ) : (
-    permissions.map((p, idx) => {
-      const Icon = p.icon;
+              {/* EMAIL */}
+              <td className="py-3 px-3 text-slate-500">
+                {user.email}
+              </td>
 
-      return (
-        <tr
-          key={p.module_id || idx}
-          className={
-            p.isRestricted
-              ? 'bg-rose-50/20'
-              : 'hover:bg-slate-50/50'
-          }
-        >
-          {/* MODULE */}
-          <td className="py-3 px-3">
-            <div className="flex items-start gap-2.5">
-              <div className="p-2 bg-slate-100 text-slate-700 rounded-lg shrink-0 mt-0.5">
-                <Icon className="w-4 h-4" />
-              </div>
+              {/* STATUS */}
+              <td className="py-3 px-3 text-center">
+                {user.is_active ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Active
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    Inactive
+                  </span>
+                )}
+              </td>
 
-              <div>
-                <p className="font-bold text-slate-900">
-                  {p.module}
-                </p>
+              {/* ACTIONS */}
+              <td className="py-3 px-3">
+                <div className="flex items-center justify-end gap-2">
 
-                <p
-                  className={`text-[11px] ${
-                    p.isRestricted
-                      ? 'text-rose-500 font-medium'
-                      : 'text-slate-400'
-                  }`}
-                >
-                  {p.desc}
-                </p>
-              </div>
-            </div>
-          </td>
+                  {/* ACTIVATE */}
+                  {!user.is_active && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(
+                            `${API_BASE}/users/${encodeURIComponent(
+                              selectedRole
+                            )}/${user.id}/status`,
+                            {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              credentials: 'include',
+                              body: JSON.stringify({
+                                is_active: true,
+                              }),
+                            }
+                          );
 
-          {/* VIEW */}
-          <td className="py-3 px-3 text-center">
-            <div
-              className={`inline-flex items-center justify-center w-6 h-6 rounded ${
-                p.can_view
-                  ? 'bg-[#0A192F] text-white'
-                  : 'border border-slate-200 bg-white'
-              }`}
-            >
-              {p.can_view && (
-                <Check className="w-3.5 h-3.5" />
-              )}
-            </div>
-          </td>
+                          if (!response.ok) {
+                            throw new Error('Failed to activate user');
+                          }
 
-          {/* CREATE / EDIT */}
-          <td className="py-3 px-3 text-center">
-            <div
-              className={`inline-flex items-center justify-center w-6 h-6 rounded ${
-                p.can_create
-                  ? 'bg-[#0A192F] text-white'
-                  : 'border border-slate-200 bg-white'
-              }`}
-            >
-              {p.can_create && (
-                <Check className="w-3.5 h-3.5" />
-              )}
-            </div>
-          </td>
+                          await fetchRoleUsers(selectedRole);
+                        } catch (error) {
+                          console.error(
+                            'Activate user error:',
+                            error
+                          );
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors text-[10px] font-semibold"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Activate
+                    </button>
+                  )}
 
-          {/* DELETE */}
-          <td className="py-3 px-3 text-center">
-            <div
-              className={`inline-flex items-center justify-center w-6 h-6 rounded ${
-                p.can_delete
-                  ? 'bg-[#0A192F] text-white'
-                  : 'border border-slate-200 bg-white'
-              }`}
-            >
-              {p.can_delete && (
-                <Check className="w-3.5 h-3.5" />
-              )}
-            </div>
-          </td>
+                  {/* DEACTIVATE */}
+                  {user.is_active && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(
+                            `${API_BASE}/users/${encodeURIComponent(
+                              selectedRole
+                            )}/${user.id}/status`,
+                            {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              credentials: 'include',
+                              body: JSON.stringify({
+                                is_active: false,
+                              }),
+                            }
+                          );
 
-          {/* APPROVE */}
-          <td className="py-3 px-3 text-center">
-            <div
-              className={`inline-flex items-center justify-center w-6 h-6 rounded ${
-                p.can_approve
-                  ? 'bg-[#0A192F] text-white'
-                  : 'border border-slate-200 bg-white'
-              }`}
-            >
-              {p.can_approve && (
-                <Check className="w-3.5 h-3.5" />
-              )}
-            </div>
-          </td>
-        </tr>
-      );
-    })
-  )}
-</tbody>
-                  </table>
+                          if (!response.ok) {
+                            throw new Error('Failed to deactivate user');
+                          }
+
+                          await fetchRoleUsers(selectedRole);
+                        } catch (error) {
+                          console.error(
+                            'Deactivate user error:',
+                            error
+                          );
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-colors text-[10px] font-semibold"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                      Deactivate
+                    </button>
+                  )}
+
+                  {/* DELETE */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const confirmed = window.confirm(
+                        `Are you sure you want to permanently delete ${user.name}?`
+                      );
+
+                      if (!confirmed) return;
+
+                      try {
+                        const response = await fetch(
+                          `${API_BASE}/users/${encodeURIComponent(
+                            selectedRole
+                          )}/${user.id}`,
+                          {
+                            method: 'DELETE',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            credentials: 'include',
+                          }
+                        );
+
+                        if (!response.ok) {
+                          throw new Error('Failed to delete user');
+                        }
+
+                        await fetchRoleUsers(selectedRole);
+                      } catch (error) {
+                        console.error(
+                          'Delete user error:',
+                          error
+                        );
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-colors text-[10px] font-semibold"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+
                 </div>
-              </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
             </div>
           </div>
                 </main>
@@ -784,6 +957,54 @@ const togglePermission = (moduleId, permission) => {
           className="px-4 py-2 rounded-xl bg-[#0A192F] hover:bg-[#1E3A8A] text-white text-xs font-bold transition-colors disabled:opacity-50"
         >
           {savingPermissions ? 'Saving...' : 'Confirm Save'}
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+
+{showDeleteRoleConfirm && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
+
+      <div className="flex items-start gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-rose-50 text-rose-600">
+          <Trash2 className="w-5 h-5" />
+        </div>
+
+        <div>
+          <h3 className="text-base font-bold text-slate-900">
+            Delete Role?
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Are you sure you want to permanently delete the role{' '}
+            <span className="font-semibold text-slate-700">
+              {selectedRole}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <button
+          type="button"
+          onClick={() => setShowDeleteRoleConfirm(false)}
+          disabled={deletingRole}
+          className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteRole}
+          disabled={deletingRole}
+          className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+        >
+          {deletingRole ? 'Deleting...' : 'Delete Role'}
         </button>
       </div>
 
