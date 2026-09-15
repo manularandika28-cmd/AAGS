@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
+import * as XLSX from 'xlsx';
 import {
   Download,
   ChevronDown,
@@ -107,7 +108,32 @@ setAuditLogs(formattedLogs);
     setLoading(false);
   }
 };
+const handleExportReport = () => {
+  const auditData = auditLogs.map((log) => ({
+    Timestamp: log.timestamp,
+    Severity: log.severity,
+    User: log.userName,
+    Action: log.action,
+    Module: log.module,
+    Details: log.details,
+    'IP Address': log.ip_address || ''
+  }));
 
+  const workbook = XLSX.utils.book_new();
+
+  const auditSheet = XLSX.utils.json_to_sheet(auditData);
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    auditSheet,
+    'Audit Trail'
+  );
+
+  XLSX.writeFile(
+    workbook,
+    'AAGS_Audit_Trail.xlsx'
+  );
+};
 useEffect(() => {
   fetchAuditLogs();
 }, []);
@@ -136,10 +162,14 @@ const currentLogs = auditLogs.slice(
               </p>
             </div>
 
-            <button className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
+            <button 
+  type="button" 
+  onClick={handleExportReport} 
+  className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors" 
+> 
+  <Download className="w-4 h-4" /> 
+  Export Logs 
+</button>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
@@ -314,7 +344,18 @@ const currentLogs = auditLogs.slice(
                     const SeverityIcon = log.icon;
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">{log.timestamp}</td>
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+  {new Date(log.timestamp).toLocaleString('en-GB', {
+    timeZone: 'Asia/Colombo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).replace(',', '')} 
+</td>
                         <td className="py-3.5 px-4">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border ${log.severityBg}`}>
                             <SeverityIcon className="w-3 h-3" />
