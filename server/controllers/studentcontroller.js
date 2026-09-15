@@ -5,11 +5,21 @@ export const getStudentDashboardData = async (req, res) => {
   try {
     const studentId = req.user.userId;
 
-    // 1. Student Name & Profile
-    let student = { student_id: studentId, student_name: req.user.name || 'Student', email: req.user.email };
+    // 1. Student Profile (including department, level, and semester)
+    let student = { 
+      student_id: studentId, 
+      student_name: req.user.name || 'Student', 
+      email: req.user.email,
+      academic_level: 'Level 2',
+      semester: 'Semester 1',
+      department_id: 1
+    };
+
     try {
       const studentRes = await pool.query(
-        `SELECT student_id, student_name, email FROM students WHERE student_id = $1`,
+        `SELECT student_id, student_name, email, department_id, academic_level, semester 
+         FROM students 
+         WHERE student_id = $1`,
         [studentId]
       );
       if (studentRes.rows.length > 0) {
@@ -19,17 +29,18 @@ export const getStudentDashboardData = async (req, res) => {
       console.warn('Student query error:', e.message);
     }
 
-    // 2. Overall Attendance Percentage Calculation
+    // 2. Attendance Calculation (DISTINCT session guard)
     let attendanceRate = 75;
     try {
       const attendanceRes = await pool.query(
         `SELECT 
-           COUNT(s.session_id) AS total_sessions,
-           COUNT(ar.attendance_id) FILTER (WHERE ar.status = 'present') AS attended_sessions
+           COUNT(DISTINCT s.session_id) AS total_sessions,
+           COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present') AS attended_sessions
          FROM enrollments e
-         JOIN courses c ON e.course_id = c.course_id
-         LEFT JOIN sessions s ON s.course_id = c.course_id
-         LEFT JOIN attendance_records ar ON ar.session_id = s.session_id AND ar.student_id = e.student_id
+         JOIN sessions s ON s.course_id = e.course_id
+         LEFT JOIN attendance_records ar 
+           ON ar.session_id = s.session_id 
+          AND ar.student_id = e.student_id
          WHERE e.student_id = $1`,
         [studentId]
       );
@@ -40,7 +51,7 @@ export const getStudentDashboardData = async (req, res) => {
       console.warn('Attendance query error:', e.message);
     }
 
-    // 3. Upcoming Confirmed Meetings Count
+    // 3. Upcoming Confirmed Meetings
     let upcomingMeetings = 0;
     try {
       const meetingsRes = await pool.query(
@@ -56,7 +67,7 @@ export const getStudentDashboardData = async (req, res) => {
       console.warn('Meetings query error:', e.message);
     }
 
-    // 4. Medical Status (Latest submission status)
+    // 4. Medical Status
     let latestMedical = { status: 'Cleared', date_to: null };
     try {
       const medicalRes = await pool.query(
@@ -74,31 +85,32 @@ export const getStudentDashboardData = async (req, res) => {
       console.warn('Medical query error:', e.message);
     }
 
-    // 5. Weekly Timetable Sessions for Enrolled Courses
+    // 5. OFFICIAL TIMETABLE FOR STUDENT'S DEPT, LEVEL & SEMESTER
     let timetable = [];
     try {
       const timetableRes = await pool.query(
         `SELECT 
-           s.session_id,
-           c.course_name,
-           c.course_code,
-           s.location,
-           s.day_of_week,
-           TO_CHAR(s.start_time::time, 'HH24:MI') AS start_time,
-           TO_CHAR(s.end_time::time, 'HH24:MI') AS end_time
-         FROM enrollments e
-         JOIN sessions s ON e.course_id = s.course_id
-         JOIN courses c ON s.course_id = c.course_id
-         WHERE e.student_id = $1
-         ORDER BY s.start_time ASC`,
-        [studentId]
+           timetable_id,
+           day_of_week,
+           TO_CHAR(start_time, 'HH24:MI') AS start_time,
+           TO_CHAR(end_time, 'HH24:MI') AS end_time,
+           course_code,
+           course_name,
+           location,
+           lecturer_abbr
+         FROM department_timetables
+         WHERE department_id = $1 
+           AND academic_level = $2 
+           AND semester = $3
+         ORDER BY start_time ASC`,
+        [student.department_id || 1, student.academic_level || 'Level 2', student.semester || 'Semester 1']
       );
       timetable = timetableRes.rows;
     } catch (e) {
       console.warn('Timetable query error:', e.message);
     }
 
-    // 6. Recent Alerts / Notifications
+    // 6. Recent Alerts
     let alerts = [];
     try {
       const alertsRes = await pool.query(

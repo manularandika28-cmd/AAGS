@@ -63,17 +63,22 @@ const StudentDashboard = () => {
   const timetable = dashboardData?.timetable || [];
   const alerts = dashboardData?.alerts || [];
 
-  // Group timetable by time slot
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  // Group timetable by day and time slot
+  const hasSaturday = timetable.some((s) => s.day_of_week?.toLowerCase() === 'saturday');
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', ...(hasSaturday ? ['Saturday'] : [])];
   
   // Extract unique time slots from timetable or fallback to standard slots if available
-  const timeSlots = Array.from(
+  const defaultSlots = ['08:00 - 10:00', '10:00 - 12:00', '13:00 - 15:00', '15:00 - 17:00'];
+
+  const dynamicSlots = Array.from(
     new Set(
-      timetable.map(
-        (s) => `${s.start_time || '08:00'} - ${s.end_time || '10:00'}`
-      )
+      timetable
+        .filter((s) => s.start_time && s.end_time)
+        .map((s) => `${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)}`)
     )
-  );
+  ).sort();
+
+  const displaySlots = dynamicSlots.length > 0 ? dynamicSlots : defaultSlots;
 
   const colorStyles = [
     { bg: 'bg-[#EBF3FC]', border: 'border-[#2563EB]', text: 'text-[#1E3A8A]' },
@@ -244,14 +249,16 @@ const StudentDashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {timeSlots.map((slot, slotIdx) => (
+                          {displaySlots.map((slot, slotIdx) => (
                             <tr key={slotIdx} className="h-20">
-                              <td className="py-3 px-3 font-medium text-slate-700 align-top text-[11px] whitespace-nowrap">
+                              <td className="py-3 px-3 font-semibold text-slate-600 align-top text-[11px] whitespace-nowrap bg-slate-50/50">
                                 {slot}
                               </td>
                               {daysOfWeek.map((day) => {
                                 const session = timetable.find((s) => {
-                                  const sSlot = `${s.start_time || '08:00'} - ${s.end_time || '10:00'}`;
+                                  const startStr = s.start_time ? s.start_time.slice(0, 5) : '08:00';
+                                  const endStr = s.end_time ? s.end_time.slice(0, 5) : '10:00';
+                                  const sSlot = `${startStr} - ${endStr}`;
                                   return (
                                     sSlot === slot &&
                                     s.day_of_week?.toLowerCase() === day.toLowerCase()
@@ -262,16 +269,23 @@ const StudentDashboard = () => {
                                   return <td key={day} className="py-3 px-2 align-top" />;
                                 }
 
-                                const style = colorStyles[session.session_id % colorStyles.length] || colorStyles[0];
+                                const styleIndex = (session.timetable_id || slotIdx) % colorStyles.length;
+                                const style = colorStyles[styleIndex] || colorStyles[0];
 
                                 return (
-                                  <td key={day} className="py-3 px-2 align-top">
-                                    <div className={`${style.bg} border-l-4 ${style.border} p-2 rounded-r-md`}>
-                                      <p className={`font-bold ${style.text} text-xs leading-tight`}>
+                                  <td key={day} className="py-2.5 px-2 align-top">
+                                    <div className={`${style.bg} border-l-4 ${style.border} p-2.5 rounded-r-lg shadow-xs space-y-1 transition-transform hover:-translate-y-0.5`}>
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-extrabold text-[10px] tracking-wide text-slate-600 uppercase">{session.course_code}</span>
+                                        {session.lecturer_abbr && (
+                                          <span className="text-[9px] font-bold bg-white/90 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">{session.lecturer_abbr}</span>
+                                        )}
+                                      </div>
+                                      <p className={`font-bold ${style.text} text-xs leading-snug`}>
                                         {session.course_name}
                                       </p>
-                                      <p className="text-[10px] text-slate-500 mt-0.5">
-                                        {session.location || 'Lecture Hall'} ({session.course_code})
+                                      <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+                                        <span>📍</span> {session.location || 'Lecture Hall'}
                                       </p>
                                     </div>
                                   </td>
