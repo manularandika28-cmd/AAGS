@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 const API_BASE = 'http://localhost:3000/api/admin';
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 const RolesAndPermissions = () => {
+  const { accessToken } = useAuth();
   const [selectedRole, setSelectedRole] = useState('');
   const [dbRoles, setDbRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
@@ -46,6 +48,9 @@ const [loadingPermissions, setLoadingPermissions] = useState(false);
 const [savingPermissions, setSavingPermissions] = useState(false);
 const [duplicatingRole, setDuplicatingRole] = useState(false);
 const [permissionMessage, setPermissionMessage] = useState('');
+const [userActionConfirm, setUserActionConfirm] = useState(null);
+const [userActionLoading, setUserActionLoading] = useState(false);
+const [userNotification, setUserNotification] = useState(null);
 
 const moduleIcons = {
   'Attendance Records': UserCheck,
@@ -412,7 +417,99 @@ const togglePermission = (moduleId, permission) => {
   setPermissionMessage('');
 };
 
-  
+  const showUserNotification = (type, message) => {
+  setUserNotification({ type, message });
+
+  setTimeout(() => {
+    setUserNotification(null);
+  }, 3500);
+};
+
+const askUserActionConfirmation = (user, action) => {
+  setUserActionConfirm({
+    user,
+    action,
+  });
+};
+
+const executeUserAction = async () => {
+  if (!userActionConfirm) return;
+
+  const { user, action } = userActionConfirm;
+
+  setUserActionLoading(true);
+
+  try {
+    let response;
+
+    if (action === 'activate' || action === 'deactivate') {
+      response = await fetch(
+        `${API_BASE}/users/${encodeURIComponent(selectedRole)}/${user.id}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            is_active: action === 'activate',
+          }),
+        }
+      );
+    }
+
+    if (action === 'delete') {
+      response = await fetch(
+        `${API_BASE}/users/${encodeURIComponent(selectedRole)}/${user.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        }
+      );
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        data.message ||
+        `Failed to ${action} user`
+      );
+    }
+
+    setUserActionConfirm(null);
+
+    await fetchRoleUsers(selectedRole);
+
+    const actionText = {
+      activate: 'activated',
+      deactivate: 'deactivated',
+      delete: 'permanently deleted',
+    };
+
+    showUserNotification(
+      'success',
+      `${user.name} has been ${actionText[action]}.`
+    );
+  } catch (error) {
+    console.error(`User ${action} error:`, error);
+
+    setUserActionConfirm(null);
+
+    showUserNotification(
+      'warning',
+      error.message
+    );
+  } finally {
+    setUserActionLoading(false);
+  }
+};
 
   return (
     <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
@@ -666,126 +763,37 @@ const togglePermission = (moduleId, permission) => {
                   {/* ACTIVATE */}
                   {!user.is_active && (
                     <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(
-                            `${API_BASE}/users/${encodeURIComponent(
-                              selectedRole
-                            )}/${user.id}/status`,
-                            {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              credentials: 'include',
-                              body: JSON.stringify({
-                                is_active: true,
-                              }),
-                            }
-                          );
-
-                          if (!response.ok) {
-                            throw new Error('Failed to activate user');
-                          }
-
-                          await fetchRoleUsers(selectedRole);
-                        } catch (error) {
-                          console.error(
-                            'Activate user error:',
-                            error
-                          );
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors text-[10px] font-semibold"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      Activate
-                    </button>
+  type="button"
+  onClick={() => askUserActionConfirmation(user, 'activate')}
+  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors text-[10px] font-semibold"
+>
+  <UserCheck className="w-3.5 h-3.5" />
+  Activate
+</button>
                   )}
 
                   {/* DEACTIVATE */}
                   {user.is_active && (
                     <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(
-                            `${API_BASE}/users/${encodeURIComponent(
-                              selectedRole
-                            )}/${user.id}/status`,
-                            {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              credentials: 'include',
-                              body: JSON.stringify({
-                                is_active: false,
-                              }),
-                            }
-                          );
-
-                          if (!response.ok) {
-                            throw new Error('Failed to deactivate user');
-                          }
-
-                          await fetchRoleUsers(selectedRole);
-                        } catch (error) {
-                          console.error(
-                            'Deactivate user error:',
-                            error
-                          );
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-colors text-[10px] font-semibold"
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                      Deactivate
-                    </button>
+  type="button"
+  onClick={() => askUserActionConfirmation(user, 'deactivate')}
+  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-colors text-[10px] font-semibold"
+>
+  <UserX className="w-3.5 h-3.5" />
+  Deactivate
+</button>
                   )}
 
                   {/* DELETE */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const confirmed = window.confirm(
-                        `Are you sure you want to permanently delete ${user.name}?`
-                      );
-
-                      if (!confirmed) return;
-
-                      try {
-                        const response = await fetch(
-                          `${API_BASE}/users/${encodeURIComponent(
-                            selectedRole
-                          )}/${user.id}`,
-                          {
-                            method: 'DELETE',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            credentials: 'include',
-                          }
-                        );
-
-                        if (!response.ok) {
-                          throw new Error('Failed to delete user');
-                        }
-
-                        await fetchRoleUsers(selectedRole);
-                      } catch (error) {
-                        console.error(
-                          'Delete user error:',
-                          error
-                        );
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-colors text-[10px] font-semibold"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
+                  
+<button
+  type="button"
+  onClick={() => askUserActionConfirmation(user, 'delete')}
+  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-colors text-[10px] font-semibold"
+>
+  <Trash2 className="w-3.5 h-3.5" />
+  Delete
+</button>
 
                 </div>
               </td>
@@ -1008,6 +1016,125 @@ const togglePermission = (moduleId, permission) => {
         </button>
       </div>
 
+    </div>
+  </div>
+)}
+{userActionConfirm && (
+  <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-[min(430px,calc(100%-32px))]">
+    <div className="bg-[#071B38]/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl overflow-hidden">
+
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+
+          <div
+            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${
+              userActionConfirm.action === 'delete'
+                ? 'bg-rose-500/15 text-rose-300'
+                : userActionConfirm.action === 'deactivate'
+                  ? 'bg-amber-500/15 text-amber-300'
+                  : 'bg-emerald-500/15 text-emerald-300'
+            }`}
+          >
+            {userActionConfirm.action === 'delete' ? (
+              <Trash2 className="w-5 h-5" />
+            ) : userActionConfirm.action === 'deactivate' ? (
+              <UserX className="w-5 h-5" />
+            ) : (
+              <UserCheck className="w-5 h-5" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="text-white font-semibold text-sm">
+              {userActionConfirm.action === 'delete'
+                ? 'Delete User?'
+                : userActionConfirm.action === 'deactivate'
+                  ? 'Deactivate User?'
+                  : 'Activate User?'}
+            </h3>
+
+            <p className="text-white/60 text-xs mt-1 leading-relaxed">
+              {userActionConfirm.action === 'delete'
+                ? `Are you sure you want to permanently delete ${userActionConfirm.user.name}? This action cannot be undone.`
+                : userActionConfirm.action === 'deactivate'
+                  ? `Are you sure you want to deactivate ${userActionConfirm.user.name}?`
+                  : `Are you sure you want to activate ${userActionConfirm.user.name}?`}
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <div className="flex border-t border-white/10">
+
+        <button
+          type="button"
+          onClick={() => setUserActionConfirm(null)}
+          disabled={userActionLoading}
+          className="flex-1 py-3 text-xs font-semibold text-white/60 hover:bg-white/5 transition-colors disabled:opacity-40"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={executeUserAction}
+          disabled={userActionLoading}
+          className={`flex-1 py-3 text-xs font-semibold border-l border-white/10 transition-colors disabled:opacity-50 ${
+            userActionConfirm.action === 'delete'
+              ? 'text-rose-300 hover:bg-rose-500/10'
+              : userActionConfirm.action === 'deactivate'
+                ? 'text-amber-300 hover:bg-amber-500/10'
+                : 'text-emerald-300 hover:bg-emerald-500/10'
+          }`}
+        >
+          {userActionLoading
+            ? 'Processing...'
+            : userActionConfirm.action === 'delete'
+              ? 'Delete'
+              : userActionConfirm.action === 'deactivate'
+                ? 'Deactivate'
+                : 'Activate'}
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
+{userNotification && (
+  <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[110] w-[min(430px,calc(100%-32px))]">
+    <div
+      className={`backdrop-blur-2xl rounded-2xl border shadow-2xl px-4 py-3 flex items-center gap-3 ${
+        userNotification.type === 'warning'
+          ? 'bg-amber-500/15 border-amber-400/25'
+          : 'bg-emerald-500/15 border-emerald-400/25'
+      }`}
+    >
+      <div
+        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+          userNotification.type === 'warning'
+            ? 'bg-amber-400/15 text-amber-300'
+            : 'bg-emerald-400/15 text-emerald-300'
+        }`}
+      >
+        {userNotification.type === 'warning' ? (
+          <span className="font-bold">!</span>
+        ) : (
+          <Check className="w-4 h-4" />
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-white text-xs font-semibold">
+          {userNotification.type === 'warning'
+            ? 'Warning'
+            : 'Success'}
+        </p>
+
+        <p className="text-white/60 text-[11px] mt-0.5">
+          {userNotification.message}
+        </p>
+      </div>
     </div>
   </div>
 )}
