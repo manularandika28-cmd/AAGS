@@ -1,4 +1,5 @@
 import express from 'express';
+import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 import { getPendingUsers, 
      approveUser,
      rejectUser, 
@@ -13,6 +14,8 @@ import { getPendingUsers,
      updateUserStatus,
      deleteUser,
      deleteRole,
+     getSystemConfiguration,
+     updateSystemConfiguration
     
     
       
@@ -32,8 +35,35 @@ router.get('/audit-logs', getAuditLogs);
 router.get('/users/role/:roleName', getUsersByRole);
 router.get('/roles/:roleId/permissions', getRolePermissions);
 router.put('/roles/:roleId/permissions', updateRolePermissions);
-router.patch('/users/:role/:id/status', updateUserStatus);
-router.delete('/users/:role/:id', deleteUser);
+router.patch(
+    '/users/:role/:id/status',
+    verifyToken,
+    authorize('Admin'),
+    updateUserStatus
+);
+router.delete(
+    '/users/:role/:id',
+    verifyToken,
+    authorize('Admin'),
+    deleteUser
+);
+
+router.get(
+    '/system-configuration',
+    verifyToken,
+    authorize('Admin'),
+    getSystemConfiguration
+);
+
+router.put(
+    '/system-configuration',
+    verifyToken,
+    authorize('Admin'),
+    updateSystemConfiguration
+);
+
 router.delete('/roles/:roleId', deleteRole);
+
+
 
 export default router;
