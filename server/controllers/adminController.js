@@ -278,31 +278,27 @@ export const getDashboardStats = async (req, res) => {
 export const getRoles = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                r.role_id,
-                r.role_name,
-                r.description,
-                r.created_at,
-                CASE r.role_name
-                    WHEN 'Student' THEN (SELECT COUNT(*) FROM students WHERE role_id = r.role_id)
-                    WHEN 'Lecturer' THEN (SELECT COUNT(*) FROM lecturers WHERE role_id = r.role_id)
-                    WHEN 'HOD' THEN (SELECT COUNT(*) FROM hods WHERE role_id = r.role_id)
-                    WHEN 'Dean' THEN (SELECT COUNT(*) FROM deans WHERE role_id = r.role_id)
-                    WHEN 'Admin' THEN (SELECT COUNT(*) FROM admins WHERE role_id = r.role_id)
-                    ELSE 0
-                END AS user_count
-            FROM roles r
-            ORDER BY r.role_id
+            SELECT 
+                r.role_id, 
+                r.role_name, 
+                r.description, 
+                r.created_at, 
+                CASE r.role_name 
+                    WHEN 'Student' THEN (SELECT COUNT(*) FROM students)
+                    WHEN 'Lecturer' THEN (SELECT COUNT(*) FROM lecturers)
+                    WHEN 'HOD' THEN (SELECT COUNT(*) FROM hods)
+                    WHEN 'Dean' THEN (SELECT COUNT(*) FROM deans)
+                    WHEN 'Admin' THEN (SELECT COUNT(*) FROM admins)
+                    ELSE 0 
+                END AS user_count 
+            FROM roles r 
+            ORDER BY r.role_id 
         `);
 
         return res.status(200).json(result.rows);
-
     } catch (error) {
-        console.error('Fetch roles error:', error);
-
-        return res.status(500).json({
-            error: 'Internal server error'
-        });
+        console.error('Get roles error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -984,12 +980,12 @@ export const getUsersByRole = async (req, res) => {
     const { roleName } = req.params;
 
     const queries = {
-        Student: `SELECT student_id AS id, student_name AS name, email, is_active FROM students`,
-        Lecturer: `SELECT lecturer_id AS id, name, email, is_active FROM lecturers`,
-        HOD: `SELECT hod_id AS id, name, email FROM hods`,
-        Dean: `SELECT dean_id AS id, name, email FROM deans`,
-        Admin: `SELECT admin_id AS id, admin_name AS name, email FROM admins`,
-    };
+    Student: `SELECT student_id AS id, student_name AS name, email, is_active FROM students`,
+    Lecturer: `SELECT lecturer_id AS id, name, email, is_active FROM lecturers`,
+    HOD: `SELECT hod_id AS id, name, email, is_active FROM hods`,
+    Dean: `SELECT dean_id AS id, name, email, is_active FROM deans`,
+    Admin: `SELECT admin_id AS id, admin_name AS name, email, is_active FROM admins`,
+};
 
     const query = queries[roleName];
     if (!query) {
@@ -1008,7 +1004,7 @@ export const updateUserStatus = async (req, res) => {
     const { role, id } = req.params;
     const { is_active } = req.body;
 
-    if (!['Student', 'Lecturer'].includes(role)) {
+    if (!['Student', 'Lecturer', 'HOD', 'Dean', 'Admin'].includes(role)) {
         return res.status(400).json({ error: 'Invalid role' });
     }
 
@@ -1019,8 +1015,70 @@ export const updateUserStatus = async (req, res) => {
     }
 
     try {
-        const table = role === 'Student' ? 'students' : 'lecturers';
-        const idColumn = role === 'Student' ? 'student_id' : 'lecturer_id';
+        const tableMap = {
+    Student: 'students',
+    Lecturer: 'lecturers',
+    HOD: 'hods',
+    Dean: 'deans',
+    Admin: 'admins',
+};
+
+const idColumnMap = {
+    Student: 'student_id',
+    Lecturer: 'lecturer_id',
+    HOD: 'hod_id',
+    Dean: 'dean_id',
+    Admin: 'admin_id',
+};
+
+const table = tableMap[role];
+const idColumn = idColumnMap[role];
+
+if (role === 'Admin') {
+    const currentAdminId = req.user?.userId;
+
+    // Prevent an Admin from deactivating their own account
+    if (String(id) === String(currentAdminId)) {
+        return res.status(403).json({
+            error: 'You cannot deactivate your own Admin account'
+        });
+    }
+
+    // Prevent the last active Admin from being deactivated
+    if (is_active === false) {
+        const adminCountResult = await pool.query(
+            `
+            SELECT COUNT(*) AS count
+            FROM admins
+            WHERE is_active = TRUE
+            `
+        );
+
+        const activeAdminCount = Number(adminCountResult.rows[0].count);
+
+        if (activeAdminCount <= 1) {
+            return res.status(403).json({
+                error: 'The last active Admin cannot be deactivated'
+            });
+        }
+    }
+}if (role === 'Admin' && is_active === false) {
+    const adminCountResult = await pool.query(
+        `
+        SELECT COUNT(*) AS count
+        FROM admins
+        WHERE is_active = TRUE
+        `
+    );
+
+    const activeAdminCount = Number(adminCountResult.rows[0].count);
+
+    if (activeAdminCount <= 1) {
+        return res.status(403).json({
+            error: 'The last active Admin cannot be deactivated'
+        });
+    }
+}
 
         const result = await pool.query(
             `
@@ -1090,13 +1148,58 @@ export const updateUserStatus = async (req, res) => {
 export const deleteUser = async (req, res) => {
     const { role, id } = req.params;
 
-    if (!['Student', 'Lecturer'].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role' });
-    }
+    if (!['Student', 'Lecturer', 'HOD', 'Dean', 'Admin'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+}
+
 
     try {
-        const table = role === 'Student' ? 'students' : 'lecturers';
-        const idColumn = role === 'Student' ? 'student_id' : 'lecturer_id';
+        const tableMap = {
+    Student: 'students',
+    Lecturer: 'lecturers',
+    HOD: 'hods',
+    Dean: 'deans',
+    Admin: 'admins',
+};
+
+const idColumnMap = {
+    Student: 'student_id',
+    Lecturer: 'lecturer_id',
+    HOD: 'hod_id',
+    Dean: 'dean_id',
+    Admin: 'admin_id',
+};
+
+const table = tableMap[role];
+const idColumn = idColumnMap[role];
+
+if (role === 'Admin') {
+    const currentAdminId = req.user?.userId;
+
+    // Prevent an Admin from deleting their own account
+    if (String(id) === String(currentAdminId)) {
+        return res.status(403).json({
+            error: 'You cannot delete your own Admin account'
+        });
+    }
+
+    // Prevent deletion of the last active Admin
+    const adminCountResult = await pool.query(
+        `
+        SELECT COUNT(*) AS count
+        FROM admins
+        WHERE is_active = TRUE
+        `
+    );
+
+    const activeAdminCount = Number(adminCountResult.rows[0].count);
+
+    if (activeAdminCount <= 1) {
+        return res.status(403).json({
+            error: 'The last active Admin cannot be deleted'
+        });
+    }
+}
 
         const result = await pool.query(
             `
@@ -1115,10 +1218,12 @@ export const deleteUser = async (req, res) => {
 
         const deletedUser = result.rows[0];
 
-        const userName =
-            role === 'Student'
-                ? deletedUser.student_name
-                : deletedUser.name;
+       const userName =
+    role === 'Student'
+        ? deletedUser.student_name
+        : role === 'Admin'
+            ? deletedUser.admin_name
+            : deletedUser.name;
 
         await pool.query(
             `
@@ -1223,3 +1328,215 @@ export const deleteRole = async (req, res) => {
         });
     }
 };
+
+export const getSystemConfiguration = async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT config_id, config_value, description
+            FROM system_configs
+            ORDER BY config_id
+        `);
+
+        const settings = {
+            minimumAttendance: '80',
+            meetingDuration: '30',
+            maxFileSize: '10',
+
+            academicYear: '2026',
+            semester: 'Semester 2',
+            warningAttendance: '85',
+            maximumLeave: '4',
+
+            bookingNotice: '2',
+            advanceBooking: '30',
+            meetingReminder: '24',
+
+            medicalExpiryReminder: '30',
+            requireVerification: true,
+
+            sessionTimeout: '30',
+            maxLoginAttempts: '5',
+            lockoutDuration: '15',
+            mfaAdmins: true,
+
+            emailNotifications: true,
+            meetingNotifications: true,
+            attendanceNotifications: true,
+            medicalNotifications: true,
+
+            systemName: 'Faculty Student Management System',
+            timezone: 'Asia/Colombo',
+            dateFormat: 'DD/MM/YYYY',
+            maintenanceMode: false
+        };
+
+        result.rows.forEach((config) => {
+            switch (config.config_id) {
+                case 1:
+                    settings.minimumAttendance = config.config_value;
+                    break;
+                case 4:
+                    settings.academicYear = config.config_value;
+                    break;
+                case 5:
+                    settings.semester = config.config_value;
+                    break;
+                case 6:
+                    settings.warningAttendance = config.config_value;
+                    break;
+                case 7:
+                    settings.maximumLeave = config.config_value;
+                    break;
+                case 8:
+                    settings.bookingNotice = config.config_value;
+                    break;
+                case 9:
+                    settings.advanceBooking = config.config_value;
+                    break;
+                case 10:
+                    settings.meetingReminder = config.config_value;
+                    break;
+                case 11:
+                    settings.medicalExpiryReminder = config.config_value;
+                    break;
+                case 12:
+                    settings.requireVerification = config.config_value === 'true';
+                    break;
+                case 13:
+                    settings.sessionTimeout = config.config_value;
+                    break;
+                case 14:
+                    settings.maxLoginAttempts = config.config_value;
+                    break;
+                case 15:
+                    settings.lockoutDuration = config.config_value;
+                    break;
+                case 16:
+                    settings.mfaAdmins = config.config_value === 'true';
+                    break;
+                case 17:
+                    settings.emailNotifications = config.config_value === 'true';
+                    break;
+                case 18:
+                    settings.meetingNotifications = config.config_value === 'true';
+                    break;
+                case 19:
+                    settings.attendanceNotifications = config.config_value === 'true';
+                    break;
+                case 20:
+                    settings.medicalNotifications = config.config_value === 'true';
+                    break;
+                case 21:
+                    settings.systemName = config.config_value;
+                    break;
+                case 22:
+                    settings.timezone = config.config_value;
+                    break;
+                case 23:
+                    settings.dateFormat = config.config_value;
+                    break;
+                case 24:
+                    settings.maintenanceMode = config.config_value === 'true';
+                    break;
+                case 25:
+                    settings.meetingDuration = config.config_value;
+                    break;
+            }
+        });
+
+        return res.status(200).json(settings);
+
+    } catch (error) {
+        console.error('Get system configuration error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
+
+export const updateSystemConfiguration = async (req, res) => {
+    try {
+        const settings = {
+            1: req.body.minimumAttendance,
+            4: req.body.academicYear,
+            5: req.body.semester,
+            6: req.body.warningAttendance,
+            7: req.body.maximumLeave,
+
+            8: req.body.bookingNotice,
+            9: req.body.advanceBooking,
+            10: req.body.meetingReminder,
+
+            11: req.body.medicalExpiryReminder,
+            12: req.body.requireVerification,
+
+            13: req.body.sessionTimeout,
+            14: req.body.maxLoginAttempts,
+            15: req.body.lockoutDuration,
+            16: req.body.mfaAdmins,
+
+            17: req.body.emailNotifications,
+            18: req.body.meetingNotifications,
+            19: req.body.attendanceNotifications,
+            20: req.body.medicalNotifications,
+
+            21: req.body.systemName,
+            22: req.body.timezone,
+            23: req.body.dateFormat,
+            24: req.body.maintenanceMode,
+
+            25: req.body.meetingDuration
+        };
+
+        for (const [configId, value] of Object.entries(settings)) {
+            await pool.query(
+                `
+                UPDATE system_configs
+                SET
+                    config_value = $1,
+                    updated_by = $2,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE config_id = $3
+                `,
+                [
+                    String(value),
+                    req.user?.userId || req.user?.id || 1,
+                    configId
+                ]
+            );
+        }
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'System configuration updated',
+                'System Configuration',
+                req.user?.userId || req.body?.userId || null,
+                req.ip,
+                'Admin',
+                'Info',
+                'System Configuration',
+                'Global system configuration updated by Admin'
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'System configuration updated successfully'
+        });
+
+    } catch (error) {
+        console.error('Update system configuration error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+
