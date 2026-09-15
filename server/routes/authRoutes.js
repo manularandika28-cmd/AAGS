@@ -4,7 +4,7 @@ import { login, refreshToken, register, logout } from '../controllers/authContro
 const router = express.Router();
 
 router.post('/login', login);
-router.get('/refresh', refreshToken);
+router.post('/refresh', refreshToken);
 router.post('/register', register);
 router.post('/logout', logout);
 
