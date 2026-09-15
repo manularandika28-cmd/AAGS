@@ -373,13 +373,17 @@ const RoleSettings = () => {
 
                   {/* ROLE HEADER */}
 
-                  <div
-                    className={`px-5 py-[30px] ${
-                      isProtectedRole
-                        ? 'bg-amber-50'
-                        : 'bg-white'
-                    }`}
-                  >
+                  <div 
+  className={`px-5 ${
+    isProtectedRole 
+      ? 'py-4' 
+      : 'py-[30px]'
+  } ${
+    isProtectedRole 
+      ? 'bg-amber-50' 
+      : 'bg-white'
+  }`}
+>
 
                     <div className="flex items-start gap-3">
 
@@ -437,7 +441,7 @@ const RoleSettings = () => {
 
                   <div className="bg-white border-t border-slate-100 grid grid-cols-2">
 
-                    <div className="p-4 border-r border-slate-100">
+                   <div className={`border-r border-slate-100 ${isProtectedRole ? 'p-3' : 'p-4'}`}>
 
                       <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
                         Assigned Users
