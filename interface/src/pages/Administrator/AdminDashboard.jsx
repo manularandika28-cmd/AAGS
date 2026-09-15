@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
+import * as XLSX from 'xlsx';
 import {
   Users,
   Shield,
@@ -211,6 +212,60 @@ const handleAddUser = async (e) => {
   roleFilter === 'All'
     ? users
     : users.filter((user) => user.role === roleFilter);
+    const handleExportReport = () => {
+  const userData = users.map((user) => ({
+    Name: user.name,
+    Email: user.email,
+    Role: user.role,
+    Status: user.status,
+    MFA: user.mfa ? 'Enabled' : 'Disabled'
+  }));
+
+  const roleData = roles.map((role) => ({
+    'Role Name': role.role_name,
+    Description: role.description,
+    'User Count': role.user_count
+  }));
+
+  const auditData = auditLogs.map((log) => ({
+    Action: log.action,
+    Target: log.target || '',
+    'IP Address': log.ip_address || '',
+    'Date & Time': new Date(log.created_at).toLocaleString('en-GB', {
+  timeZone: 'Asia/Colombo',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false
+})
+  }));
+
+  const summaryData = [
+    {
+      'Total Active Users': stats?.totalActiveUsers ?? 0,
+      'System Admins': stats?.systemAdminsCount ?? 0,
+      'MFA Adoption Rate': '68%',
+      'System Status': 'All Systems Operational'
+    }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+
+  const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+  const usersSheet = XLSX.utils.json_to_sheet(userData);
+  const rolesSheet = XLSX.utils.json_to_sheet(roleData);
+  const auditSheet = XLSX.utils.json_to_sheet(auditData);
+
+  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+  XLSX.utils.book_append_sheet(workbook, usersSheet, 'Users');
+  XLSX.utils.book_append_sheet(workbook, rolesSheet, 'Roles');
+  XLSX.utils.book_append_sheet(workbook, auditSheet, 'Audit Logs');
+
+  XLSX.writeFile(workbook, 'AAGS_Admin_Report.xlsx');
+};
   return (
     <div className="flex min-h-screen text-slate-800 font-sans antialiased">
 
@@ -241,10 +296,14 @@ const handleAddUser = async (e) => {
             <div className="flex items-center gap-3">
 
               {/* Export Report */}
-              <button className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-slate-700 border border px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors">
-                <Download className="w-4 h-4" />
-                Export Report
-              </button>
+              <button
+  type="button"
+  onClick={handleExportReport}
+  className="flex items-center gap-2 bg-white hover:bg-[#F17723] text-slate-700 border border px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
+>
+  <Download className="w-4 h-4" />
+  Export Report
+</button>
 
               {/* Add User */}
               <button 
