@@ -16,7 +16,8 @@ import {
   Shield,
   Loader2,
   CheckCircle2,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -25,6 +26,9 @@ const StudentDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Controls whether the low-attendance course list is expanded
+  const [showLowAttendance, setShowLowAttendance] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,7 +60,13 @@ const StudentDashboard = () => {
 
   const studentName = dashboardData?.student?.student_name || user?.name || 'Student';
   const attendanceRate = dashboardData?.attendanceRate ?? 100;
+
+  // Courses returned by studentcontroller.js with attendance_pct < 80,
+  // pre-sorted ascending (lowest attendance first) by the SQL query.
+  const lowAttendanceModules = dashboardData?.lowAttendanceModules || [];
+  const hasLowAttendance = lowAttendanceModules.length > 0;
   const isAttendanceLow = attendanceRate < 75;
+
   const upcomingMeetings = dashboardData?.upcomingMeetings ?? 0;
   const medicalStatusObj = dashboardData?.medicalStatus || { status: 'Cleared' };
   const medicalStatusText = medicalStatusObj.status || 'Cleared';
@@ -66,19 +76,42 @@ const StudentDashboard = () => {
   // Group timetable by day and time slot
   const hasSaturday = timetable.some((s) => s.day_of_week?.toLowerCase() === 'saturday');
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', ...(hasSaturday ? ['Saturday'] : [])];
-  
-  // Extract unique time slots from timetable or fallback to standard slots if available
-  const defaultSlots = ['08:00 - 10:00', '10:00 - 12:00', '13:00 - 15:00', '15:00 - 17:00'];
 
-  const dynamicSlots = Array.from(
-    new Set(
-      timetable
-        .filter((s) => s.start_time && s.end_time)
-        .map((s) => `${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)}`)
-    )
-  ).sort();
+  // Fixed timetable rows — always these four 2-hour blocks, regardless
+  // of what's in the data. The lunch gap (12:00-13:00) is intentionally
+  // not its own row.
+  const SEGMENTS = [
+    { label: '08:00 - 10:00', start: 480, end: 600 },   // 08:00-10:00
+    { label: '10:00 - 12:00', start: 600, end: 720 },   // 10:00-12:00
+    { label: '13:00 - 15:00', start: 780, end: 900 },   // 13:00-15:00
+    { label: '15:00 - 17:00', start: 900, end: 1020 }   // 15:00-17:00
+  ];
+  const ROW_HEIGHT_PX = 80;
+  const TOTAL_HEIGHT_PX = ROW_HEIGHT_PX * SEGMENTS.length;
+  // Virtual timeline length with the lunch gap compressed out, so every
+  // row above contributes the same "weight" to position math.
+  const TOTAL_VIRTUAL_MIN = SEGMENTS.reduce((sum, s) => sum + (s.end - s.start), 0);
 
-  const displaySlots = dynamicSlots.length > 0 ? dynamicSlots : defaultSlots;
+  const timeToMinutes = (label) => {
+    const [h, m] = label.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  // Maps a real clock-time (in minutes) onto the virtual, gap-compressed
+  // timeline above, so a class's on-screen position/height is
+  // proportional to how much of the fixed rows it actually covers —
+  // e.g. 13:00-17:00 fills both the 13-15 and 15-17 rows completely,
+  // while 14:00-16:00 fills only the bottom half of 13-15 and the top
+  // half of 15-17.
+  const toVirtualOffset = (mins) => {
+    let offset = 0;
+    for (const seg of SEGMENTS) {
+      if (mins <= seg.start) return offset;
+      if (mins <= seg.end) return offset + (mins - seg.start);
+      offset += seg.end - seg.start;
+    }
+    return offset;
+  };
 
   const colorStyles = [
     { bg: 'bg-[#EBF3FC]', border: 'border-[#2563EB]', text: 'text-[#1E3A8A]' },
@@ -98,6 +131,13 @@ const StudentDashboard = () => {
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  // Colour tier for an individual course's attendance percentage
+  const getPctStyle = (pct) => {
+    if (pct < 60) return { bar: 'bg-rose-500', text: 'text-rose-600', chip: 'bg-rose-50 border-rose-200' };
+    if (pct < 70) return { bar: 'bg-amber-500', text: 'text-amber-600', chip: 'bg-amber-50 border-amber-200' };
+    return { bar: 'bg-yellow-500', text: 'text-yellow-700', chip: 'bg-yellow-50 border-yellow-200' };
   };
 
   return (
@@ -156,7 +196,9 @@ const StudentDashboard = () => {
                     </div>
                     <div className="text-3xl font-black text-slate-900 mt-3">{attendanceRate}%</div>
                     <p className="text-xs text-slate-600 mt-1 max-w-[200px]">
-                      {isAttendanceLow ? 'Below 75% threshold. Action required.' : 'Good standing. Meets attendance target.'}
+                      {hasLowAttendance
+                        ? `Below 80% threshold. Action required for ${lowAttendanceModules.length} module${lowAttendanceModules.length > 1 ? 's' : ''}.`
+                        : 'Good standing. Meets attendance target.'}
                     </p>
                   </div>
 
@@ -167,6 +209,61 @@ const StudentDashboard = () => {
                       style={{ width: `${Math.min(100, Math.max(0, attendanceRate))}%` }}
                     />
                   </div>
+
+                  {/* Low Attendance Courses Dropdown Toggle */}
+                  {hasLowAttendance && (
+                    <div className="mt-4 relative z-10">
+                      <button
+                        type="button"
+                        onClick={() => setShowLowAttendance((prev) => !prev)}
+                        aria-expanded={showLowAttendance}
+                        className="w-full flex items-center justify-between text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 hover:bg-amber-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          {lowAttendanceModules.length} course{lowAttendanceModules.length > 1 ? 's' : ''} below 80%
+                        </span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${showLowAttendance ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+
+                      {showLowAttendance && (
+                        <ul className="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {lowAttendanceModules.map((course) => {
+                            const totalSessions = Number(course.total_sessions ?? 0);
+                            const hasSessions = totalSessions > 0;
+                            const rawPct = Number(course.attendance_pct);
+                            const pct = Number.isFinite(rawPct) ? rawPct : 0;
+                            const style = getPctStyle(pct);
+                            return (
+                              <li
+                                key={course.course_id ?? course.course_code}
+                                className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 ${
+                                  hasSessions ? style.chip : 'bg-slate-50 border-slate-200'
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-900 truncate">
+                                    {course.course_name}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500 font-medium">
+                                    {course.course_code}
+                                    {hasSessions && course.attended != null && (
+                                      <span> &middot; {course.attended}/{totalSessions} sessions</span>
+                                    )}
+                                  </p>
+                                </div>
+                                <span className={`text-xs font-black shrink-0 ${hasSessions ? style.text : 'text-slate-400'}`}>
+                                  {hasSessions ? `${pct}%` : 'No sessions yet'}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Card 2: Upcoming Meetings */}
@@ -239,62 +336,104 @@ const StudentDashboard = () => {
                         <p className="text-xs font-medium">No scheduled classes found for your enrolled courses.</p>
                       </div>
                     ) : (
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 text-slate-400 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-                            <th className="py-2.5 px-3">TIME</th>
-                            {daysOfWeek.map((day) => (
-                              <th key={day} className="py-2.5 px-3">{day.toUpperCase()}</th>
+                      <div className="min-w-[640px]">
+                        {/* Header row */}
+                        <div
+                          className="grid"
+                          style={{ gridTemplateColumns: `90px repeat(${daysOfWeek.length}, 1fr)` }}
+                        >
+                          <div className="py-2.5 px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-200">
+                            Time
+                          </div>
+                          {daysOfWeek.map((day) => (
+                            <div
+                              key={day}
+                              className="py-2.5 px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-l border-slate-200 text-center"
+                            >
+                              {day.toUpperCase()}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Body: fixed time-row labels + a proportionally-positioned canvas per day */}
+                        <div
+                          className="grid"
+                          style={{ gridTemplateColumns: `90px repeat(${daysOfWeek.length}, 1fr)` }}
+                        >
+                          <div className="flex flex-col divide-y divide-slate-100">
+                            {SEGMENTS.map((seg) => (
+                              <div
+                                key={seg.label}
+                                className="h-20 flex items-center px-3 text-[11px] font-semibold text-slate-600 bg-slate-50/50 whitespace-nowrap"
+                              >
+                                {seg.label}
+                              </div>
                             ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {displaySlots.map((slot, slotIdx) => (
-                            <tr key={slotIdx} className="h-20">
-                              <td className="py-3 px-3 font-semibold text-slate-600 align-top text-[11px] whitespace-nowrap bg-slate-50/50">
-                                {slot}
-                              </td>
-                              {daysOfWeek.map((day) => {
-                                const session = timetable.find((s) => {
-                                  const startStr = s.start_time ? s.start_time.slice(0, 5) : '08:00';
-                                  const endStr = s.end_time ? s.end_time.slice(0, 5) : '10:00';
-                                  const sSlot = `${startStr} - ${endStr}`;
-                                  return (
-                                    sSlot === slot &&
-                                    s.day_of_week?.toLowerCase() === day.toLowerCase()
+                          </div>
+
+                          {daysOfWeek.map((day) => {
+                            const daySessions = timetable.filter(
+                              (s) => s.day_of_week?.toLowerCase() === day.toLowerCase() && s.start_time && s.end_time
+                            );
+
+                            return (
+                              <div
+                                key={day}
+                                className="relative border-l border-slate-100"
+                                style={{ height: TOTAL_HEIGHT_PX }}
+                              >
+                                {/* Reference lines matching the fixed rows on the left */}
+                                {SEGMENTS.map((seg, i) => (
+                                  <div
+                                    key={seg.label}
+                                    className="absolute left-0 right-0 border-t border-slate-100"
+                                    style={{ top: i * ROW_HEIGHT_PX }}
+                                  />
+                                ))}
+
+                                {daySessions.map((session, idx) => {
+                                  const startMin = timeToMinutes(session.start_time.slice(0, 5));
+                                  const endMin = Math.max(
+                                    timeToMinutes(session.end_time.slice(0, 5)),
+                                    startMin + 1
                                   );
-                                });
+                                  const vStart = toVirtualOffset(startMin);
+                                  const vEnd = toVirtualOffset(endMin);
+                                  const topPct = (vStart / TOTAL_VIRTUAL_MIN) * 100;
+                                  const heightPct = Math.max(((vEnd - vStart) / TOTAL_VIRTUAL_MIN) * 100, 6);
+                                  const styleIndex = (session.timetable_id ?? idx) % colorStyles.length;
+                                  const style = colorStyles[styleIndex] || colorStyles[0];
 
-                                if (!session) {
-                                  return <td key={day} className="py-3 px-2 align-top" />;
-                                }
-
-                                const styleIndex = (session.timetable_id || slotIdx) % colorStyles.length;
-                                const style = colorStyles[styleIndex] || colorStyles[0];
-
-                                return (
-                                  <td key={day} className="py-2.5 px-2 align-top">
-                                    <div className={`${style.bg} border-l-4 ${style.border} p-2.5 rounded-r-lg shadow-xs space-y-1 transition-transform hover:-translate-y-0.5`}>
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-extrabold text-[10px] tracking-wide text-slate-600 uppercase">{session.course_code}</span>
+                                  return (
+                                    <div
+                                      key={session.timetable_id ?? `${day}-${idx}`}
+                                      className={`absolute left-1 right-1 ${style.bg} border-l-4 ${style.border} rounded-r-lg shadow-xs px-2 py-1 overflow-hidden transition-transform hover:-translate-y-0.5 hover:z-10`}
+                                      style={{ top: `${topPct}%`, height: `${heightPct}%` }}
+                                    >
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="font-extrabold text-[10px] tracking-wide text-slate-600 uppercase truncate">
+                                          {session.course_code}
+                                        </span>
                                         {session.lecturer_abbr && (
-                                          <span className="text-[9px] font-bold bg-white/90 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">{session.lecturer_abbr}</span>
+                                          <span className="text-[9px] font-bold bg-white/90 text-slate-700 px-1 py-0.5 rounded border border-slate-200 shrink-0">
+                                            {session.lecturer_abbr}
+                                          </span>
                                         )}
                                       </div>
-                                      <p className={`font-bold ${style.text} text-xs leading-snug`}>
+                                      <p className={`font-bold ${style.text} text-xs leading-snug truncate`}>
                                         {session.course_name}
                                       </p>
-                                      <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-                                        <span>📍</span> {session.location || 'Lecture Hall'}
+                                      <p className="text-[10px] text-slate-500 font-medium truncate">
+                                        📍 {session.location || 'Lecture Hall'}
                                       </p>
                                     </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

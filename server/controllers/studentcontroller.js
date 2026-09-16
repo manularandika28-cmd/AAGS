@@ -1,11 +1,12 @@
-// server/controllers/studentController.js
 import { pool } from '../db.js';
 
 export const getStudentDashboardData = async (req, res) => {
   try {
-    const studentId = req.user.userId;
+    // Resolve logged in student ID from auth token payload
+    const studentId = req.user.userId || req.user.id || req.user.student_id;
+    console.log('Logged in student ID:', studentId);
 
-    // 1. Student Profile (including department, level, and semester)
+    // 1. Student Profile
     let student = { 
       student_id: studentId, 
       student_name: req.user.name || 'Student', 
@@ -17,36 +18,71 @@ export const getStudentDashboardData = async (req, res) => {
 
     try {
       const studentRes = await pool.query(
-        `SELECT student_id, student_name, email, department_id, academic_level, semester 
-         FROM students 
-         WHERE student_id = $1`,
+        `SELECT s.student_id, s.student_name, s.email, s.academic_level, s.semester, s.department_id, d.dep_name
+         FROM students s
+         JOIN departments d ON s.department_id = d.department_id
+         WHERE s.student_id = $1`,
         [studentId]
       );
       if (studentRes.rows.length > 0) {
         student = studentRes.rows[0];
       }
     } catch (e) {
-      console.warn('Student query error:', e.message);
+      console.warn('Student profile query error:', e.message);
     }
 
     // 2. Attendance Calculation (DISTINCT session guard)
-    let attendanceRate = 75;
+    let overallRate = 100;
+    let lowAttendanceModules = [];
+
     try {
       const attendanceRes = await pool.query(
-        `SELECT 
-           COUNT(DISTINCT s.session_id) AS total_sessions,
-           COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present') AS attended_sessions
-         FROM enrollments e
-         JOIN sessions s ON s.course_id = e.course_id
-         LEFT JOIN attendance_records ar 
-           ON ar.session_id = s.session_id 
-          AND ar.student_id = e.student_id
-         WHERE e.student_id = $1`,
-        [studentId]
-      );
-      const total = parseInt(attendanceRes.rows[0]?.total_sessions || 0);
-      const attended = parseInt(attendanceRes.rows[0]?.attended_sessions || 0);
-      attendanceRate = total === 0 ? 100 : Math.round((attended / total) * 100);
+      `SELECT 
+         c.course_id,
+         c.course_code,
+         c.course_name,
+         COUNT(DISTINCT s.session_id) AS total_sessions,
+         COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present') AS attended,
+         ROUND(
+           (COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present')::numeric / 
+           NULLIF(COUNT(DISTINCT s.session_id), 0)) * 100, 1
+         ) AS attendance_pct
+       FROM enrollments e
+       JOIN courses c ON c.course_id = e.course_id
+       LEFT JOIN sessions s 
+         ON s.course_id = c.course_id
+        AND s.session_date <= now()   -- only count sessions that have actually happened
+       LEFT JOIN attendance_records ar 
+         ON ar.session_id = s.session_id 
+        AND ar.student_id = e.student_id
+       WHERE e.student_id = $1
+       GROUP BY c.course_id, c.course_code, c.course_name
+       ORDER BY attendance_pct ASC`,
+      [studentId]
+    );
+
+      const rows = attendanceRes.rows;
+      if (rows.length > 0) {
+        let sumPct = 0;
+        rows.forEach((row) => {
+      const totalSessions = parseInt(row.total_sessions || 0, 10);
+      const pct = parseFloat(row.attendance_pct || 0);
+      sumPct += totalSessions > 0 ? pct : 100; // don't drag the average down for not-yet-started courses
+ 
+      if (totalSessions > 0 && pct < 80.0) {
+        lowAttendanceModules.push({
+          course_id: row.course_id,
+          course_code: row.course_code,
+          course_name: row.course_name,
+          total_sessions: totalSessions,
+          attended: parseInt(row.attended || 0, 10),
+          attendance_pct: pct
+        });
+      }
+    });
+
+        overallRate = Math.round(sumPct / rows.length);
+      }
     } catch (e) {
       console.warn('Attendance query error:', e.message);
     }
@@ -129,7 +165,8 @@ export const getStudentDashboardData = async (req, res) => {
 
     return res.json({
       student,
-      attendanceRate,
+      attendanceRate: overallRate,
+      lowAttendanceModules: lowAttendanceModules,
       upcomingMeetings,
       medicalStatus: latestMedical,
       timetable,
