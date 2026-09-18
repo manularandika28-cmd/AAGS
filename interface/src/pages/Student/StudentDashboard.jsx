@@ -323,17 +323,14 @@ const StudentDashboard = () => {
                 <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <h3 className="font-bold text-base text-slate-900">Weekly Timetable</h3>
-                    <button className="flex items-center space-x-1 text-xs font-semibold text-slate-700 hover:text-slate-900">
-                      <span>Current Week</span>
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
+                    
                   </div>
 
                   <div className="overflow-x-auto pt-4">
                     {timetable.length === 0 ? (
                       <div className="py-12 text-center text-slate-500 space-y-2">
                         <Clock className="w-8 h-8 text-slate-300 mx-auto" />
-                        <p className="text-xs font-medium">No scheduled classes found for your enrolled courses.</p>
+                        <p className="text-xs font-medium">No Timetable found for your enrolled courses.</p>
                       </div>
                     ) : (
                       <div className="min-w-[640px]">
@@ -438,37 +435,71 @@ const StudentDashboard = () => {
                   </div>
                 </div>
 
-                {/* Recent Alerts */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-                  <div className="flex items-center space-x-2 font-bold text-base text-slate-900 pb-1 border-b border-slate-100">
-                    <BellRing className="w-4 h-4 text-slate-800" />
-                    <h3>Recent Alerts</h3>
-                  </div>
+                {/* Recent Alerts Card */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center space-x-2 font-bold text-base text-slate-900 pb-1 border-b border-slate-100">
+                <BellRing className="w-4 h-4 text-slate-800" />
+                <h3>Recent Alerts</h3>
+              </div>
 
-                  {alerts.length === 0 ? (
-                    <div className="py-8 text-center text-slate-400 space-y-1">
-                      <Info className="w-6 h-6 mx-auto text-slate-300" />
-                      <p className="text-xs">No recent notifications</p>
-                    </div>
-                  ) : (
-                    alerts.map((alert, idx) => (
-                      <div key={alert.notification_id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex space-x-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${idx % 2 === 0 ? 'bg-amber-100 text-amber-600' : 'bg-[#051E3D] text-white'}`}>
-                          {idx % 2 === 0 ? <AlertTriangle className="w-3.5 h-3.5" /> : <Info className="w-3.5 h-3.5" />}
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-xs text-slate-900">{alert.title}</h4>
-                          <p className="text-xs text-slate-600 leading-relaxed">
-                            {alert.message}
-                          </p>
-                          <span className="text-[10px] text-slate-400 block pt-1">
-                            {formatAlertTime(alert.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
+              {alerts.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 space-y-1">
+                  <Info className="w-6 h-6 mx-auto text-slate-300" />
+                  <p className="text-xs">No recent notifications</p>
                 </div>
+              ) : (
+                alerts.map((alert) => {
+                  let icon = <Info className="w-3.5 h-3.5" />;
+                  let badgeColor = 'bg-[#051E3D] text-white';
+
+                  if (alert.type === 'attendance_warning') {
+                    icon = <AlertTriangle className="w-3.5 h-3.5" />;
+                    badgeColor = 'bg-rose-100 text-rose-600';
+                  } else if (alert.type === 'medical_update') {
+                    icon = <ShieldCheck className="w-3.5 h-3.5" />;
+                    badgeColor = 'bg-emerald-100 text-emerald-600';
+                  } else if (alert.type === 'meeting_update') {
+                    icon = <Calendar className="w-3.5 h-3.5" />;
+                    badgeColor = 'bg-blue-100 text-blue-600';
+                  } else if (alert.type === 'announcement') {
+                    icon = <BellRing className="w-3.5 h-3.5" />;
+                    badgeColor = 'bg-indigo-100 text-indigo-700';
+                  }
+
+                  return (
+                    <div
+                      key={alert.notification_id}
+                      className={`border rounded-xl p-4 flex space-x-3 transition-colors ${
+                        !alert.is_read ? 'bg-slate-50/90 border-slate-200' : 'bg-white border-slate-100'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${badgeColor}`}>
+                        {icon}
+                      </div>
+
+                      <div className="space-y-1 w-full min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-bold text-xs text-slate-900 truncate">
+                            {alert.title}
+                          </h4>
+                          {alert.audience !== 'personal' && (
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200/60 rounded shrink-0">
+                              {alert.audience === 'all' ? 'Campus' : 'Notice'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {alert.message}
+                        </p>
+                        <span className="text-[10px] text-slate-400 block pt-1 font-medium">
+                          {formatAlertTime(alert.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
               </div>
             </>
           )}
