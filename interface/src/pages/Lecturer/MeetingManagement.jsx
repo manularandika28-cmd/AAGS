@@ -297,15 +297,30 @@ const MeetingManagement = () => {
                     {/* Buttons */}
                     <div className="flex justify-end gap-2 mt-4">
 
-                      <button className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]">
-                        Decline
-                      </button>
+                      <button
+                      
+                          onClick={() => {
+                            alert("Meeting request declined.");
+                          }}
+                          className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]"
+                        >
+                          Decline
+                        </button>
 
-                      <button className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]">
+                      <button
+                        onClick={() => {
+                          alert("Reschedule option selected.");
+                        }}
+                        className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]"
+                      >
                         Reschedule
                       </button>
 
-                      <button className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]">
+                      <button 
+                        onClick={() => {
+                         alert("Meeting request approved."); 
+                        }}
+                      className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]">
 
                         <Check size={14} />
 
