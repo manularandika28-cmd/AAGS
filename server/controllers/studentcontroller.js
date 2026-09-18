@@ -323,3 +323,174 @@ export const cancelMeetingRequest = async (req, res) => {
     return res.status(500).json({ error: 'Failed to cancel meeting' });
   }
 };
+
+
+//-----medicalController-----
+
+export const getStudentMedicals = async (req, res) => {
+  try {
+    const studentId = req.user.userId || req.user.id || req.user.student_id;
+
+    const query = `
+      SELECT 
+        m.submission_id,
+        m.student_id,
+        m.department_id,
+        d.dep_name,
+        m.description,
+        TO_CHAR(m.date_from, 'YYYY-MM-DD') AS date_from,
+        TO_CHAR(m.date_to, 'YYYY-MM-DD') AS date_to,
+        m.file_path,
+        m.status,
+        m.submitted_at,
+        h.name AS reviewer_name,
+        m.reviewed_at
+      FROM medical_submissions m
+      LEFT JOIN departments d ON m.department_id = d.department_id
+      LEFT JOIN hods h ON m.reviewed_hod = h.hod_id
+      WHERE m.student_id = $1
+      ORDER BY m.submitted_at DESC
+    `;
+
+    const result = await pool.query(query, [studentId]);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching medical submissions:', err);
+    return res.status(500).json({ error: 'Failed to fetch medical records' });
+  }
+};
+
+// 2. Submit new medical certificate (auto-injects student's department_id)
+export const createMedicalSubmission = async (req, res) => {
+  try {
+    const studentId = req.user.userId || req.user.id || req.user.student_id;
+    const { date_from, date_to, description } = req.body;
+    const filePath = req.file ? `/uploads/medicals/${req.file.filename}` : null;
+
+    if (!date_from || !date_to) {
+      return res.status(400).json({ error: 'Date From and Date To are required' });
+    }
+
+    if (new Date(date_to) < new Date(date_from)) {
+      return res.status(400).json({ error: 'Date To cannot be earlier than Date From' });
+    }
+
+    // Lookup student's registered department
+    const studentRes = await pool.query(
+      `SELECT department_id FROM students WHERE student_id = $1`,
+      [studentId]
+    );
+
+    const departmentId = studentRes.rows[0]?.department_id || null;
+
+    const insertQuery = `
+      INSERT INTO medical_submissions 
+        (student_id, department_id, date_from, date_to, description, file_path, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+      RETURNING *
+    `;
+
+    const result = await pool.query(insertQuery, [
+      studentId,
+      departmentId,
+      date_from,
+      date_to,
+      description || '',
+      filePath
+    ]);
+
+    return res.status(201).json({
+      message: 'Medical certificate submitted to your HOD successfully',
+      submission: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Error creating medical submission:', err);
+    return res.status(500).json({ error: 'Failed to submit medical certificate' });
+  }
+};
+
+
+//-----academicController-----
+
+export const getAcademicRecords = async (req, res) => {
+  try {
+    const studentId = req.user.userId || req.user.id || req.user.student_id;
+    const { level, semester } = req.query;
+
+    // 1. Fetch Student Profile Details
+    const studentRes = await pool.query(
+      `SELECT s.student_id, s.student_name, s.email, s.academic_level, s.semester, d.dep_name
+       FROM students s
+       LEFT JOIN departments d ON s.department_id = d.department_id
+       WHERE s.student_id = $1`,
+      [studentId]
+    );
+
+    if (studentRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Student profile not found' });
+    }
+    const student = studentRes.rows[0];
+
+    // 2. Fetch Course Attendance with Optional Dynamic Level & Semester Filters
+    let queryParams = [studentId];
+    let queryConditions = [`e.student_id = $1`];
+
+    if (level && level !== 'all') {
+      queryParams.push(level);
+      queryConditions.push(`c.academic_level = $${queryParams.length}`);
+    }
+
+    if (semester && semester !== 'all') {
+      queryParams.push(semester);
+      queryConditions.push(`c.semester = $${queryParams.length}`);
+    }
+
+    const attendanceSql = `
+      SELECT 
+        c.course_id,
+        c.course_code,
+        c.course_name,
+        c.academic_level,
+        c.semester,
+        COUNT(DISTINCT s.session_id) AS total_sessions,
+        COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present') AS attended,
+        ROUND(
+          (COUNT(DISTINCT ar.session_id) FILTER (WHERE ar.status = 'present')::numeric / 
+          NULLIF(COUNT(DISTINCT s.session_id), 0)) * 100, 1
+        ) AS attendance_pct
+      FROM enrollments e
+      JOIN courses c ON c.course_id = e.course_id
+      LEFT JOIN sessions s 
+        ON s.course_id = c.course_id 
+       AND s.session_date <= NOW()
+      LEFT JOIN attendance_records ar 
+        ON ar.session_id = s.session_id 
+       AND ar.student_id = e.student_id
+      WHERE ${queryConditions.join(' AND ')}
+      GROUP BY c.course_id, c.course_code, c.course_name, c.academic_level, c.semester
+      ORDER BY c.academic_level ASC, c.semester ASC, c.course_code ASC
+    `;
+
+    const recordsRes = await pool.query(attendanceSql, queryParams);
+
+    // 3. Fetch Academic Alerts (Warnings & Academic Updates for Student)
+    const alertsRes = await pool.query(
+      `SELECT notification_id, title, message, type, audience, is_read, created_at
+       FROM notifications
+       WHERE (audience = 'personal' AND student_id = $1)
+          OR (audience IN ('students', 'all'))
+       ORDER BY created_at DESC
+       LIMIT 4`,
+      [studentId]
+    );
+
+    return res.json({
+      student,
+      records: recordsRes.rows,
+      academicAlerts: alertsRes.rows
+    });
+  } catch (err) {
+    console.error('Error loading academic records:', err);
+    return res.status(500).json({ error: 'Failed to retrieve academic records' });
+  }
+};

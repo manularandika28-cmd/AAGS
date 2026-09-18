@@ -166,7 +166,7 @@ if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
             role: role,
         };
 
-        const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+        const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '30m' });
         const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: '7d' });
 
         // Set Refresh Token in HTTP-Only Cookie
@@ -206,7 +206,7 @@ export const refreshToken = (req, res) => {
             role: decoded.role,
         };
 
-        const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+        const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '30m' });
         return res.status(200).json({ accessToken: newAccessToken, user: payload });
     });
 };
