@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
 
@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 const MeetingManagement = () => {
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -81,7 +82,9 @@ const MeetingManagement = () => {
 
 
                 {/* New appointment */}
-                <button className="bg-[#062746] text-white rounded-lg px-5 py-3 flex items-center gap-2 text-[13px] font-semibold hover:bg-[#0A365D]">
+                <button 
+                onClick={() => setShowAppointmentModal(true)}
+                className="bg-[#062746] text-white rounded-lg px-5 py-3 flex items-center gap-2 text-[13px] font-semibold hover:bg-[#0A365D]">
 
                   <Plus size={18} />
 
@@ -664,8 +667,112 @@ const MeetingManagement = () => {
         </main>
 
       </div>
+      
+      {showAppointmentModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    
+    <div className="bg-white rounded-xl shadow-xl w-[500px] p-6">
+      
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-[#071B38]">
+          Create New Appointment
+        </h2>
+
+        <button
+          onClick={() => setShowAppointmentModal(false)}
+          className="text-gray-500 hover:text-gray-700 text-xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-4">
+
+        {/* Student */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Student
+          </label>
+          <input
+            type="text"
+            placeholder="Enter student name or ID"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Purpose */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Purpose
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Thesis Review"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Date */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Date
+          </label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-3">
+          <button
+            onClick={() => setShowAppointmentModal(false)}
+            className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              alert("Appointment created successfully.");
+              setShowAppointmentModal(false);
+            }}
+            className="px-5 py-2 rounded-lg bg-[#062746] text-white hover:bg-[#0A365D]"
+          >
+            Create Appointment
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
+    
   );
 };
 
