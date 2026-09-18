@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
 
@@ -27,6 +27,7 @@ import {
 
 
 const AttendanceManager = () => {
+  const [isPaused, setIsPaused] = useState(false);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -95,26 +96,49 @@ const AttendanceManager = () => {
                   Session
                 </span>
               </button>
+
               {/* Pause */}
-              <button className="w-[158px] h-[58px] rounded-lg bg-[#E8F0FD] border border-[#D8E2F2] text-[#071B38] flex items-center justify-center gap-3 shadow-sm hover:bg-[#DDE9FA]">
+                <button 
+                onClick={() => setIsPaused(!isPaused)}
+                className="w-[158px] h-[58px] rounded-lg bg-[#E8F0FD] border border-[#D8E2F2] text-[#071B38] flex items-center justify-center gap-3 shadow-sm hover:bg-[#DDE9FA]">
 
                 <Pause
                   size={19}
                   fill="currentColor"
                 />
-
                 <span className="text-[13px] font-semibold leading-tight">
-                  Pause
-                  <br />
-                  Scanner
+                  {isPaused ? (
+                    <>
+                      Resume
+                      <br />
+                      Scanner
+                    </>
+                  ) : (
+                    <>
+                      Pause
+                      <br />
+                      Scanner
+                    </>
+                  )}
                 </span>
+                
 
               </button>
 
 
               {/* End */}
-              <button className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]">
+              <button 
+              onClick={() => {
+                const confirmed = window.confirm(
+                  "Are you sure you want to end this attendance session?"
+                  );
 
+                  if (confirmed) {
+                    alert("Attendance session ended.");
+                  }
+                }}
+                className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]"
+              >             
                 <CircleStop size={21} />
 
                 <span className="text-[13px] font-semibold leading-tight">
