@@ -15,6 +15,7 @@ import {
   Search,
   Fingerprint,
   Pause,
+  CirclePlay,
   CircleStop,
   CheckCircle2,
   Timer,
@@ -85,6 +86,15 @@ const AttendanceManager = () => {
             {/* Session buttons */}
             <div className="flex items-center gap-4 pb-1">
 
+              {/* Start Session */}
+              <button className="w-[158px] h-[58px] rounded-lg bg-[#12B76A] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#0FA563]">
+              <CirclePlay size={21} fill="currentColor" />
+              <span className="text-[13px] font-semibold leading-tight">
+              Start
+                  <br />
+                  Session
+                </span>
+              </button>
               {/* Pause */}
               <button className="w-[158px] h-[58px] rounded-lg bg-[#E8F0FD] border border-[#D8E2F2] text-[#071B38] flex items-center justify-center gap-3 shadow-sm hover:bg-[#DDE9FA]">
 
