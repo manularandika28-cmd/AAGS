@@ -32,6 +32,7 @@ import {
 
 const MeetingManagement = () => {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -421,17 +422,22 @@ const MeetingManagement = () => {
                     {/* Buttons */}
                     <div className="flex justify-end gap-2 mt-4">
 
-                      <button className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold">
-                        Decline
-                      </button>
-
-                      <button className="border border-[#98A2B3] text-[#475467] rounded-md px-3 py-2 text-[12px] font-semibold flex items-center gap-1">
-
+                      <button
+                                  onClick={() => {
+                                    alert("Meeting request declined.");
+                                  }}
+                                  className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]"
+                                >
+                                  Decline
+                                </button>
+                      <button
+                        onClick={() => setShowTimeModal(true)}
+                        className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]"
+                      >
                         <CalendarClock size={14} />
-
                         Propose New Time
-
                       </button>
+                     
 
                       <button
                         disabled
@@ -779,6 +785,84 @@ const MeetingManagement = () => {
           >
             Create Appointment
           </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
+{showTimeModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-xl w-[450px] p-6">
+
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-[#071B38]">
+          Propose New Time
+        </h2>
+
+        <button
+          onClick={() => setShowTimeModal(false)}
+          className="text-gray-500 hover:text-gray-700 text-xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-4">
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            New Date
+          </label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+        </div>
+
+        <div className="flex justify-end gap-3 pt-3">
+
+          <button
+            onClick={() => setShowTimeModal(false)}
+            className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              alert("New meeting time proposed successfully.");
+              setShowTimeModal(false);
+            }}
+            className="px-5 py-2 rounded-lg bg-[#062746] text-white hover:bg-[#0A365D]"
+          >
+            Propose Time
+          </button>
+
         </div>
 
       </div>
