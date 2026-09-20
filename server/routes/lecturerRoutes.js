@@ -1,5 +1,9 @@
 import express from 'express';
-import { getLecturerDashboard } from '../controllers/lecturerController.js';
+import {
+    getLecturerDashboard,
+    getLecturerSessions,
+    getSessionAttendance
+} from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -9,6 +13,18 @@ router.get(
     verifyToken,
     authorize('Lecturer'),
     getLecturerDashboard
+);
+router.get(
+    '/sessions',
+    verifyToken,
+    authorize('Lecturer'),
+    getLecturerSessions
+);
+router.get(
+    '/sessions/:sessionId/attendance',
+    verifyToken,
+    authorize('Lecturer'),
+    getSessionAttendance
 );
 
 export default router;

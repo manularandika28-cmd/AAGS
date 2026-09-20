@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   LayoutDashboard,
@@ -27,6 +28,59 @@ import {
 
 
 const AttendanceManager = () => {
+  const { accessToken, user } = useAuth();
+  const [sessions, setSessions] = useState([]);
+  useEffect(() => {
+  const fetchLecturerSessions = async () => {
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/lecturer/sessions",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch sessions");
+      }
+
+      console.log("Lecturer sessions:", data);
+      setSessions(data.sessions);
+      if (data.sessions.length > 0) {
+  const sessionId = data.sessions[0].session_id;
+
+  const attendanceResponse = await fetch(
+    `http://localhost:3000/api/lecturer/sessions/${sessionId}/attendance`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const attendanceData = await attendanceResponse.json();
+
+  if (!attendanceResponse.ok) {
+    throw new Error(
+      attendanceData.error || "Failed to fetch attendance"
+    );
+  }
+
+  console.log("Session attendance:", attendanceData);
+}
+    } catch (error) {
+      console.error("Sessions error:", error);
+    }
+  };
+
+  fetchLecturerSessions();
+}, [accessToken]);
   const [isPaused, setIsPaused] = useState(false);
   return (
     <div className="min-h-screen flex text-[#071B38]">
@@ -70,17 +124,13 @@ const AttendanceManager = () => {
 
               {/* Module */}
               <h2 className="text-[36px] leading-tight font-bold text-white max-w-[650px]">
-                IT3045: Advanced Database
-                <br />
-                Systems
+                {sessions[0]?.course_code}: {sessions[0]?.course_name}
               </h2>
-
 
               {/* Session details */}
               <p className="mt-3 text-[15px] text-white/70">
-                Lecture • Week 7 • Dr. A. Perera
+                Lecture • {sessions[0]?.day_of_week} • {user?.name}
               </p>
-
             </div>
 
 
