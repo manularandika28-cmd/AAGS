@@ -103,6 +103,19 @@ setSessionProgress(progress);
   fetchLecturerSessions();
 }, [accessToken]);
   const [isPaused, setIsPaused] = useState(false);
+  const [isSessionStarted, setIsSessionStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  useEffect(() => {
+  if (!isSessionStarted || isPaused) {
+    return;
+  }
+
+  const timer = setInterval(() => {
+    setElapsedTime((previousTime) => previousTime + 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [isSessionStarted, isPaused]);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -159,7 +172,14 @@ setSessionProgress(progress);
             <div className="flex items-center gap-4 pb-1">
 
               {/* Start Session */}
-              <button className="w-[158px] h-[58px] rounded-lg bg-[#12B76A] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#0FA563]">
+              <button
+                onClick={() => {
+                  setElapsedTime(0);
+                  setIsSessionStarted(true);
+                  setIsPaused(false);
+                }}
+                className="w-[158px] h-[58px] rounded-lg bg-[#12B76A] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#0FA563]"
+>
               <CirclePlay size={21} fill="currentColor" />
               <span className="text-[13px] font-semibold leading-tight">
               Start
@@ -205,8 +225,10 @@ setSessionProgress(progress);
                   );
 
                   if (confirmed) {
-                    alert("Attendance session ended.");
-                  }
+                      setIsSessionStarted(false);
+                      setIsPaused(false);
+                      alert("Attendance session ended.");
+                    }
                 }}
                 className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]"
               >             
@@ -330,7 +352,11 @@ setSessionProgress(progress);
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      45:12
+                      {`${Math.floor(elapsedTime / 60)
+                        .toString()
+                        .padStart(2, "0")}:${(elapsedTime % 60)
+                        .toString()
+                        .padStart(2, "0")}`}
                     </div>
 
                     <p className="text-[13px] text-[#475467] mt-2">
