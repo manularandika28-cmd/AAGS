@@ -32,6 +32,7 @@ const AttendanceManager = () => {
   const [sessions, setSessions] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [enrolledCount, setEnrolledCount] = useState(0);
+  const [sessionProgress, setSessionProgress] = useState(0);
   const presentCount = attendanceRecords.filter(
   (record) => record.status === "present"
 ).length;
@@ -82,6 +83,16 @@ const AttendanceManager = () => {
   console.log("Session attendance:", attendanceData);
   setAttendanceRecords(attendanceData.attendance);
   setEnrolledCount(attendanceData.enrolled_count);
+  const presentCount = attendanceData.attendance.filter(
+  (record) => record.status === "present"
+).length;
+
+const progress =
+  attendanceData.enrolled_count > 0
+    ? (presentCount / attendanceData.enrolled_count) * 100
+    : 0;
+
+setSessionProgress(progress);
   console.log("Attendance records state data:", attendanceData.attendance);
 
     } catch (error) {
@@ -282,16 +293,15 @@ const AttendanceManager = () => {
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      72.5%
+                    {sessionProgress.toFixed(1)}%
                     </div>
-
 
                     {/* Progress bar */}
                     <div className="mt-3 w-full h-[9px] bg-[#D5E3F8] rounded-full overflow-hidden">
 
                       <div
                         className="h-full bg-[#12B76A] rounded-full"
-                        style={{ width: "72.5%" }}
+                        style={{ width: `${sessionProgress}%` }}
                       ></div>
 
                     </div>
