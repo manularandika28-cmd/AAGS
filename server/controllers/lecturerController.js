@@ -34,25 +34,30 @@ export const getLecturerSessions = async (req, res) => {
         const lecturerId = req.user.userId;
 
         const result = await pool.query(
-            `SELECT
-                s.session_id,
-                s.course_id,
-                c.course_code,
-                c.course_name,
-                s.location,
-                s.session_date,
-                s.start_time,
-                s.end_time,
-                s.day_of_week
-             FROM sessions s
-             INNER JOIN course_lecturers cl
-                ON s.course_id = cl.course_id
-             INNER JOIN courses c
-                ON s.course_id = c.course_id
-             WHERE cl.lecturer_id = $1
-             ORDER BY s.session_date, s.start_time`,
-            [lecturerId]
-        );
+    `SELECT
+        s.session_id,
+        s.course_id,
+        c.course_code,
+        c.course_name,
+        s.location,
+        s.session_date,
+        s.start_time,
+        s.end_time,
+        s.day_of_week,
+        (
+            SELECT COUNT(*)
+            FROM enrollments e
+            WHERE e.course_id = s.course_id
+        ) AS enrolled_count
+     FROM sessions s
+     INNER JOIN course_lecturers cl
+        ON s.course_id = cl.course_id
+     INNER JOIN courses c
+        ON s.course_id = c.course_id
+     WHERE cl.lecturer_id = $1
+     ORDER BY s.session_date, s.start_time`,
+    [lecturerId]
+);
 
         return res.status(200).json({
             sessions: result.rows
@@ -86,9 +91,19 @@ export const getSessionAttendance = async (req, res) => {
             [sessionId]
         );
 
-        return res.status(200).json({
-            attendance: result.rows
-        });
+        const enrolledResult = await pool.query(
+    `SELECT COUNT(*) AS enrolled_count
+     FROM enrollments e
+     INNER JOIN sessions s
+        ON e.course_id = s.course_id
+     WHERE s.session_id = $1`,
+    [sessionId]
+);
+
+return res.status(200).json({
+    attendance: result.rows,
+    enrolled_count: Number(enrolledResult.rows[0].enrolled_count)
+});
 
     } catch (error) {
         console.error('Session attendance error:', error);

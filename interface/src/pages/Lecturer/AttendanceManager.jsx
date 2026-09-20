@@ -31,6 +31,7 @@ const AttendanceManager = () => {
   const { accessToken, user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [enrolledCount, setEnrolledCount] = useState(0);
   const presentCount = attendanceRecords.filter(
   (record) => record.status === "present"
 ).length;
@@ -57,6 +58,8 @@ const AttendanceManager = () => {
       console.log("Lecturer sessions:", data);
       setSessions(data.sessions);
       if (data.sessions.length > 0) {
+  setEnrolledCount(Number(data.sessions[0].enrolled_count));
+}
   const sessionId = data.sessions[0].session_id;
 
   const attendanceResponse = await fetch(
@@ -78,8 +81,9 @@ const AttendanceManager = () => {
 
   console.log("Session attendance:", attendanceData);
   setAttendanceRecords(attendanceData.attendance);
+  setEnrolledCount(attendanceData.enrolled_count);
   console.log("Attendance records state data:", attendanceData.attendance);
-}
+
     } catch (error) {
       console.error("Sessions error:", error);
     }
@@ -251,7 +255,7 @@ const AttendanceManager = () => {
                     </div>
 
                     <p className="text-[13px] text-[#475467] mt-2">
-                      out of 120 enrolled
+                      out of {enrolledCount} enrolled
                     </p>
 
                   </div>
