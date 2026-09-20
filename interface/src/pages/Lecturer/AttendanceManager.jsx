@@ -31,6 +31,9 @@ const AttendanceManager = () => {
   const { accessToken, user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const presentCount = attendanceRecords.filter(
+  (record) => record.status === "present"
+).length;
   useEffect(() => {
   const fetchLecturerSessions = async () => {
     if (!accessToken) return;
@@ -244,7 +247,7 @@ const AttendanceManager = () => {
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      87
+                      {presentCount}
                     </div>
 
                     <p className="text-[13px] text-[#475467] mt-2">
