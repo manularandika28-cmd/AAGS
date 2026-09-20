@@ -30,6 +30,7 @@ import {
 const AttendanceManager = () => {
   const { accessToken, user } = useAuth();
   const [sessions, setSessions] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
   useEffect(() => {
   const fetchLecturerSessions = async () => {
     if (!accessToken) return;
@@ -73,6 +74,8 @@ const AttendanceManager = () => {
   }
 
   console.log("Session attendance:", attendanceData);
+  setAttendanceRecords(attendanceData.attendance);
+  console.log("Attendance records state data:", attendanceData.attendance);
 }
     } catch (error) {
       console.error("Sessions error:", error);
@@ -392,148 +395,41 @@ const AttendanceManager = () => {
                 </div>
 
 
-                {/* Row 1 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
+               {attendanceRecords.map((record) => (
+  <div
+    key={record.attendance_id}
+    className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]"
+  >
+    <span className="text-[13px] text-[#475467]">
+      {record.marked_at
+        ? new Date(record.marked_at).toLocaleTimeString()
+        : "-"}
+    </span>
 
-                  <span className="text-[13px] text-[#475467]">
-                    08:45:12
-                  </span>
+    <span className="text-[13px] font-semibold text-[#071B38]">
+      {record.student_id}
+    </span>
 
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/101
-                  </span>
+    <span className="text-[14px] text-[#071B38]">
+      {record.student_name}
+    </span>
 
-                  <span className="text-[14px] text-[#071B38]">
-                    Kamal Perera
-                  </span>
+    <span className="text-[13px] text-[#475467] flex items-center gap-2">
+      <Fingerprint size={15} />
+      Scanner
+    </span>
 
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 1
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
-
-                {/* Row 2 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:44:50
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/085
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38]">
-                    Nimali Silva
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 2
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
-
-                {/* Row 3 - Failed */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[80px] bg-[#FFF8F7]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:42:15
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/112
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38] leading-tight">
-                    Unknown /
-                    <br />
-                    Mismatch
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 1
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#FFD9D5] text-[#B42318] px-3 py-2 text-[12px] font-medium text-center leading-tight">
-                    ⓘ Failed
-                    <br />
-                    (Retry)
-                  </span>
-
-                </div>
-
-
-                {/* Row 4 - Manual */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:40:05
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/042
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38] leading-tight">
-                    Ruwan
-                    <br />
-                    Bandara
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <UserRoundCheck size={15} />
-                    Manual
-                    <br />
-                    Override
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#FFFAEB] text-[#B54708] px-3 py-1 text-[12px] font-medium">
-                    ♢ Manual
-                  </span>
-
-                </div>
-
-
-                {/* Row 5 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:38:22
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/005
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38]">
-                    Saman Kumara
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 2
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
+    <span
+      className={`justify-self-start rounded-full px-3 py-1 text-[12px] font-medium ${
+        record.status === "present"
+          ? "bg-[#ECFDF3] text-[#12B76A]"
+          : "bg-[#FEF3F2] text-[#F04438]"
+      }`}
+    >
+      {record.status === "present" ? "✓ Present" : "✕ Absent"}
+    </span>
+  </div>
+))} 
               </section>
 
             </div>
