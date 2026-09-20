@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +15,38 @@ import {
 } from "lucide-react";
 
 const LecturerDashboard = () => {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
+
+  const [lecturer, setLecturer] = useState(null);
+  useEffect(() => {
+  const fetchLecturerDashboard = async () => {
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/lecturer/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch dashboard");
+      }
+
+      console.log("Lecturer dashboard data:", data);
+      setLecturer(data.lecturer);
+    } catch (error) {
+      console.error("Dashboard error:", error);
+    }
+  };
+
+  fetchLecturerDashboard();
+}, [accessToken]);
   return (
     <div className="flex min-h-screen">
 
@@ -38,7 +69,7 @@ const LecturerDashboard = () => {
             </h1>
 
             <p className="text-[15px] text-white/80 mt-2">
-              Welcome back, {user.name}. Here is your daily digest.
+              Welcome back, {lecturer?.name || user.name}. Here is your daily digest.
             </p>
           </div>
 
