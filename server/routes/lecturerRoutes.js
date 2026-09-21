@@ -3,7 +3,9 @@ import {
     getLecturerDashboard,
     getLecturerSessions,
     getSessionAttendance,
-    markAttendanceManually
+    markAttendanceManually,
+    startAttendanceSession,
+    endAttendanceSession
 } from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
@@ -32,6 +34,18 @@ router.post(
     verifyToken,
     authorize('Lecturer'),
     markAttendanceManually
+);
+router.post(
+    '/sessions/:sessionId/start',
+    verifyToken,
+    authorize('Lecturer'),
+    startAttendanceSession
+);
+router.post(
+    '/sessions/:sessionId/end',
+    verifyToken,
+    authorize('Lecturer'),
+    endAttendanceSession
 );
 
 export default router;

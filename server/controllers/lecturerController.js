@@ -187,3 +187,67 @@ if (existingResult.rows.length > 0) {
         });
     }
 };
+export const startAttendanceSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+
+        const result = await pool.query(
+            `UPDATE sessions
+             SET session_status = 'active',
+                 actual_start_time = NOW()
+             WHERE session_id = $1
+             RETURNING *`,
+            [sessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Session not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Attendance session started',
+            session: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Start attendance session error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
+export const endAttendanceSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+
+        const result = await pool.query(
+            `UPDATE sessions
+             SET session_status = 'ended',
+                 actual_end_time = NOW()
+             WHERE session_id = $1
+             RETURNING *`,
+            [sessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Session not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Attendance session ended',
+            session: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('End attendance session error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

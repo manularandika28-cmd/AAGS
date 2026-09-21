@@ -175,11 +175,41 @@ setSessionProgress(progress);
 
               {/* Start Session */}
               <button
-                onClick={() => {
-                  setElapsedTime(0);
-                  setIsSessionStarted(true);
-                  setIsPaused(false);
-                }}
+                onClick={async () => {
+                    if (!sessions[0]?.session_id) {
+                      alert("No session found.");
+                      return;
+                    }
+
+                    try {
+                      const response = await fetch(
+                        `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/start`,
+                        {
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                          },
+                        }
+                      );
+
+                      const data = await response.json();
+
+                      if (!response.ok) {
+                        alert(data.error || "Failed to start session.");
+                        return;
+                      }
+
+                      setElapsedTime(0);
+                      setIsSessionStarted(true);
+                      setIsPaused(false);
+
+                      alert("Attendance session started.");
+                    } catch (error) {
+                      console.error("Start session error:", error);
+                      alert("Could not connect to the server.");
+                    }
+                  }}
+                
                 className="w-[158px] h-[58px] rounded-lg bg-[#12B76A] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#0FA563]"
 >
               <CirclePlay size={21} fill="currentColor" />
@@ -221,17 +251,47 @@ setSessionProgress(progress);
 
               {/* End */}
               <button 
-              onClick={() => {
-                const confirmed = window.confirm(
-                  "Are you sure you want to end this attendance session?"
-                  );
+              onClick={async () => {
+  const confirmed = window.confirm(
+    "Are you sure you want to end this attendance session?"
+  );
 
-                  if (confirmed) {
-                      setIsSessionStarted(false);
-                      setIsPaused(false);
-                      alert("Attendance session ended.");
-                    }
-                }}
+  if (!confirmed) {
+    return;
+  }
+
+  if (!sessions[0]?.session_id) {
+    alert("No session found.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/end`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Failed to end session.");
+      return;
+    }
+
+    setIsSessionStarted(false);
+    setIsPaused(false);
+
+    alert("Attendance session ended.");
+  } catch (error) {
+    console.error("End session error:", error);
+    alert("Could not connect to the server.");
+  }
+}}
                 className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]"
               >             
                 <CircleStop size={21} />
