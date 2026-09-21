@@ -118,11 +118,54 @@ export const markAttendanceManually = async (req, res) => {
     try {
         const { sessionId } = req.params;
         const { studentId, reason } = req.body;
+        const sessionResult = await pool.query(
+            `SELECT session_id, session_status
+            FROM sessions
+            WHERE session_id = $1`,
+            [sessionId]
+        );
+
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Session not found'
+            });
+        }
+
+        if (sessionResult.rows[0].session_status !== 'active') {
+            return res.status(400).json({
+                error: 'Attendance session is not active'
+            });
+        }
 
         if (!studentId) {
             return res.status(400).json({
                 error: 'Student ID is required'
             });
+        }
+        const timeResult = await pool.query(
+    `SELECT actual_start_time
+     FROM sessions
+     WHERE session_id = $1`,
+    [sessionId]
+);
+
+        const sessionStartTime = timeResult.rows[0].actual_start_time;
+
+                if (!sessionStartTime) {
+                    return res.status(400).json({
+                        error: 'Attendance session has not been started'
+                    });
+                }
+
+                const hoursSinceStart =
+                    (Date.now() - new Date(sessionStartTime).getTime()) /
+                    (1000 * 60 * 60);
+
+                if (hoursSinceStart > 24) {
+                    return res.status(400).json({
+                        error: 'Attendance can only be corrected within 24 hours of the session'
+                    });
         }
 
         const studentResult = await pool.query(
@@ -180,12 +223,18 @@ if (existingResult.rows.length > 0) {
         });
 
     } catch (error) {
-        console.error('Manual attendance error:', error);
+    console.error('Manual attendance error:', error);
 
-        return res.status(500).json({
-            error: 'Internal server error'
+    if (error.code === '23505') {
+        return res.status(409).json({
+            error: 'Attendance has already been marked for this student in this session.'
         });
     }
+
+    return res.status(500).json({
+        error: 'Internal server error'
+    });
+}
 };
 export const startAttendanceSession = async (req, res) => {
     try {
