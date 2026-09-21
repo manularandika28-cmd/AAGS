@@ -677,7 +677,35 @@ setSessionProgress(progress);
 
                         alert("Attendance marked successfully.");
 
-                        setStudentRegistrationNumber("");
+// Refresh attendance records
+const attendanceResponse = await fetch(
+  `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/attendance`,
+  {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }
+);
+
+const attendanceData = await attendanceResponse.json();
+
+if (attendanceResponse.ok) {
+  setAttendanceRecords(attendanceData.attendance);
+  setEnrolledCount(attendanceData.enrolled_count);
+
+  const presentCount = attendanceData.attendance.filter(
+    (record) => record.status === "present"
+  ).length;
+
+  const progress =
+    attendanceData.enrolled_count > 0
+      ? (presentCount / attendanceData.enrolled_count) * 100
+      : 0;
+
+  setSessionProgress(progress);
+}
+
+setStudentRegistrationNumber("");
                       } catch (error) {
                         console.error("Manual attendance error:", error);
                         alert("Could not connect to the server.");
