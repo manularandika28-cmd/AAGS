@@ -498,7 +498,7 @@ setSessionProgress(progress);
                   <div className="flex items-baseline gap-3">
 
                     <span className="text-[36px] font-bold text-[#071B38]">
-                      72.5%
+                      {sessionProgress.toFixed(1)}%
                     </span>
 
                     <span className="text-[13px] text-[#475467]">
@@ -516,7 +516,7 @@ setSessionProgress(progress);
                     </span>
 
                     <span className="text-[13px] text-[#F79009]">
-                      2.5% short
+                      {Math.max(0, 75 - sessionProgress).toFixed(1)}% short
                     </span>
 
                   </div>
@@ -527,7 +527,7 @@ setSessionProgress(progress);
 
                     <div
                       className="h-full bg-[#062746] rounded-full"
-                      style={{ width: "72.5%" }}
+                      style={{ width: `${sessionProgress}%` }}
                     ></div>
 
                     {/* Target marker */}
@@ -545,8 +545,14 @@ setSessionProgress(progress);
                     />
 
                     <p className="text-[13px] leading-5 text-[#475467]">
-                      Need <strong>3 more students</strong> to reach
-                      the 75% module requirement threshold for this
+                      Need{" "}
+                      <strong>
+                        {Math.max(
+                          0,
+                          Math.ceil(enrolledCount * 0.75 - presentCount)
+                        )} more students
+                      </strong>{" "}
+                      to reach the 75% module requirement threshold for this
                       session.
                     </p>
 
