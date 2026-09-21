@@ -300,3 +300,88 @@ export const endAttendanceSession = async (req, res) => {
         });
     }
 };
+export const markAttendanceByFingerprint = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { fingerprintId } = req.body;
+
+        if (!fingerprintId) {
+            return res.status(400).json({
+                error: 'Fingerprint ID is required'
+            });
+        }
+
+        const sessionResult = await pool.query(
+            `SELECT session_id, session_status
+             FROM sessions
+             WHERE session_id = $1`,
+            [sessionId]
+        );
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Session not found'
+            });
+        }
+
+        if (sessionResult.rows[0].session_status !== 'active') {
+            return res.status(400).json({
+                error: 'Attendance session is not active'
+            });
+        }
+
+        const studentResult = await pool.query(
+            `SELECT student_id, student_name, fingerprint_id
+             FROM students
+             WHERE fingerprint_id = $1`,
+            [fingerprintId]
+        );
+
+        if (studentResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'No student found for this fingerprint'
+            });
+        }
+
+        const student = studentResult.rows[0];
+
+        const existingResult = await pool.query(
+            `SELECT attendance_id
+             FROM attendance_records
+             WHERE session_id = $1 AND student_id = $2`,
+            [sessionId, student.student_id]
+        );
+
+        if (existingResult.rows.length > 0) {
+            return res.status(409).json({
+                error: 'Attendance has already been marked for this student'
+            });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO attendance_records
+                (session_id, student_id, status, marked_at)
+             VALUES
+                ($1, $2, 'present', NOW())
+             RETURNING *`,
+            [sessionId, student.student_id]
+        );
+
+        return res.status(201).json({
+            message: 'Fingerprint attendance marked successfully',
+            student: {
+                student_id: student.student_id,
+                student_name: student.student_name,
+                fingerprint_id: student.fingerprint_id
+            },
+            attendance: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Fingerprint attendance error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

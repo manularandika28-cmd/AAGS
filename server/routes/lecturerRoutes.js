@@ -4,6 +4,7 @@ import {
     getLecturerSessions,
     getSessionAttendance,
     markAttendanceManually,
+    markAttendanceByFingerprint,
     startAttendanceSession,
     endAttendanceSession
 } from '../controllers/lecturerController.js';
@@ -34,6 +35,12 @@ router.post(
     verifyToken,
     authorize('Lecturer'),
     markAttendanceManually
+);
+router.post(
+    '/sessions/:sessionId/attendance/fingerprint',
+    verifyToken,
+    authorize('Lecturer'),
+    markAttendanceByFingerprint
 );
 router.post(
     '/sessions/:sessionId/start',
