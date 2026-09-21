@@ -113,3 +113,77 @@ return res.status(200).json({
         });
     }
 };
+
+export const markAttendanceManually = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { studentId, reason } = req.body;
+
+        if (!studentId) {
+            return res.status(400).json({
+                error: 'Student ID is required'
+            });
+        }
+
+        const studentResult = await pool.query(
+            `SELECT student_id, student_name
+             FROM students
+             WHERE student_id = $1`,
+            [studentId]
+        );
+
+        if (studentResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Student not found'
+            });
+        }
+
+        const existingResult = await pool.query(
+    `SELECT attendance_id
+     FROM attendance_records
+     WHERE session_id = $1 AND student_id = $2`,
+    [sessionId, studentId]
+);
+
+let result;
+
+if (existingResult.rows.length > 0) {
+    result = await pool.query(
+        `UPDATE attendance_records
+         SET status = 'present',
+             marked_at = NOW(),
+             changed_by = $2,
+             changed_reason = $3,
+             changed_at = NOW()
+         WHERE attendance_id = $1
+         RETURNING *`,
+        [
+            existingResult.rows[0].attendance_id,
+            req.user.userId,
+            reason
+        ]
+    );
+} else {
+    result = await pool.query(
+        `INSERT INTO attendance_records
+            (session_id, student_id, status, marked_at, changed_by, changed_reason)
+         VALUES
+            ($1, $2, 'present', NOW(), $3, $4)
+         RETURNING *`,
+        [sessionId, studentId, req.user.userId, reason]
+    );
+}
+
+        return res.status(201).json({
+            message: 'Attendance marked manually',
+            attendance: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Manual attendance error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

@@ -2,7 +2,8 @@ import express from 'express';
 import {
     getLecturerDashboard,
     getLecturerSessions,
-    getSessionAttendance
+    getSessionAttendance,
+    markAttendanceManually
 } from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
@@ -25,6 +26,12 @@ router.get(
     verifyToken,
     authorize('Lecturer'),
     getSessionAttendance
+);
+router.post(
+    '/sessions/:sessionId/attendance/manual',
+    verifyToken,
+    authorize('Lecturer'),
+    markAttendanceManually
 );
 
 export default router;

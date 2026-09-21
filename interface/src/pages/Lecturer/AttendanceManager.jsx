@@ -105,6 +105,8 @@ setSessionProgress(progress);
   const [isPaused, setIsPaused] = useState(false);
   const [isSessionStarted, setIsSessionStarted] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [studentRegistrationNumber, setStudentRegistrationNumber] = useState("");
+  const [manualReason, setManualReason] = useState("Fingerprint Not Recognized");
   useEffect(() => {
   if (!isSessionStarted || isPaused) {
     return;
@@ -579,12 +581,14 @@ setSessionProgress(progress);
                   <div>
 
                     <label className="block text-[12px] font-semibold text-[#475467] mb-2">
-                      Student Registration Number
+                     Student ID
                     </label>
 
                     <input
                       type="text"
-                      placeholder="e.g. 2020/CS/001"
+                      placeholder="e.g. 2"
+                      value={studentRegistrationNumber}
+                      onChange={(e) => setStudentRegistrationNumber(e.target.value)}
                       className="w-full h-[41px] rounded-lg border border-[#D0D5DD] bg-[#F8FAFC] px-3 text-[14px] text-[#344054] outline-none focus:ring-2 focus:ring-[#00427C]/20"
                     />
 
@@ -601,7 +605,9 @@ setSessionProgress(progress);
                     <div className="relative">
 
                       <select
-                        defaultValue="Fingerprint Not Recognized"
+                        
+                        value={manualReason}
+                        onChange={(e) => setManualReason(e.target.value)}
                         className="appearance-none w-full h-[41px] rounded-lg border border-[#D0D5DD] bg-[#F8FAFC] px-3 pr-9 text-[14px] text-[#344054] outline-none focus:ring-2 focus:ring-[#00427C]/20"
                       >
                         <option>
@@ -633,7 +639,51 @@ setSessionProgress(progress);
 
 
                   {/* Button */}
-                  <button className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
+                  
+                  <button 
+                  onClick={async () => {
+                      if (!studentRegistrationNumber.trim()) {
+                        alert("Please enter the student ID.");
+                        return;
+                      }
+
+                      if (!sessions[0]?.session_id) {
+                        alert("No active session found.");
+                        return;
+                      }
+
+                      try {
+                        const response = await fetch(
+                          `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/attendance/manual`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${accessToken}`,
+                            },
+                            body: JSON.stringify({
+                              studentId: Number(studentRegistrationNumber),
+                              reason: manualReason,
+                            }),
+                          }
+                        );
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                          alert(data.error || "Failed to mark attendance.");
+                          return;
+                        }
+
+                        alert("Attendance marked successfully.");
+
+                        setStudentRegistrationNumber("");
+                      } catch (error) {
+                        console.error("Manual attendance error:", error);
+                        alert("Could not connect to the server.");
+                      }
+                    }}
+                  className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
 
                     <UserRoundCheck size={16} />
 
