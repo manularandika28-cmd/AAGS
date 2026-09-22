@@ -1,5 +1,102 @@
 import { pool } from '../db.js';
+const checkAttendanceAlert = async (studentId, courseId) => {
+    const attendanceSummary = await pool.query(
+        `SELECT
+            (
+                SELECT COUNT(*)
+                FROM attendance_records ar
+                INNER JOIN sessions s
+                    ON ar.session_id = s.session_id
+                WHERE s.course_id = $1
+                  AND ar.student_id = $2
+                  AND ar.status = 'present'
+            ) AS present_count,
+            (
+                SELECT COUNT(*)
+                FROM sessions
+                WHERE course_id = $1
+            ) AS total_sessions`,
+        [courseId, studentId]
+    );
 
+    const presentCount = Number(
+        attendanceSummary.rows[0].present_count
+    );
+
+    const totalSessions = Number(
+        attendanceSummary.rows[0].total_sessions
+    );
+
+    const attendancePercentage =
+        totalSessions > 0
+            ? (presentCount / totalSessions) * 100
+            : 0;
+
+    console.log(
+        `Student ${studentId} attendance: ${attendancePercentage.toFixed(2)}%`
+    );
+
+    if (attendancePercentage < 75) {
+                const existingWarning = await pool.query(
+            `SELECT n.notification_id
+             FROM notifications n
+             INNER JOIN notification_students ns
+                ON n.notification_id = ns.notification_id
+             WHERE ns.student_id = $1
+               AND n.title = 'Attendance Warning'
+             LIMIT 1`,
+            [studentId]
+        );
+
+        if (existingWarning.rows.length === 0) {
+
+            const notificationResult = await pool.query(
+                `INSERT INTO notifications
+                    (title, message, delivery_status, created_at)
+                 VALUES
+                    ($1, $2, 'delivered', NOW())
+                 RETURNING notification_id`,
+                [
+                    'Attendance Warning',
+                    'Your attendance for this course has dropped below 75%.'
+                ]
+            );
+
+            const notificationId =
+                notificationResult.rows[0].notification_id;
+
+            await pool.query(
+                `INSERT INTO notification_students
+                    (notification_id, student_id, created_at, is_read)
+                 VALUES
+                    ($1, $2, NOW(), false)`,
+                [notificationId, studentId]
+            );
+
+            const lecturerResult = await pool.query(
+                `SELECT lecturer_id
+                 FROM course_lecturers
+                 WHERE course_id = $1
+                 LIMIT 1`,
+                [courseId]
+            );
+
+            if (lecturerResult.rows.length > 0) {
+
+                await pool.query(
+                    `INSERT INTO notification_lecturers
+                        (notification_id, lecturer_id, received_at, is_read)
+                     VALUES
+                        ($1, $2, NOW(), false)`,
+                    [
+                        notificationId,
+                        lecturerResult.rows[0].lecturer_id
+                    ]
+                );
+            }
+        }
+    }
+};
 export const getLecturerDashboard = async (req, res) => {
     try {
         const lecturerId = req.user.userId;
@@ -82,6 +179,7 @@ export const getSessionAttendance = async (req, res) => {
                 ar.student_id,
                 s.student_name,
                 ar.status,
+                ar.changed_reason,
                 ar.marked_at
              FROM attendance_records ar
              INNER JOIN students s
@@ -144,11 +242,11 @@ export const markAttendanceManually = async (req, res) => {
             });
         }
         const timeResult = await pool.query(
-    `SELECT actual_start_time
-     FROM sessions
-     WHERE session_id = $1`,
-    [sessionId]
-);
+            `SELECT actual_start_time
+            FROM sessions
+            WHERE session_id = $1`,
+            [sessionId]
+        );
 
         const sessionStartTime = timeResult.rows[0].actual_start_time;
 
@@ -182,11 +280,11 @@ export const markAttendanceManually = async (req, res) => {
         }
 
         const existingResult = await pool.query(
-    `SELECT attendance_id
-     FROM attendance_records
-     WHERE session_id = $1 AND student_id = $2`,
-    [sessionId, studentId]
-);
+            `SELECT attendance_id
+            FROM attendance_records
+            WHERE session_id = $1 AND student_id = $2`,
+            [sessionId, studentId]
+        );
 
 let result;
 
@@ -216,6 +314,16 @@ if (existingResult.rows.length > 0) {
         [sessionId, studentId, req.user.userId, reason]
     );
 }
+const courseResult = await pool.query(
+    `SELECT course_id
+     FROM sessions
+     WHERE session_id = $1`,
+    [sessionId]
+);
+
+const courseId = courseResult.rows[0].course_id;
+
+await checkAttendanceAlert(studentId, courseId);
 
         return res.status(201).json({
             message: 'Attendance marked manually',
@@ -312,12 +420,11 @@ export const markAttendanceByFingerprint = async (req, res) => {
         }
 
         const sessionResult = await pool.query(
-            `SELECT session_id, session_status
-             FROM sessions
-             WHERE session_id = $1`,
+            `SELECT session_id, course_id, session_status
+            FROM sessions
+            WHERE session_id = $1`,
             [sessionId]
         );
-
         if (sessionResult.rows.length === 0) {
             return res.status(404).json({
                 error: 'Session not found'
@@ -366,7 +473,10 @@ export const markAttendanceByFingerprint = async (req, res) => {
              RETURNING *`,
             [sessionId, student.student_id]
         );
-
+       await checkAttendanceAlert(
+            student.student_id,
+            sessionResult.rows[0].course_id
+        );
         return res.status(201).json({
             message: 'Fingerprint attendance marked successfully',
             student: {
@@ -377,11 +487,15 @@ export const markAttendanceByFingerprint = async (req, res) => {
             attendance: result.rows[0]
         });
 
-    } catch (error) {
+    
+}
+    
+    catch (error) {
         console.error('Fingerprint attendance error:', error);
 
         return res.status(500).json({
             error: 'Internal server error'
         });
     }
+
 };

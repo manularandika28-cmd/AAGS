@@ -521,7 +521,8 @@ setSessionProgress(progress);
 
     <span className="text-[13px] text-[#475467] flex items-center gap-2">
       <Fingerprint size={15} />
-      Scanner
+      {record.changed_reason ? "Manual Override" : "Scanner"}
+    
     </span>
 
     <span
