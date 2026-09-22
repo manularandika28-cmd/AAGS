@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from 'react';
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
+import { useAuth } from '../../context/AuthContext';
 
 import {
   LayoutDashboard,
@@ -33,6 +34,39 @@ import {
 const MeetingManagement = () => {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const { accessToken, user } = useAuth();
+  const [meetings, setMeetings] = useState([]);
+
+useEffect(() => {
+    const fetchMeetings = async () => {
+        try {
+            const response = await fetch(
+                'http://localhost:3000/api/lecturer/meetings',
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error(data.error);
+                return;
+            }
+
+            setMeetings(data.meetings);
+            console.log("Lecturer meetings:", data.meetings);
+        } catch (error) {
+            console.error('Failed to fetch meetings:', error);
+        }
+    };
+
+    if (accessToken) {
+        fetchMeetings();
+    }
+}, [accessToken]);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -236,226 +270,127 @@ const MeetingManagement = () => {
                 {/* Requests */}
                 <div className="p-4 space-y-4">
 
-
-                  {/* =================================================
-                      REQUEST 1
-                  ================================================== */}
-                  <div className="border border-[#D0D5DD] rounded-lg p-4">
-
-                    {/* Student */}
-                    <div className="flex items-center justify-between">
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
-                          AS
-                        </div>
-
-                        <div>
-
-                          <h3 className="text-[14px] font-bold">
-                            Amaya Silva
-                          </h3>
-
-                          <p className="text-[13px] text-[#475467]">
-                            STU-2021-045
-                          </p>
-
-                        </div>
-
-                      </div>
-
-
-                      <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
-                        THESIS REVIEW
-                      </span>
-
+                  {meetings.length === 0 ? (
+                    <div className="text-center py-8 text-[#475467]">
+                      No meeting requests found.
                     </div>
+                  ) : (
+                    meetings.map((meeting) => {
 
+                      const [year, month, day] = meeting.preferred_date
+                        .split("T")[0]
+                        .split("-");
 
-                    {/* Date and time */}
-                    <div className="mt-3 bg-[#F8FAFC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px] text-[#475467]">
+                      const meetingDate = new Date(meeting.preferred_date).toLocaleDateString(
+                        "en-US",
+                        {
+                          timeZone: "Asia/Colombo",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        }
+                      );
 
-                      <CalendarDays size={16} />
+                      const meetingTime = meeting.preferred_time
+                        ? meeting.preferred_time.slice(0, 5)
+                        : "--";
 
-                      <span>
-                        Oct 24, 2023
-                      </span>
+                      const initials = meeting.student_name
+                        .split(" ")
+                        .map((name) => name[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
 
-                      <span>
-                        •
-                      </span>
-
-                      <Clock3 size={16} />
-
-                      <span>
-                        10:00 AM - 10:30 AM
-                      </span>
-
-                    </div>
-
-
-                    {/* Buttons */}
-                    <div className="flex justify-end gap-2 mt-4">
-
-                      <button
-                      
-                          onClick={() => {
-                            alert("Meeting request declined.");
-                          }}
-                          className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]"
+                      return (
+                        <div
+                          key={meeting.request_id}
+                          className="border border-[#D0D5DD] rounded-lg p-4"
                         >
-                          Decline
-                        </button>
 
-                      <button
-                        onClick={() => {
-                          alert("Reschedule option selected.");
-                        }}
-                        className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]"
-                      >
-                        Reschedule
-                      </button>
+                          {/* Student */}
+                          <div className="flex items-center justify-between">
 
-                      <button 
-                        onClick={() => {
-                         alert("Meeting request approved."); 
-                        }}
-                      className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]">
+                            <div className="flex items-center gap-3">
 
-                        <Check size={14} />
+                              <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
+                                {initials}
+                              </div>
 
-                        Approve
+                              <div>
 
-                      </button>
+                                <h3 className="text-[14px] font-bold">
+                                  {meeting.student_name}
+                                </h3>
 
-                    </div>
+                                <p className="text-[13px] text-[#475467]">
+                                  Student ID: {meeting.student_id}
+                                </p>
 
-                  </div>
+                              </div>
+
+                            </div>
+
+                            <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
+                              {meeting.status?.toUpperCase()}
+                            </span>
+
+                          </div>
 
 
-                  {/* =================================================
-                      REQUEST 2 - OVERLAP
-                  ================================================== */}
-                  <div className="border border-[#F04438] border-l-4 rounded-lg bg-[#FFF8F7] p-4">
+                          {/* Purpose */}
+                          <div className="mt-3">
 
-                    {/* Student */}
-                    <div className="flex items-center justify-between">
+                            <p className="text-[13px] font-semibold text-[#344054]">
+                              {meeting.purpose}
+                            </p>
 
-                      <div className="flex items-center gap-3">
+                          </div>
 
-                        <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
-                          KP
+
+                          {/* Date and Time */}
+                          <div className="mt-3 bg-[#F8FAFC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px] text-[#475467]">
+
+                            <CalendarDays size={16} />
+
+                            <span>
+                              {meetingDate}
+                            </span>
+
+                            <span>
+                              •
+                            </span>
+
+                            <Clock3 size={16} />
+
+                            <span>
+                              {meetingTime}
+                            </span>
+
+                          </div>
+
+
+                          {/* Location */}
+                          {meeting.location && (
+                            <div className="mt-2 text-[12px] text-[#475467]">
+                              <strong>Location:</strong> {meeting.location}
+                            </div>
+                          )}
+
+
+                          {/* Response */}
+                          {meeting.response && (
+                            <div className="mt-2 text-[12px] text-[#475467]">
+                              <strong>Response:</strong> {meeting.response}
+                            </div>
+                          )}
+
                         </div>
-
-                        <div>
-
-                          <h3 className="text-[14px] font-bold">
-                            Kasun Perera
-                          </h3>
-
-                          <p className="text-[13px] text-[#475467]">
-                            STU-2022-112
-                          </p>
-
-                        </div>
-
-                      </div>
-
-
-                      <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
-                        LAB GUIDANCE
-                      </span>
-
-                    </div>
-
-
-                    {/* Date */}
-                    <div className="mt-3 bg-[#F5F8FC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px]">
-
-                      <CalendarDays size={16} />
-
-                      <span>
-                        Oct 24, 2023
-                      </span>
-
-                      <span>
-                        •
-                      </span>
-
-                      <Clock3 size={16} />
-
-                      <span className="text-[#F04438] font-semibold">
-                        14:00 PM - 15:00 PM
-                      </span>
-
-                    </div>
-
-
-                    {/* Alert */}
-                    <div className="mt-3 bg-[#FFD9D5] rounded-md p-3 flex gap-2">
-
-                      <AlertTriangle
-                        size={18}
-                        className="text-[#B42318] shrink-0"
-                      />
-
-                      <div className="text-[12px] text-[#B42318]">
-
-                        <div className="font-semibold">
-                          Overlap Alert
-                        </div>
-
-                        <div className="mt-1">
-                          Clashes with existing:
-                          <strong>
-                            {" "} "Faculty Senate Meeting"
-                          </strong>
-                          {" "} (13:30 - 15:30)
-                        </div>
-
-                      </div>
-
-                    </div>
-
-
-                    {/* Buttons */}
-                    <div className="flex justify-end gap-2 mt-4">
-
-                      <button
-                                  onClick={() => {
-                                    alert("Meeting request declined.");
-                                  }}
-                                  className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]"
-                                >
-                                  Decline
-                                </button>
-                      <button
-                        onClick={() => setShowTimeModal(true)}
-                        className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]"
-                      >
-                        <CalendarClock size={14} />
-                        Propose New Time
-                      </button>
-                     
-
-                      <button
-                        disabled
-                        className="bg-[#BCE8D0] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 opacity-70"
-                      >
-
-                        <Check size={14} />
-
-                        Approve
-
-                      </button>
-
-                    </div>
-
-                  </div>
+                      );
+                    })
+                  )}
 
                 </div>
-
               </section>
 
             </div>
