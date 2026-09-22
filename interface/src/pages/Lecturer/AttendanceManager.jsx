@@ -767,12 +767,13 @@ if (attendanceResponse.ok) {
 }
 
 setStudentRegistrationNumber("");
-                      } catch (error) {
-                        console.error("Manual attendance error:", error);
-                        alert("Could not connect to the server.");
-                      }
-                    }}
-                  className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
+                      }   catch (error) {
+                            console.error("Manual attendance error:", error);
+                            alert("Could not connect to the server.");
+                        }
+                        }}
+                      
+                        className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
 
                     <UserRoundCheck size={16} />
 

@@ -67,7 +67,7 @@ const checkAttendanceAlert = async (studentId, courseId) => {
 
             await pool.query(
                 `INSERT INTO notification_students
-                    (notification_id, student_id, created_at, is_read)
+                    (notification_id, student_id, received_at, is_read)
                  VALUES
                     ($1, $2, NOW(), false)`,
                 [notificationId, studentId]
