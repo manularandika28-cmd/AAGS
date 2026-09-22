@@ -540,3 +540,40 @@ export const getLecturerMeetings = async (req, res) => {
         });
     }
 };
+export const approveMeetingRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const lecturerId = req.user.userId;
+
+        const result = await pool.query(
+            `UPDATE meeting_requests
+             SET status = 'confirmed',
+                 response = 'Meeting request approved.',
+                 confirmed_date = preferred_date,
+                 confirmed_time = preferred_time
+             WHERE request_id = $1
+               AND lecturer_id = $2
+               AND status = 'pending'
+             RETURNING *`,
+            [requestId, lecturerId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Pending meeting request not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Meeting request approved',
+            meeting: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Approve meeting error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

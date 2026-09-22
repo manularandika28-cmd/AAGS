@@ -7,7 +7,8 @@ import {
     markAttendanceByFingerprint,
     startAttendanceSession,
     endAttendanceSession,
-    getLecturerMeetings
+    getLecturerMeetings,
+    approveMeetingRequest
 } from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
@@ -61,5 +62,11 @@ router.get(
     verifyToken,
     authorize('Lecturer'),
     getLecturerMeetings
+);
+router.patch(
+    '/meetings/:requestId/approve',
+    verifyToken,
+    authorize('Lecturer'),
+    approveMeetingRequest
 );
 export default router;

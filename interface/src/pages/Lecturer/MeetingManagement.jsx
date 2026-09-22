@@ -281,15 +281,17 @@ useEffect(() => {
                         .split("T")[0]
                         .split("-");
 
-                      const meetingDate = new Date(meeting.preferred_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          timeZone: "Asia/Colombo",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric"
-                        }
-                      );
+                      const meetingDate = meeting.preferred_date
+                        ? new Date(meeting.preferred_date).toLocaleDateString(
+                            "en-US",
+                            {
+                              timeZone: "Asia/Colombo",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            }
+                          )
+                        : "Date not available";
 
                       const meetingTime = meeting.preferred_time
                         ? meeting.preferred_time.slice(0, 5)
@@ -384,16 +386,60 @@ useEffect(() => {
                               <strong>Response:</strong> {meeting.response}
                             </div>
                           )}
+                          {meeting.status === "pending" && (
+                            <div className="flex justify-end gap-2 mt-4">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(
+                                      `http://localhost:3000/api/lecturer/meetings/${meeting.request_id}/approve`,
+                                      {
+                                        method: "PATCH",
+                                        headers: {
+                                          Authorization: `Bearer ${accessToken}`,
+                                        },
+                                      }
+                                    );
 
-                        </div>
-                      );
-                    })
-                  )}
+                                    const data = await response.json();
 
-                </div>
-              </section>
+                                    if (!response.ok) {
+                                      alert(data.error || "Failed to approve meeting.");
+                                      return;
+                                    }
 
-            </div>
+                                    alert("Meeting request approved.");
+
+                                    setMeetings((currentMeetings) =>
+                                      currentMeetings.map((item) =>
+                                        item.request_id === meeting.request_id
+                                          ? data.meeting
+                                          : item
+                                      )
+                                    );
+
+                                  } catch (error) {
+                                    console.error("Approve meeting error:", error);
+                                    alert("Could not connect to the server.");
+                                  }
+                                }}
+                                className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]"
+                              >
+                                <Check size={14} />
+                                Approve
+                              </button>
+                            </div>
+                          )}
+
+                                  </div>
+                                );
+                              })
+                            )}
+
+                          </div>
+                        </section>
+
+                      </div>
 
 
             {/* =================================================
