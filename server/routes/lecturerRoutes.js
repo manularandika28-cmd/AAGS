@@ -6,7 +6,8 @@ import {
     markAttendanceManually,
     markAttendanceByFingerprint,
     startAttendanceSession,
-    endAttendanceSession
+    endAttendanceSession,
+    getLecturerMeetings
 } from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
@@ -29,6 +30,7 @@ router.get(
     verifyToken,
     authorize('Lecturer'),
     getSessionAttendance
+
 );
 router.post(
     '/sessions/:sessionId/attendance/manual',
@@ -54,5 +56,10 @@ router.post(
     authorize('Lecturer'),
     endAttendanceSession
 );
-
+router.get(
+    '/meetings',
+    verifyToken,
+    authorize('Lecturer'),
+    getLecturerMeetings
+);
 export default router;

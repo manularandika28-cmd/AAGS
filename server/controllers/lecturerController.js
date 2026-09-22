@@ -499,3 +499,44 @@ export const markAttendanceByFingerprint = async (req, res) => {
     }
 
 };
+export const getLecturerMeetings = async (req, res) => {
+    try {
+        const lecturerId = req.user.userId;
+
+        const result = await pool.query(
+            `SELECT
+                mr.request_id,
+                mr.student_id,
+                s.student_name,
+                mr.lecturer_id,
+                l.name AS lecturer_name,
+                mr.preferred_date,
+                mr.preferred_time,
+                mr.purpose,
+                mr.response,
+                mr.confirmed_date,
+                mr.confirmed_time,
+                mr.location,
+                mr.status
+             FROM meeting_requests mr
+             INNER JOIN students s
+                ON mr.student_id = s.student_id
+             INNER JOIN lecturers l
+                ON mr.lecturer_id = l.lecturer_id
+             WHERE mr.lecturer_id = $1
+             ORDER BY mr.preferred_date, mr.preferred_time`,
+            [lecturerId]
+        );
+
+        return res.status(200).json({
+            meetings: result.rows
+        });
+
+    } catch (error) {
+        console.error('Lecturer meetings error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
