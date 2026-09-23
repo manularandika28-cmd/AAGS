@@ -514,7 +514,7 @@ export const getLecturerMeetings = async (req, res) => {
                 mr.preferred_time,
                 mr.purpose,
                 mr.response,
-                mr.confirmed_date,
+                mr.confirmed_date::text AS confirmed_date,
                 mr.confirmed_time,
                 mr.location,
                 mr.status

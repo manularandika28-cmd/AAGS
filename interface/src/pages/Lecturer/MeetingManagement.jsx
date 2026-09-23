@@ -40,12 +40,17 @@ const MeetingManagement = () => {
   const confirmedMeetings = meetings.filter(
   (meeting) => meeting.status === "confirmed"
 );
-const scheduleStartDate = confirmedMeetings.length
-  ? new Date(confirmedMeetings[0].confirmed_date)
-  : new Date();
+const today = new Date();
+const dayOfWeek = today.getDay();
+
+const daysFromMonday = dayOfWeek === 0
+  ? 6
+  : dayOfWeek - 1;
+
+const scheduleStartDate = new Date(today);
 
 scheduleStartDate.setDate(
-  scheduleStartDate.getDate() + weekOffset * 7
+  today.getDate() - daysFromMonday + weekOffset * 7
 );
 
 const scheduleEndDate = new Date(scheduleStartDate);
@@ -66,8 +71,18 @@ const scheduleDates = Array.from({ length: 7 }, (_, index) => {
   return date;
 });
 
-const today = new Date();
 
+const todaysMeetings = confirmedMeetings.filter((meeting) => {
+  if (!meeting.confirmed_date) return false;
+
+  const meetingDate = new Date(meeting.confirmed_date);
+
+  return (
+    meetingDate.getFullYear() === today.getFullYear() &&
+    meetingDate.getMonth() === today.getMonth() &&
+    meetingDate.getDate() === today.getDate()
+  );
+});
 
 useEffect(() => {
     const fetchMeetings = async () => {
@@ -542,24 +557,41 @@ useEffect(() => {
                   {/* Schedule dates */}
                   <div className="grid grid-cols-7 text-center">
                     {scheduleDates.map((date, index) => {
-                      const hasMeeting = confirmedMeetings.some((meeting) => {
-                        if (!meeting.confirmed_date) return false;
-
-                        const meetingDate = new Date(meeting.confirmed_date);
-
-                        return (
-                          meetingDate.getFullYear() === date.getFullYear() &&
-                          meetingDate.getMonth() === date.getMonth() &&
-                          meetingDate.getDate() === date.getDate()
+                      console.log(
+                          "Confirmed meetings:",
+                          confirmedMeetings.map((meeting) => ({
+                            request_id: meeting.request_id,
+                            confirmed_date: meeting.confirmed_date,
+                          }))
                         );
-                      });
 
+                        const hasMeeting = confirmedMeetings.some((meeting) => {
+                          if (!meeting.confirmed_date) return false;
+
+                          const meetingDateKey = String(meeting.confirmed_date).slice(0, 10);
+
+                          const calendarDateKey =
+                            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+                          return meetingDateKey === calendarDateKey;
+                        });
+
+                        const isToday =
+                          date.getFullYear() === today.getFullYear() &&
+                          date.getMonth() === today.getMonth() &&
+                          date.getDate() === today.getDate();
+                      
+                      
                       return (
                         <span
                           key={index}
                           className={`relative text-[12px] py-2 ${
-                            hasMeeting
-                              ? "font-semibold text-[#062746]"
+                            isToday && hasMeeting
+                              ? "font-semibold text-red-600"
+                              : isToday
+                              ? "font-semibold text-blue-600"
+                              : hasMeeting
+                              ? "font-semibold text-green-600"
                               : "text-[#475467]"
                           }`}
                         >
@@ -572,6 +604,27 @@ useEffect(() => {
                       );
                     })}
                   </div>
+                  {/* Calendar Legend */}
+                    <div className="flex items-center justify-center gap-5 pt-3">
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span className="text-[10px] text-[#475467]">Today</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                        <span className="text-[10px] text-[#475467]">Meeting</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                        <span className="text-[10px] text-[#475467]">
+                          Today + Meeting
+                        </span>
+                      </div>
+
+              </div>
               </div>
 
 
@@ -595,7 +648,7 @@ useEffect(() => {
                         No confirmed meetings scheduled.
                       </div>
                     ) : (
-                      confirmedMeetings.map((meeting) => {
+                      todaysMeetings.map((meeting) => {
                         const meetingDate = meeting.confirmed_date
                           ? new Date(meeting.confirmed_date).toLocaleDateString(
                               "en-US",
@@ -646,6 +699,7 @@ useEffect(() => {
                       })
                     )}
                 </div>
+
 
               </div>
 
