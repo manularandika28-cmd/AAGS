@@ -34,6 +34,58 @@ const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
+    const refreshAccessToken = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to refresh access token');
+        }
+
+        const data = await response.json();
+
+        setAccessToken(data.accessToken);
+
+        const storedSession = sessionStorage.getItem('authSession');
+
+        if (storedSession) {
+            const session = JSON.parse(storedSession);
+
+            sessionStorage.setItem(
+                'authSession',
+                JSON.stringify({
+                    ...session,
+                    user: data.user,
+                    accessToken: data.accessToken,
+                })
+            );
+        }
+
+        return data.accessToken;
+    } catch (error) {
+        console.error('Token refresh failed:', error);
+
+        sessionStorage.removeItem('authSession');
+        setUser(null);
+        setAccessToken(null);
+
+        return null;
+    }
+};
+
+useEffect(() => {
+    if (!accessToken) return;
+
+    const refreshInterval = setInterval(() => {
+        refreshAccessToken();
+    }, 10 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
+}, [accessToken]);
+
     const registerUser = async (formData) => {
     const response = await fetch(`${API_BASE}/register`, {
         method: 'POST',
@@ -91,20 +143,28 @@ const AuthProvider = ({ children }) => {
     | LOGOUT
     |--------------------------------------------------------------------------
     */
-    const logout = async () => {
-        try {
-            await fetch(`${API_BASE}/logout`, {
-                method: 'POST',
-                credentials: 'include',
-            });
-        } catch (error) {
-            console.error('Logout request failed:', error);
-        }
+   const logout = async () => {
+    try {
+        await fetch(`${API_BASE}/logout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                userId: user?.userId,
+                name: user?.name,
+                role: user?.role,
+            }),
+        });
+    } catch (error) {
+        console.error('Logout request failed:', error);
+    }
 
-        sessionStorage.removeItem('authSession');
-        setUser(null);
-        setAccessToken(null);
-    };
+    sessionStorage.removeItem('authSession');
+    setUser(null);
+    setAccessToken(null);
+};
 
     return (
         <AuthContext.Provider
@@ -115,7 +175,9 @@ const AuthProvider = ({ children }) => {
                 loginUser,
                 logout,
                 registerUser,
+                refreshAccessToken,
                 isAuthenticated: !!user,
+
             }}
         >
             {children}
