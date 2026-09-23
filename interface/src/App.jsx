@@ -10,6 +10,7 @@ import backgroundVideo from './Assets/BackgroundVideo.mp4';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import Register from './pages/Register';
 
 // =========================================
 // AUTH
@@ -40,6 +41,7 @@ import AcademicRecords from './pages/Student/AcademicRecords';
 // =========================================
 import AdminDashboard from './pages/Administrator/AdminDashboard';
 import UserManagement from './pages/Administrator/UserManagement';
+import PendingApprovals from './pages/Administrator/PendingApprovals';
 import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
@@ -69,20 +71,20 @@ function App() {
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
 
           <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          >
-            <source
-              src={backgroundVideo}
-              type="video/mp4"
-            />
-          </video>
+  autoPlay
+  loop
+  muted
+  playsInline
+  className="w-full h-full object-cover blur-sm"
+>
+  <source
+    src={backgroundVideo}
+    type="video/mp4"
+  />
+</video>
 
           {/* Video Overlay */}
-          <div className="absolute inset-0 bg-white/10" />
+          <div className="absolute inset-0 bg-black/40" />
 
         </div>
 
@@ -107,7 +109,7 @@ function App() {
                 />
               }
             />
-
+          <Route path="/Register" element={<Register />} />
 
             {/* =========================================
                 LOGIN
@@ -204,6 +206,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+            path="/admin/pending-approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <PendingApprovals />
+              </ProtectedRoute>
+            }
+          />
 
             <Route
               path="/admin/users"

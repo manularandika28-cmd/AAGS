@@ -77,7 +77,7 @@ export default function MeetingRequests() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen text-slate-800 font-sans antialiased overflow-hidden">
       
       {/* Sidebar Navigation */}
       <Sidenavbar activeNav={activeNav} setActiveNav={setActiveNav} />
@@ -86,7 +86,7 @@ export default function MeetingRequests() {
       <div className="flex-1 flex flex-col overflow-y-auto">
         
         {/* Top Navbar */}
-        <Topnavbar />
+        
 
         {/* Dashboard Body */}
         <main className="p-8 space-y-6">

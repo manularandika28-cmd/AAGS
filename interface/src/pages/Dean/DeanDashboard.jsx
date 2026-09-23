@@ -65,10 +65,10 @@ export default function DeanDashboard() {
           {/* Page header */}
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-[#071B38]">
+              <h1 className="text-2xl font-bold text-white">
                 Dean's Dashboard
               </h1>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 High-level strategic overview for the Faculty of Technology.
               </p>
             </div>
@@ -85,48 +85,42 @@ export default function DeanDashboard() {
           <hr className="border-slate-200 mb-6" />
 
           {/* Stat cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {STATS.map((stat) => {
-              const Icon = stat.icon;
-              const FooterIcon = stat.footerIcon;
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+  {STATS.map((stat) => {
+    const Icon = stat.icon;
+    const FooterIcon = stat.footerIcon;
 
-              return (
-                <div
-                  key={stat.id}
-                  className={`rounded-xl p-5 shadow-sm border ${
-                    stat.highlight
-                      ? 'bg-red-50/60 border-red-100'
-                      : 'bg-white border-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      {stat.label}
-                    </span>
-                    <span
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${stat.iconBg}`}
-                    >
-                      <Icon size={16} className={stat.iconColor} />
-                    </span>
-                  </div>
+    return (
+      <div
+        key={stat.id}
+        className={`rounded-2xl p-5 shadow-xl backdrop-blur-2xl border ${
+          stat.highlight
+            ? 'bg-white/10 border-red-300/40 shadow-red-900/20'
+            : 'bg-white/10 border-white/30'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-white/90">
+            {stat.label}
+          </span>
+          <span className="w-9 h-9 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center">
+            <Icon size={16} className="text-white" />
+          </span>
+        </div>
 
-                  <div className="text-3xl font-bold text-[#071B38] mt-3">
-                    {stat.value}
-                  </div>
+        <div className="text-4xl font-bold text-white mt-4">
+          {stat.value}
+        </div>
 
-                  <div
-                    className={`flex items-center gap-1 text-xs font-medium mt-2 ${stat.footerColor}`}
-                  >
-                    {FooterIcon && <FooterIcon size={12} />}
-                    {stat.highlight && (
-                      <span className="text-red-500">&#9888;</span>
-                    )}
-                    {stat.footer}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex items-center gap-1 text-xs font-medium mt-2 text-white/70">
+          {FooterIcon && <FooterIcon size={12} />}
+          {stat.highlight && <span className="text-red-300">&#9888;</span>}
+          {stat.footer}
+        </div>
+      </div>
+    );
+  })}
+</div>
         </main>
       </div>
     </div>

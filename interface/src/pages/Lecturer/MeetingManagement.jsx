@@ -65,13 +65,13 @@ const MeetingManagement = () => {
 
                 <div>
 
-                  <h2 className="text-[38px] leading-[1.05] font-bold text-[#071B38]">
+                  <h2 className="text-[38px] leading-[1.05] font-bold text-white">
                     Meeting Management
                     <br />
                     Hub
                   </h2>
 
-                  <p className="mt-3 text-[16px] text-[#475467]">
+                  <p className="mt-3 text-[16px] text-white/70 max-w-[600px]">
                     Manage student consultations, thesis reviews, and lab
                     <br className="hidden md:block" />
                     guidance sessions.

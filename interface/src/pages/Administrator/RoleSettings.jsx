@@ -1,715 +1,1033 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import {
-  ShieldCheck,
   Users,
-  GraduationCap,
-  BriefcaseMedical,
-  CalendarDays,
+  UserCheck,
   FileText,
-  Settings,
+  CalendarDays,
+  Shield,
+  ShieldCheck,
+  Lock,
   Save,
   RotateCcw,
-  CheckCircle2,
-  Shield,
-  Lock,
-  ChevronDown
+  Check,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
+const API_BASE = 'http://localhost:3000/api/admin';
+
+const moduleIcons = {
+  'Attendance Records': UserCheck,
+  'Medical Submissions': FileText,
+  'Meeting Scheduler': CalendarDays,
+  'User Management': Users
+};
+
 const RoleSettings = () => {
-  const [selectedRole, setSelectedRole] = useState('System Admin');
-  const [saved, setSaved] = useState(false);
+  const [roles, setRoles] = useState([]);
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [selectedRole, setSelectedRole] = useState(null);
 
-  const roles = [
-    {
-      name: 'System Admin',
-      description: 'Full access to system administration and management.',
-      users: 12,
-      badge: 'Full Access'
-    },
-    {
-      name: 'Faculty Member',
-      description: 'Manage academic activities and student interactions.',
-      users: 86,
-      badge: 'Academic'
-    },
-    {
-      name: 'Medical Staff',
-      description: 'Manage student medical records and documents.',
-      users: 8,
-      badge: 'Medical'
-    },
-    {
-      name: 'Data Entry Staff',
-      description: 'Enter and update permitted student information.',
-      users: 14,
-      badge: 'Restricted'
-    },
-    {
-      name: 'Student',
-      description: 'Access personal academic and student services.',
-      users: 1128,
-      badge: 'Basic Access'
-    }
-  ];
+  const [permissions, setPermissions] = useState([]);
+  const [originalPermissions, setOriginalPermissions] = useState([]);
 
-  const permissionGroups = [
-    {
-      title: 'User Management',
-      description: 'Control access to user accounts and account administration.',
-      icon: Users,
-      permissions: [
-        {
-          id: 'view_users',
-          name: 'View Users',
-          description: 'View registered users and account information.'
-        },
-        {
-          id: 'create_users',
-          name: 'Create Users',
-          description: 'Create new student, staff, or administrator accounts.'
-        },
-        {
-          id: 'edit_users',
-          name: 'Edit Users',
-          description: 'Modify user account information.'
-        },
-        {
-          id: 'deactivate_users',
-          name: 'Activate / Deactivate Users',
-          description: 'Change the active status of user accounts.'
-        }
-      ]
-    },
-    {
-      title: 'Academic Records',
-      description: 'Control access to academic information and records.',
-      icon: GraduationCap,
-      permissions: [
-        {
-          id: 'view_academic',
-          name: 'View Academic Records',
-          description: 'View student academic records and results.'
-        },
-        {
-          id: 'edit_academic',
-          name: 'Edit Academic Records',
-          description: 'Create and modify academic records.'
-        },
-        {
-          id: 'manage_attendance',
-          name: 'Manage Attendance',
-          description: 'View and update student attendance.'
-        },
-        {
-          id: 'export_academic',
-          name: 'Export Academic Data',
-          description: 'Export academic information and reports.'
-        }
-      ]
-    },
-    {
-      title: 'Meeting Management',
-      description: 'Control student and staff meeting functionality.',
-      icon: CalendarDays,
-      permissions: [
-        {
-          id: 'view_meetings',
-          name: 'View Meetings',
-          description: 'View scheduled meetings and appointments.'
-        },
-        {
-          id: 'create_meetings',
-          name: 'Create Meetings',
-          description: 'Schedule meetings with students or staff.'
-        },
-        {
-          id: 'manage_meetings',
-          name: 'Manage Meetings',
-          description: 'Edit, reschedule, or cancel meetings.'
-        }
-      ]
-    },
-    {
-      title: 'Medical Hub',
-      description: 'Control access to student medical information.',
-      icon: BriefcaseMedical,
-      permissions: [
-        {
-          id: 'view_medical',
-          name: 'View Medical Records',
-          description: 'View student medical information.'
-        },
-        {
-          id: 'manage_medical',
-          name: 'Manage Medical Records',
-          description: 'Review and update medical records.'
-        },
-        {
-          id: 'verify_documents',
-          name: 'Verify Medical Documents',
-          description: 'Approve or reject uploaded medical documents.'
-        }
-      ]
-    },
-    {
-      title: 'Audit Logs',
-      description: 'Control access to system activity and security logs.',
-      icon: FileText,
-      permissions: [
-        {
-          id: 'view_audit',
-          name: 'View Audit Logs',
-          description: 'View recorded system activities and changes.'
-        },
-        {
-          id: 'export_audit',
-          name: 'Export Audit Logs',
-          description: 'Export audit records for administrative review.'
-        }
-      ]
-    },
-    {
-      title: 'System Administration',
-      description: 'Control sensitive system-level administration functions.',
-      icon: Settings,
-      permissions: [
-        {
-          id: 'manage_roles',
-          name: 'Manage Roles',
-          description: 'Create, edit, and configure system roles.'
-        },
-        {
-          id: 'system_config',
-          name: 'System Configuration',
-          description: 'Modify global system configuration.'
-        }
-      ]
-    }
-  ];
+  const [loadingRoles, setLoadingRoles] = useState(true);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const defaultPermissions = {
-    'System Admin': [
-      'view_users',
-      'create_users',
-      'edit_users',
-      'deactivate_users',
-      'view_academic',
-      'edit_academic',
-      'manage_attendance',
-      'export_academic',
-      'view_meetings',
-      'create_meetings',
-      'manage_meetings',
-      'view_medical',
-      'manage_medical',
-      'verify_documents',
-      'view_audit',
-      'export_audit',
-      'manage_roles',
-      'system_config'
-    ],
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-    'Faculty Member': [
-      'view_academic',
-      'edit_academic',
-      'manage_attendance',
-      'export_academic',
-      'view_meetings',
-      'create_meetings',
-      'manage_meetings'
-    ],
+  const fetchRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      setError('');
 
-    'Medical Staff': [
-      'view_medical',
-      'manage_medical',
-      'verify_documents',
-      'view_meetings'
-    ],
+      const response = await fetch(`${API_BASE}/roles`, {
+        credentials: 'include'
+      });
 
-    'Data Entry Staff': [
-      'view_users',
-      'edit_users',
-      'view_academic',
-      'edit_academic'
-    ],
+      const data = await response.json();
 
-    Student: [
-      'view_academic',
-      'view_meetings',
-      'create_meetings',
-      'view_medical'
-    ]
-  };
-
-  const [permissions, setPermissions] = useState(
-    defaultPermissions[selectedRole]
-  );
-
-  const handleRoleChange = (role) => {
-    setSelectedRole(role);
-    setPermissions(defaultPermissions[role] || []);
-    setSaved(false);
-  };
-
-  const togglePermission = (permissionId) => {
-    setPermissions((current) => {
-      if (current.includes(permissionId)) {
-        return current.filter((id) => id !== permissionId);
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || 'Failed to fetch roles'
+        );
       }
 
-      return [...current, permissionId];
-    });
+      setRoles(data);
 
-    setSaved(false);
+      if (data.length > 0) {
+        setSelectedRoleId(String(data[0].role_id));
+      }
+    } catch (err) {
+      console.error('Fetch roles error:', err);
+      setError(err.message);
+    } finally {
+      setLoadingRoles(false);
+    }
   };
 
-  const handleSave = () => {
-    setSaved(true);
+  const fetchPermissions = async (roleId) => {
+    if (!roleId) return;
 
-    setTimeout(() => {
-      setSaved(false);
-    }, 3000);
+    try {
+      setLoadingPermissions(true);
+      setError('');
+      setMessage('');
+
+      const response = await fetch(
+        `${API_BASE}/roles/${roleId}/permissions`,
+        {
+          credentials: 'include'
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || 'Failed to fetch permissions'
+        );
+      }
+
+      const formattedPermissions = data.permissions.map((permission) => ({
+        ...permission,
+        module: permission.module_name,
+        icon: moduleIcons[permission.module_name] || Shield
+      }));
+
+      setPermissions(formattedPermissions);
+
+      setOriginalPermissions(
+        JSON.parse(JSON.stringify(formattedPermissions))
+      );
+    } catch (err) {
+      console.error('Fetch permissions error:', err);
+      setPermissions([]);
+      setOriginalPermissions([]);
+      setError(err.message);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRoleId) return;
+
+    const role = roles.find(
+      (item) => String(item.role_id) === String(selectedRoleId)
+    );
+
+    setSelectedRole(role || null);
+
+    fetchPermissions(selectedRoleId);
+  }, [selectedRoleId, roles]);
+
+  const isProtectedRole =
+    selectedRole?.role_name === 'Admin';
+
+  const togglePermission = (moduleId, permissionName) => {
+    if (isProtectedRole) {
+      return;
+    }
+
+    setPermissions((currentPermissions) =>
+      currentPermissions.map((permission) => {
+        if (permission.module_id !== moduleId) {
+          return permission;
+        }
+
+        return {
+          ...permission,
+          [permissionName]: !permission[permissionName]
+        };
+      })
+    );
+
+    setMessage('');
+    setError('');
   };
 
   const handleReset = () => {
-    setPermissions(defaultPermissions[selectedRole] || []);
-    setSaved(false);
+    setPermissions(
+      JSON.parse(JSON.stringify(originalPermissions))
+    );
+
+    setMessage('');
+    setError('');
   };
 
-  const selectedRoleData = roles.find(
-    (role) => role.name === selectedRole
-  );
+  const handleSave = async () => {
+    if (!selectedRoleId || isProtectedRole) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+      setMessage('');
+
+      const response = await fetch(
+        `${API_BASE}/roles/${selectedRoleId}/permissions`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            permissions: permissions.map((permission) => ({
+              module_id: permission.module_id,
+              can_view: permission.can_view,
+              can_create: permission.can_create,
+              can_delete: permission.can_delete,
+              can_approve: permission.can_approve
+            }))
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || 'Failed to save permissions'
+        );
+      }
+
+      setOriginalPermissions(
+        JSON.parse(JSON.stringify(permissions))
+      );
+
+      setMessage('Permissions saved successfully.');
+
+      setTimeout(() => {
+        setMessage('');
+      }, 3000);
+    } catch (err) {
+      console.error('Save permissions error:', err);
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getPermissionValue = (permission, key) => {
+    return Boolean(permission[key]);
+  };
 
   return (
-    <div className="flex min-h-screen  text-slate-800 font-sans antialiased">
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
 
-      {/* Sidebar */}
       <Sidenavbar />
 
-      {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-        {/* Top Navbar */}
         <Topnavbar />
 
-        {/* Main Content */}
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+        <main className="p-8 max-w-[1500px] w-full mx-auto space-y-6 flex-1">
 
-          {/* Header */}
-          <div className="flex items-center justify-between">
+          {/* PAGE HEADER */}
+          <div>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">
+              Role Settings
+            </h1>
 
-            <div>
-              <h1 className="text-3xl font-extrabold text-white text-slate-900 tracking-tight">
-                Role Settings
-              </h1>
-
-              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
-                Manage role-based permissions and access control.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 bg-white hover:bg-rose-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </button>
-
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                Save Changes
-              </button>
-
-            </div>
+            <p className="text-sm text-white mt-1 font-medium">
+              Manage role-based permissions and access control.
+            </p>
           </div>
 
-          {/* Success Message */}
-          {saved && (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 flex items-center gap-3">
 
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+          {/* MESSAGES */}
 
-              <div>
-                <p className="text-xs font-bold text-emerald-700">
-                  Role permissions saved successfully
-                </p>
+          {message && (
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
 
-                <p className="text-[10px] text-emerald-600 mt-0.5">
-                  Changes to {selectedRole} permissions have been applied.
-                </p>
-              </div>
+              <CheckCircleIcon />
+
+              <span className="text-sm font-semibold">
+                {message}
+              </span>
 
             </div>
           )}
 
-          {/* Role Selection + Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {error && (
+            <div className="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
 
-            {/* Role List */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
 
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-
-                <div>
-                  <h2 className="font-bold text-base text-slate-900">
-                    System Roles
-                  </h2>
-
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Select a role to manage.
-                  </p>
-                </div>
-
-                <Shield className="w-4 h-4 text-slate-300" />
-
-              </div>
-
-              <div className="space-y-2 pt-4">
-
-                {roles.map((role) => {
-                  const isSelected = selectedRole === role.name;
-
-                  return (
-                    <button
-                      key={role.name}
-                      onClick={() => handleRoleChange(role.name)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'bg-[#051E3D] border-[#051E3D] text-white shadow-sm'
-                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'
-                      }`}
-                    >
-
-                      <div className="flex items-center justify-between gap-2">
-
-                        <div className="flex items-center gap-2">
-
-                          <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                              isSelected
-                                ? 'bg-white/10 text-white'
-                                : 'bg-white text-slate-500'
-                            }`}
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                          </div>
-
-                          <span className="text-xs font-bold">
-                            {role.name}
-                          </span>
-
-                        </div>
-
-                        {isSelected && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        )}
-
-                      </div>
-
-                      <div className="flex items-center justify-between mt-2">
-
-                        <span
-                          className={`text-[10px] ${
-                            isSelected
-                              ? 'text-slate-300'
-                              : 'text-slate-400'
-                          }`}
-                        >
-                          {role.users} users
-                        </span>
-
-                        <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded ${
-                            isSelected
-                              ? 'bg-white/10 text-slate-200'
-                              : 'bg-slate-200 text-slate-600'
-                          }`}
-                        >
-                          {role.badge}
-                        </span>
-
-                      </div>
-
-                    </button>
-                  );
-                })}
-
-              </div>
+              <span className="text-sm font-semibold">
+                {error}
+              </span>
 
             </div>
+          )}
 
-            {/* Selected Role Information */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
 
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          {/* MAIN LAYOUT */}
 
-                <div className="flex items-center gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
 
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+
+            {/* LEFT COLUMN */}
+
+            <div className="space-y-6">
+
+
+              {/* SELECT ROLE */}
+
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+
+                <div className="flex items-center gap-3 mb-6">
+
+                  <div className="p-2.5 rounded-xl bg-[#071B38] text-white">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
 
                   <div>
-                    <h2 className="font-bold text-base text-slate-900">
-                      {selectedRole}
+
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Select Role
                     </h2>
 
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {selectedRoleData?.description}
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Choose a role to manage.
                     </p>
+
                   </div>
 
                 </div>
 
-                <div className="text-right">
 
-                  <p className="text-xl font-black text-slate-900">
-                    {permissions.length}
-                  </p>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  System Role
+                </label>
 
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
-                    Permissions
-                  </p>
 
-                </div>
+                <select
+                  value={selectedRoleId}
+                  onChange={(event) =>
+                    setSelectedRoleId(event.target.value)
+                  }
+                  disabled={loadingRoles}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-[#071B38] focus:ring-2 focus:ring-[#071B38]/10 transition"
+                >
 
-              </div>
+                  {loadingRoles ? (
 
-              {/* Permission Summary */}
-              <div className="grid grid-cols-3 gap-3 pt-5">
+                    <option>
+                      Loading roles...
+                    </option>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  ) : (
 
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
-                    Assigned Users
-                  </p>
+                    roles.map((role) => (
 
-                  <p className="text-lg font-black text-slate-900 mt-1">
-                    {selectedRoleData?.users}
-                  </p>
+                      <option
+                        key={role.role_id}
+                        value={role.role_id}
+                      >
+                        {role.role_name}
+                      </option>
 
-                </div>
+                    ))
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  )}
 
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
-                    Active Permissions
-                  </p>
+                </select>
 
-                  <p className="text-lg font-black text-emerald-600 mt-1">
-                    {permissions.length}
-                  </p>
 
-                </div>
+                <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <Users className="w-3.5 h-3.5" />
 
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
-                    Access Level
-                  </p>
-
-                  <p className="text-sm font-black text-slate-900 mt-1">
-                    {selectedRoleData?.badge}
-                  </p>
+                  <span>
+                    {selectedRole?.user_count ?? 0} users assigned
+                  </span>
 
                 </div>
 
-              </div>
+              </section>
 
-              <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-3">
 
-                <Lock className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+              {/* SELECTED ROLE CARD */}
 
-                <div>
+              {selectedRole && (
 
-                  <p className="text-[11px] font-bold text-blue-700">
-                    Role-based access control
-                  </p>
+                <section
+                  className={`rounded-2xl border shadow-sm overflow-hidden ${
+                    isProtectedRole
+                      ? 'border-amber-200'
+                      : 'border-slate-200'
+                  }`}
+                >
 
-                  <p className="text-[10px] text-blue-600 mt-0.5">
-                    Permission changes apply to every user assigned to this role.
-                  </p>
+                  {/* ROLE HEADER */}
 
-                </div>
+                  <div 
+  className={`px-5 ${
+    isProtectedRole 
+      ? 'py-4' 
+      : 'py-[30px]'
+  } ${
+    isProtectedRole 
+      ? 'bg-amber-50' 
+      : 'bg-white'
+  }`}
+>
 
-              </div>
+                    <div className="flex items-start gap-3">
 
-            </div>
+                      <div
+                        className={`p-3 rounded-xl shrink-0 ${
+                          isProtectedRole
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
 
-          </div>
+                        {isProtectedRole ? (
+                          <Lock className="w-5 h-5" />
+                        ) : (
+                          <Shield className="w-5 h-5" />
+                        )}
 
-          {/* Permissions */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                      </div>
 
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
 
-              <div>
+                      <div className="min-w-0">
 
-                <h2 className="font-bold text-base text-slate-900">
-                  Permissions
-                </h2>
+                        <div className="flex items-center gap-2 flex-wrap">
 
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Configure what {selectedRole} members can access.
-                </p>
+                          <h2 className="text-lg font-extrabold text-slate-900">
+                            {selectedRole.role_name}
+                          </h2>
 
-              </div>
 
-              <button className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700">
-                {selectedRole}
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
+                          {isProtectedRole && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
 
-            </div>
+                              <Lock className="w-3 h-3" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-5">
+                              Protected
 
-              {permissionGroups.map((group) => {
+                            </span>
+                          )}
 
-                const Icon = group.icon;
-
-                return (
-                  <div
-                    key={group.title}
-                    className="border border-slate-200 rounded-xl overflow-hidden"
-                  >
-
-                    {/* Permission Group Header */}
-                    <div className="bg-slate-50 p-4 border-b border-slate-200">
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 flex items-center justify-center">
-                          <Icon className="w-4 h-4" />
                         </div>
 
-                        <div>
-                          <h3 className="text-xs font-bold text-slate-900">
-                            {group.title}
-                          </h3>
 
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            {group.description}
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                          {selectedRole.description}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* ROLE STATISTICS */}
+
+                  <div className="bg-white border-t border-slate-100 grid grid-cols-2">
+
+                   <div className={`border-r border-slate-100 ${isProtectedRole ? 'p-3' : 'p-4'}`}>
+
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                        Assigned Users
+                      </p>
+
+                      <p className="text-xl font-extrabold text-slate-900 mt-1">
+                        {selectedRole.user_count ?? 0}
+                      </p>
+
+                    </div>
+
+
+                    <div className="p-4">
+
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                        Permissions
+                      </p>
+
+                      <p className="text-xl font-extrabold text-slate-900 mt-1">
+
+                        {permissions.filter(
+                          (permission) =>
+                            permission.can_view ||
+                            permission.can_create ||
+                            permission.can_delete ||
+                            permission.can_approve
+                        ).length}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* PROTECTED NOTICE */}
+
+                  {isProtectedRole && (
+
+                    <div className="px-5 py-3 bg-amber-50 border-t border-amber-200">
+
+                      <div className="flex items-start gap-2.5">
+
+                        <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+
+                        <div>
+
+                          <p className="text-xs font-bold text-amber-800">
+                            Protected System Role
                           </p>
+
+                          <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
+                            Admin permissions are predefined and cannot be changed by administrators.
+                          </p>
+
                         </div>
 
                       </div>
 
                     </div>
 
-                    {/* Permission Items */}
-                    <div className="px-4">
+                  )}
 
-                      {group.permissions.map((permission) => {
+                </section>
 
-                        const enabled = permissions.includes(
-                          permission.id
-                        );
+              )}
 
-                        return (
-                          <div
-                            key={permission.id}
-                            className="flex items-center justify-between gap-4 py-3 border-b border-slate-100 last:border-b-0"
-                          >
+            </div>
 
-                            <div className="min-w-0">
 
-                              <p className="text-xs font-bold text-slate-800">
-                                {permission.name}
-                              </p>
+            {/* RIGHT COLUMN */}
 
-                              <p className="text-[10px] text-slate-400 mt-0.5">
-                                {permission.description}
-                              </p>
+            {isProtectedRole ? (
 
-                            </div>
+  <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                togglePermission(permission.id)
-                              }
-                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                                enabled
-                                  ? 'bg-emerald-500'
-                                  : 'bg-slate-300'
-                              }`}
-                            >
+    {/* Permission Header */}
+    <div className="px-5 py-3 border-b border-slate-200">
 
-                              <span
-                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 mt-0.5 ${
-                                  enabled
-                                    ? 'translate-x-4'
-                                    : 'translate-x-0.5'
-                                }`}
-                              />
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-                            </button>
+        <div>
 
-                          </div>
-                        );
-                      })}
+          <div className="flex items-center gap-2">
 
-                    </div>
+            <div className="p-2.5 rounded-xl bg-[#071B38] text-white">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
 
-                  </div>
-                );
-              })}
+            <div>
+
+              <h2 className="text-lg font-bold text-slate-900">
+                Admin Permissions
+              </h2>
+
+              <p className="text-xs text-slate-500 mt-0.5">
+                System administrator permissions are predefined.
+              </p>
 
             </div>
 
           </div>
 
-          {/* Bottom Save Bar */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        </div>
 
-            <div className="flex items-start gap-3">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-bold">
+          <Lock className="w-3.5 h-3.5" />
+          Protected
+        </span>
 
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-4 h-4" />
+      </div>
+
+    </div>
+
+
+    {/* Same Table Header Dimensions */}
+    <div className="hidden md:grid grid-cols-[minmax(0,1fr)_90px_90px_90px_90px] gap-3 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] uppercase tracking-wider font-bold text-slate-500">
+
+      <div>
+        Module
+      </div>
+
+      <div className="text-center">
+        View
+      </div>
+
+      <div className="text-center">
+        Create
+      </div>
+
+      <div className="text-center">
+        Delete
+      </div>
+
+      <div className="text-center">
+        Approve
+      </div>
+
+    </div>
+
+
+    {/* Same Permission Rows */}
+    <div className="divide-y divide-slate-100">
+
+      {permissions.map((permission) => {
+
+        const Icon =
+          permission.icon || Shield;
+
+        return (
+
+          <div
+            key={permission.module_id}
+            className={`px-6 py-2 ${
+              permission.module_name === 'User Management'
+                ? 'bg-rose-50/20'
+                : ''
+            }`}
+          >
+
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_90px_90px_90px_90px] gap-4 items-center">
+
+              {/* Module */}
+              <div className="flex items-start gap-3">
+
+                <div className="p-2.5 rounded-xl bg-slate-100 text-slate-700 shrink-0">
+                  <Icon className="w-5 h-5" />
+                </div>
+
+                <div className="min-w-0">
+
+                  <p className="font-bold text-slate-900">
+                    {permission.module_name}
+                  </p>
+
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    {permission.description}
+                  </p>
+
+                </div>
+
               </div>
 
-              <div>
 
-                <h3 className="text-sm font-bold text-slate-900">
-                  Permission Changes
-                </h3>
+              {/* View */}
+              <PermissionControl
+                label="View"
+                enabled={getPermissionValue(
+                  permission,
+                  'can_view'
+                )}
+                disabled
+              />
 
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Changes will affect all users assigned to the{' '}
-                  {selectedRole} role.
-                </p>
 
-              </div>
+              {/* Create */}
+              <PermissionControl
+                label="Create"
+                enabled={getPermissionValue(
+                  permission,
+                  'can_create'
+                )}
+                disabled
+              />
+
+
+              {/* Delete */}
+              <PermissionControl
+                label="Delete"
+                enabled={getPermissionValue(
+                  permission,
+                  'can_delete'
+                )}
+                disabled
+              />
+
+
+              {/* Approve */}
+              <PermissionControl
+                label="Approve"
+                enabled={getPermissionValue(
+                  permission,
+                  'can_approve'
+                )}
+                disabled
+              />
 
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+          </div>
 
-              <button
-                onClick={handleReset}
-                className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                Cancel
-              </button>
+        );
 
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0A192F] text-white text-xs font-bold hover:bg-[#1E3A8A] transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                Save Permissions
-              </button>
+      })}
 
-            </div>
+    </div>
+
+
+    {/* Same Bottom Area Height */}
+    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+
+      <div className="flex items-center gap-2">
+
+        <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+
+        <div>
+
+          <p className="text-xs font-bold text-slate-700">
+            Protected System Role
+          </p>
+
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Admin permissions are predefined and cannot be changed by administrators.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+            ) : (
+
+              /* NORMAL ROLE PERMISSION MANAGER */
+
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+                {/* PERMISSION HEADER */}
+
+                <div className="px-5 py-3 border-b border-slate-200">
+
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+                    <div>
+
+                      <div className="flex items-center gap-2">
+
+                        <div className="p-2.5 rounded-xl bg-[#071B38] text-white">
+
+                          <ShieldCheck className="w-5 h-5" />
+
+                        </div>
+
+
+                        <div>
+
+                          <h2 className="text-lg font-bold text-slate-900">
+                            Permission Manager
+                          </h2>
+
+                          <p className="text-xs text-slate-500 mt-0.5">
+
+                            {selectedRole
+                              ? `Manage permissions for ${selectedRole.role_name}.`
+                              : 'Select a role to manage permissions.'}
+
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* LEGEND */}
+
+                    <div className="flex items-center gap-2">
+
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-bold">
+
+                        <Check className="w-3.5 h-3.5" />
+
+                        Granted
+
+                      </span>
+
+
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-bold">
+
+                        <X className="w-3.5 h-3.5" />
+
+                        Denied
+
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                {/* TABLE HEADER */}
+
+                <div className="hidden md:grid grid-cols-[minmax(0,1fr)_90px_90px_90px_90px] gap-3 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] uppercase tracking-wider font-bold text-slate-500">
+
+                  <div>
+                    Module
+                  </div>
+
+                  <div className="text-center">
+                    View
+                  </div>
+
+                  <div className="text-center">
+                    Create
+                  </div>
+
+                  <div className="text-center">
+                    Delete
+                  </div>
+
+                  <div className="text-center">
+                    Approve
+                  </div>
+
+                </div>
+
+
+                {/* PERMISSION CONTENT */}
+
+                {loadingPermissions ? (
+
+                  <div className="py-20 text-center">
+
+                    <div className="inline-flex items-center gap-2 text-sm text-slate-400">
+                      Loading permissions...
+                    </div>
+
+                  </div>
+
+                ) : permissions.length === 0 ? (
+
+                  <div className="py-20 text-center">
+
+                    <Shield className="w-10 h-10 mx-auto text-slate-300" />
+
+                    <p className="mt-3 text-sm font-semibold text-slate-500">
+                      No permissions found for this role.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div className="divide-y divide-slate-100">
+
+                    {permissions.map((permission) => {
+
+                      const Icon =
+                        permission.icon || Shield;
+
+                      return (
+
+                        <div
+                          key={permission.module_id}
+                          className={`px-6 py-2 ${
+                            permission.module_name === 'User Management'
+                              ? 'bg-rose-50/20'
+                              : ''
+                          }`}
+                        >
+
+                          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_90px_90px_90px_90px] gap-4 items-center">
+
+                            {/* MODULE */}
+
+                            <div className="flex items-start gap-3">
+
+                              <div className="p-2.5 rounded-xl bg-slate-100 text-slate-700 shrink-0">
+
+                                <Icon className="w-5 h-5" />
+
+                              </div>
+
+
+                              <div className="min-w-0">
+
+                                <p className="font-bold text-slate-900">
+                                  {permission.module_name}
+                                </p>
+
+                                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                  {permission.description}
+                                </p>
+
+
+                                {permission.module_name === 'User Management' && (
+
+                                  <p className="text-[10px] text-rose-500 font-semibold mt-1.5">
+                                    Restricted system module
+                                  </p>
+
+                                )}
+
+                              </div>
+
+                            </div>
+
+
+                            {/* VIEW */}
+
+                            <PermissionControl
+                              label="View"
+                              enabled={getPermissionValue(
+                                permission,
+                                'can_view'
+                              )}
+                              disabled={false}
+                              onClick={() =>
+                                togglePermission(
+                                  permission.module_id,
+                                  'can_view'
+                                )
+                              }
+                            />
+
+
+                            {/* CREATE */}
+
+                            <PermissionControl
+                              label="Create"
+                              enabled={getPermissionValue(
+                                permission,
+                                'can_create'
+                              )}
+                              disabled={false}
+                              onClick={() =>
+                                togglePermission(
+                                  permission.module_id,
+                                  'can_create'
+                                )
+                              }
+                            />
+
+
+                            {/* DELETE */}
+
+                            <PermissionControl
+                              label="Delete"
+                              enabled={getPermissionValue(
+                                permission,
+                                'can_delete'
+                              )}
+                              disabled={false}
+                              onClick={() =>
+                                togglePermission(
+                                  permission.module_id,
+                                  'can_delete'
+                                )
+                              }
+                            />
+
+
+                            {/* APPROVE */}
+
+                            <PermissionControl
+                              label="Approve"
+                              enabled={getPermissionValue(
+                                permission,
+                                'can_approve'
+                              )}
+                              disabled={false}
+                              onClick={() =>
+                                togglePermission(
+                                  permission.module_id,
+                                  'can_approve'
+                                )
+                              }
+                            />
+
+                          </div>
+
+                        </div>
+
+                      );
+
+                    })}
+
+                  </div>
+
+                )}
+
+
+                {/* ACTION BAR */}
+
+                {selectedRole && (
+
+                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+                    <div>
+
+                      <p className="text-xs font-bold text-slate-700">
+                        Permission changes
+                      </p>
+
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Changes are not applied until you save.
+                      </p>
+
+                    </div>
+
+
+                    <div className="flex items-center gap-2">
+
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        disabled={saving || loadingPermissions}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-100 disabled:opacity-50 transition"
+                      >
+
+                        <RotateCcw className="w-3.5 h-3.5" />
+
+                        Reset
+
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving || loadingPermissions}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#071B38] text-white text-xs font-bold hover:bg-[#0A264D] disabled:opacity-50 transition"
+                      >
+
+                        <Save className="w-3.5 h-3.5" />
+
+                        {saving
+                          ? 'Saving...'
+                          : 'Save Permissions'}
+
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              </section>
+
+            )}
 
           </div>
 
@@ -720,5 +1038,67 @@ const RoleSettings = () => {
     </div>
   );
 };
+
+
+const PermissionControl = ({
+  label,
+  enabled,
+  disabled,
+  onClick
+}) => {
+
+  return (
+
+    <div className="flex items-center justify-between md:block">
+
+      <span className="md:hidden text-xs font-bold text-slate-500">
+        {label}
+      </span>
+
+
+      <div className="flex justify-center">
+
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={`${label} permission`}
+          className={`inline-flex items-center justify-center w-9 h-9 rounded-xl transition ${
+            enabled
+              ? 'bg-emerald-500 text-white'
+              : 'bg-slate-100 text-slate-400'
+          } ${
+            disabled
+              ? 'cursor-not-allowed opacity-80'
+              : 'cursor-pointer hover:scale-105'
+          }`}
+        >
+
+          {enabled ? (
+            <Check className="w-4 h-4" />
+          ) : (
+            <X className="w-4 h-4" />
+          )}
+
+        </button>
+
+      </div>
+
+    </div>
+
+  );
+};
+
+
+const CheckCircleIcon = () => (
+
+  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+
+    <Check className="w-3 h-3" />
+
+  </div>
+
+);
+
 
 export default RoleSettings;
