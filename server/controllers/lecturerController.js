@@ -612,3 +612,52 @@ export const declineMeetingRequest = async (req, res) => {
         });
     }
 };
+export const proposeMeetingAlternative = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const lecturerId = req.user.userId;
+        const { alternativeDate, alternativeTime } = req.body;
+
+        if (!alternativeDate || !alternativeTime) {
+            return res.status(400).json({
+                error: 'Alternative date and time are required'
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE meeting_requests
+             SET alternative_date = $1::date,
+                 alternative_time = $2::time,
+                 response = $3
+             WHERE request_id = $4
+               AND lecturer_id = $5
+               AND status = 'pending'
+             RETURNING *`,
+            [
+            alternativeDate,
+            alternativeTime,
+            `Alternative time proposed: ${alternativeDate} at ${alternativeTime}`,
+            requestId,
+            lecturerId
+        ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Pending meeting request not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Alternative meeting time proposed',
+            meeting: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Alternative meeting error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};

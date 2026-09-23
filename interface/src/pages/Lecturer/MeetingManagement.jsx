@@ -36,6 +36,10 @@ const MeetingManagement = () => {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const { accessToken, user } = useAuth();
   const [meetings, setMeetings] = useState([]);
+  const [showAlternativeForm, setShowAlternativeForm] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [alternativeDate, setAlternativeDate] = useState("");
+  const [alternativeTime, setAlternativeTime] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const confirmedMeetings = meetings.filter(
   (meeting) => meeting.status === "confirmed"
@@ -434,6 +438,17 @@ useEffect(() => {
                           {meeting.status === "pending" && (
                             <div className="flex justify-end gap-2 mt-4">
                               <button
+                                onClick={() => {
+                                  setSelectedMeeting(meeting);
+                                  setAlternativeDate("");
+                                  setAlternativeTime("");
+                                  setShowAlternativeForm(true);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px] font-medium hover:bg-[#F9FAFB]"
+                              >
+                                Alternative
+                              </button>
+                              <button
                                       onClick={async () => {
                                     try {
                                       const response = await fetch(
@@ -514,6 +529,113 @@ useEffect(() => {
                               </button>
                             </div>
                           )}
+                                    {showAlternativeForm && selectedMeeting?.request_id === meeting.request_id && (
+            <div className="mt-4 p-4 border border-[#D0D5DD] rounded-lg bg-[#F9FAFB]">
+
+              <h3 className="text-[14px] font-semibold text-[#344054] mb-4">
+                Propose Alternative Meeting Time
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+
+                <div>
+                  <label className="block text-[12px] font-medium text-[#344054] mb-1">
+                    Alternative Date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={alternativeDate}
+                    onChange={(e) => setAlternativeDate(e.target.value)}
+                    className="w-full border border-[#D0D5DD] rounded-lg px-3 py-2 text-[13px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-medium text-[#344054] mb-1">
+                    Alternative Time
+                  </label>
+
+                  <input
+                    type="time"
+                    value={alternativeTime}
+                    onChange={(e) => setAlternativeTime(e.target.value)}
+                    className="w-full border border-[#D0D5DD] rounded-lg px-3 py-2 text-[13px]"
+                  />
+                </div>
+
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+
+                <button
+                  onClick={() => {
+                    setShowAlternativeForm(false);
+                    setSelectedMeeting(null);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px]"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+  if (!alternativeDate || !alternativeTime) {
+    alert("Please select an alternative date and time.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/lecturer/meetings/${selectedMeeting.request_id}/alternative`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          alternativeDate,
+          alternativeTime,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Failed to propose alternative time.");
+      return;
+    }
+
+    alert("Alternative meeting time proposed.");
+
+    setMeetings((currentMeetings) =>
+  currentMeetings.map((item) =>
+    item.request_id === selectedMeeting.request_id
+      ? { ...item, ...data.meeting }
+      : item
+  )
+);
+    setShowAlternativeForm(false);
+    setSelectedMeeting(null);
+    setAlternativeDate("");
+    setAlternativeTime("");
+
+  } catch (error) {
+    console.error("Alternative meeting error:", error);
+    alert("Could not connect to the server.");
+  }
+}}
+                  className="px-4 py-2 rounded-lg bg-[#062746] text-white text-[13px]"
+                >
+                  Propose Alternative
+                </button>
+
+              </div>
+
+            </div>
+          )}
 
                                   </div>
                                 );
