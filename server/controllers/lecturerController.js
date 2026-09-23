@@ -581,6 +581,31 @@ if (availabilityCheck.rows.length > 0) {
         error: 'This time slot is already booked.'
     });
 }
+const notificationResult = await pool.query(
+    `INSERT INTO notifications
+        (title, message, delivery_status, created_at)
+     VALUES
+        ($1, $2, 'delivered', NOW())
+     RETURNING notification_id`,
+    [
+        'Meeting Confirmed',
+        'Your meeting request has been approved.'
+    ]
+);
+
+const notificationId =
+    notificationResult.rows[0].notification_id;
+
+await pool.query(
+    `INSERT INTO notification_students
+        (notification_id, student_id,received_at, is_read)
+     VALUES
+        ($1, $2, NOW(), false)`,
+    [
+        notificationId,
+        result.rows[0].student_id
+    ]
+);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
