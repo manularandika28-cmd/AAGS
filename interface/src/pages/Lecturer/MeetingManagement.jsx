@@ -36,12 +36,17 @@ const MeetingManagement = () => {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const { accessToken, user } = useAuth();
   const [meetings, setMeetings] = useState([]);
+  const [weekOffset, setWeekOffset] = useState(0);
   const confirmedMeetings = meetings.filter(
   (meeting) => meeting.status === "confirmed"
 );
 const scheduleStartDate = confirmedMeetings.length
   ? new Date(confirmedMeetings[0].confirmed_date)
   : new Date();
+
+scheduleStartDate.setDate(
+  scheduleStartDate.getDate() + weekOffset * 7
+);
 
 const scheduleEndDate = new Date(scheduleStartDate);
 scheduleEndDate.setDate(scheduleStartDate.getDate() + 6);
@@ -493,11 +498,17 @@ useEffect(() => {
 
                   <div className="flex gap-4">
 
-                    <button className="text-[#344054]">
+                    <button
+                      onClick={() => setWeekOffset((current) => current - 1)}
+                      className="text-[#344054]"
+                    >
                       <ChevronLeft size={19} />
                     </button>
 
-                    <button className="text-[#344054]">
+                    <button
+                      onClick={() => setWeekOffset((current) => current + 1)}
+                      className="text-[#344054]"
+                    >
                       <ChevronRight size={19} />
                     </button>
 
