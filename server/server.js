@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { pool } from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import deanRoutes from './routes/deanRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -45,6 +46,7 @@ pool.connect((err, client, release) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/dean', deanRoutes);
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {
