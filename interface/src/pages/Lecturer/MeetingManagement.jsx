@@ -36,6 +36,33 @@ const MeetingManagement = () => {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const { accessToken, user } = useAuth();
   const [meetings, setMeetings] = useState([]);
+  const confirmedMeetings = meetings.filter(
+  (meeting) => meeting.status === "confirmed"
+);
+const scheduleStartDate = confirmedMeetings.length
+  ? new Date(confirmedMeetings[0].confirmed_date)
+  : new Date();
+
+const scheduleEndDate = new Date(scheduleStartDate);
+scheduleEndDate.setDate(scheduleStartDate.getDate() + 6);
+
+const scheduleDateRange = `${scheduleStartDate.toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+})} - ${scheduleEndDate.toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+})}`;
+const scheduleDates = Array.from({ length: 7 }, (_, index) => {
+  const date = new Date(scheduleStartDate);
+  date.setDate(scheduleStartDate.getDate() + index);
+  return date;
+});
+
+const today = new Date();
+
 
 useEffect(() => {
     const fetchMeetings = async () => {
@@ -457,8 +484,8 @@ useEffect(() => {
                       Weekly Schedule
                     </h2>
 
-                    <p className="text-[13px] text-[#475467] mt-1">
-                      Oct 23 - Oct 29, 2023
+                    <p className="text-[11px] text-[#667085] mt-1">
+                      {scheduleDateRange}
                     </p>
 
                   </div>
@@ -501,60 +528,39 @@ useEffect(() => {
                   )}
 
                 </div>
+                  {/* Schedule dates */}
+                  <div className="grid grid-cols-7 text-center">
+                    {scheduleDates.map((date, index) => {
+                      const hasMeeting = confirmedMeetings.some((meeting) => {
+                        if (!meeting.confirmed_date) return false;
 
+                        const meetingDate = new Date(meeting.confirmed_date);
 
-                {/* Previous week */}
-                <div className="grid grid-cols-7 text-center mb-2">
+                        return (
+                          meetingDate.getFullYear() === date.getFullYear() &&
+                          meetingDate.getMonth() === date.getMonth() &&
+                          meetingDate.getDate() === date.getDate()
+                        );
+                      });
 
-                  {["16", "17", "18", "19", "20", "21", "22"].map(
-                    (date) => (
-                      <span
-                        key={date}
-                        className="text-[12px] text-[#98A2B3] py-2"
-                      >
-                        {date}
-                      </span>
-                    )
-                  )}
+                      return (
+                        <span
+                          key={index}
+                          className={`relative text-[12px] py-2 ${
+                            hasMeeting
+                              ? "font-semibold text-[#062746]"
+                              : "text-[#475467]"
+                          }`}
+                        >
+                          {date.getDate()}
 
-                </div>
-
-
-                {/* Current week */}
-                <div className="grid grid-cols-7 text-center">
-
-                  <span className="text-[12px] py-2">
-                    23
-                  </span>
-
-                  <span className="w-8 h-8 mx-auto rounded-md bg-[#062746] text-white flex items-center justify-center text-[12px] font-semibold">
-                    24
-                  </span>
-
-                  <span className="text-[12px] py-2">
-                    25
-                  </span>
-
-                  <span className="relative text-[12px] py-2">
-                    26
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
-                  </span>
-
-                  <span className="relative text-[12px] py-2">
-                    27
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
-                  </span>
-
-                  <span className="text-[12px] py-2">
-                    28
-                  </span>
-
-                  <span className="text-[12px] py-2">
-                    29
-                  </span>
-
-                </div>
-
+                          {hasMeeting && (
+                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
               </div>
 
 
@@ -564,98 +570,70 @@ useEffect(() => {
               <div className="p-4">
 
                 <h3 className="text-[12px] font-bold text-[#475467] mb-5">
-                  TODAY'S AGENDA (OCT 24)
+                  TODAY'S AGENDA 
                 </h3>
 
 
                 {/* Timeline */}
-                <div className="relative pl-6">
+                  <div className="relative pl-6">
 
-                  {/* Vertical line */}
-                  <div className="absolute left-[7px] top-1 bottom-2 w-px bg-[#D0D5DD]"></div>
+                    <div className="absolute left-[7px] top-1 bottom-2 w-px bg-[#D0D5DD]"></div>
 
+                    {confirmedMeetings.length === 0 ? (
+                      <div className="text-center py-8 text-[#475467]">
+                        No confirmed meetings scheduled.
+                      </div>
+                    ) : (
+                      confirmedMeetings.map((meeting) => {
+                        const meetingDate = meeting.confirmed_date
+                          ? new Date(meeting.confirmed_date).toLocaleDateString(
+                              "en-US",
+                              {
+                                timeZone: "Asia/Colombo",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric"
+                              }
+                            )
+                          : "Date not available";
 
-                  {/* ===========================================
-                      EVENT 1
-                  ============================================ */}
-                  <div className="relative mb-5">
+                        const meetingTime = meeting.confirmed_time
+                          ? meeting.confirmed_time.slice(0, 5)
+                          : "--";
 
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#496B99]"></div>
+                        return (
+                          <div
+                            key={meeting.request_id}
+                            className="relative mb-5"
+                          >
 
-                    <p className="text-[11px] text-[#475467] mb-2">
-                      08:00 AM - 10:00 AM
-                    </p>
+                            <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#496B99]"></div>
 
-                    <div className="bg-[#F2F5FB] border border-[#D8E2F2] rounded-md p-3">
+                            <p className="text-[11px] text-[#475467] mb-2">
+                              {meetingDate} - {meetingTime}
+                            </p>
 
-                      <h4 className="text-[14px] font-semibold">
-                        Undergraduate Lecture: Data Structures
-                      </h4>
+                            <div className="bg-[#F2F5FB] border border-[#D8E2F2] rounded-md p-3">
 
-                      <p className="text-[11px] text-[#475467] mt-2 flex items-center gap-1">
+                              <h4 className="text-[14px] font-semibold">
+                                {meeting.purpose}
+                              </h4>
 
-                        <MapPin size={13} />
+                              <p className="text-[11px] text-[#475467] mt-2 flex items-center gap-1">
+                                <Users size={13} />
+                                {meeting.student_name}
+                              </p>
 
-                        Auditorium A
+                              <p className="text-[11px] text-[#475467] mt-1 flex items-center gap-1">
+                                <MapPin size={13} />
+                                {meeting.location || "Location not assigned"}
+                              </p>
 
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ===========================================
-                      EVENT 2 - PENDING
-                  ============================================ */}
-                  <div className="relative mb-5">
-
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#D0D5DD]"></div>
-
-                    <p className="text-[11px] text-[#98A2B3] mb-2">
-                      10:00 AM - 10:30 AM
-                    </p>
-
-                    <div className="border border-dashed border-[#BFD1E8] bg-[#FAFCFF] rounded-md p-3">
-
-                      <p className="text-[14px] italic text-[#667085]">
-                        Pending: Thesis Review (Amaya S.)
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ===========================================
-                      EVENT 3
-                  ============================================ */}
-                  <div className="relative">
-
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#C0392B]"></div>
-
-                    <p className="text-[11px] text-[#475467] mb-2">
-                      13:30 PM - 15:30 PM
-                    </p>
-
-                    <div className="bg-[#FFD9D5] border border-[#FF9B91] rounded-md p-3">
-
-                      <h4 className="text-[14px] font-semibold text-[#4A1714]">
-                        Faculty Senate Meeting
-                      </h4>
-
-                      <p className="text-[11px] text-[#6B2A25] mt-2 flex items-center gap-1">
-
-                        <Users size={13} />
-
-                        Main Boardroom
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                 </div>
 
               </div>
