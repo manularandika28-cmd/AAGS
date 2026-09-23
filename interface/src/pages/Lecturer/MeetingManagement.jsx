@@ -275,11 +275,9 @@ useEffect(() => {
                       No meeting requests found.
                     </div>
                   ) : (
-                    meetings.map((meeting) => {
-
-                      const [year, month, day] = meeting.preferred_date
-                        .split("T")[0]
-                        .split("-");
+                    meetings
+                      .filter((meeting) => meeting.status === "pending")
+                      .map((meeting) => {
 
                       const meetingDate = meeting.preferred_date
                         ? new Date(meeting.preferred_date).toLocaleDateString(
