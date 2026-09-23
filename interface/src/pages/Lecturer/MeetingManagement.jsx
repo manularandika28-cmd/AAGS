@@ -434,9 +434,48 @@ useEffect(() => {
                           {meeting.status === "pending" && (
                             <div className="flex justify-end gap-2 mt-4">
                               <button
+                                      onClick={async () => {
+                                    try {
+                                      const response = await fetch(
+                                        `http://localhost:3000/api/lecturer/meetings/${meeting.request_id}/decline`,
+                                        {
+                                          method: "PATCH",
+                                          headers: {
+                                            Authorization: `Bearer ${accessToken}`,
+                                          },
+                                        }
+                                      );
+
+                                      const data = await response.json();
+
+                                      if (!response.ok) {
+                                        alert(data.error || "Failed to decline meeting.");
+                                        return;
+                                      }
+
+                                      alert("Meeting request declined.");
+
+                                      setMeetings((currentMeetings) =>
+                                        currentMeetings.map((item) =>
+                                          item.request_id === meeting.request_id
+                                            ? data.meeting
+                                            : item
+                                        )
+                                      );
+
+                                    } catch (error) {
+                                      console.error("Decline meeting error:", error);
+                                      alert("Could not connect to the server.");
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px] font-medium hover:bg-[#F9FAFB]"
+                                >
+                                  Decline
+                                </button>
+                                <button
                                 onClick={async () => {
-                                  try {
-                                    const response = await fetch(
+                                 try {
+                                const response = await fetch(
                                       `http://localhost:3000/api/lecturer/meetings/${meeting.request_id}/approve`,
                                       {
                                         method: "PATCH",

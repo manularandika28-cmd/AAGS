@@ -8,7 +8,8 @@ import {
     startAttendanceSession,
     endAttendanceSession,
     getLecturerMeetings,
-    approveMeetingRequest
+    approveMeetingRequest,
+    declineMeetingRequest
 } from '../controllers/lecturerController.js';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 
@@ -68,5 +69,11 @@ router.patch(
     verifyToken,
     authorize('Lecturer'),
     approveMeetingRequest
+);
+router.patch(
+    '/meetings/:requestId/decline',
+    verifyToken,
+    authorize('Lecturer'),
+    declineMeetingRequest
 );
 export default router;

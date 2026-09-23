@@ -577,3 +577,38 @@ export const approveMeetingRequest = async (req, res) => {
         });
     }
 };
+export const declineMeetingRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const lecturerId = req.user.userId;
+
+        const result = await pool.query(
+            `UPDATE meeting_requests
+             SET status = 'rejected',
+                 response = 'Meeting request declined.'
+             WHERE request_id = $1
+               AND lecturer_id = $2
+               AND status = 'pending'
+             RETURNING *`,
+            [requestId, lecturerId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Pending meeting request not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Meeting request declined',
+            meeting: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Decline meeting error:', error);
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
