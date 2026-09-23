@@ -557,6 +557,30 @@ export const approveMeetingRequest = async (req, res) => {
              RETURNING *`,
             [requestId, lecturerId]
         );
+        const availabilityCheck = await pool.query(
+    `SELECT request_id
+     FROM meeting_requests
+     WHERE lecturer_id = $1
+       AND status = 'confirmed'
+       AND confirmed_date = (
+           SELECT preferred_date
+           FROM meeting_requests
+           WHERE request_id = $2
+       )
+       AND confirmed_time = (
+           SELECT preferred_time
+           FROM meeting_requests
+           WHERE request_id = $2
+       )
+       AND request_id != $2`,
+    [lecturerId, requestId]
+);
+
+if (availabilityCheck.rows.length > 0) {
+    return res.status(409).json({
+        error: 'This time slot is already booked.'
+    });
+}
 
         if (result.rows.length === 0) {
             return res.status(404).json({
