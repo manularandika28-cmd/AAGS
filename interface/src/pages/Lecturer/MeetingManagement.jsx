@@ -202,18 +202,20 @@ useEffect(() => {
 
                     </div>
 
-                    <span className="rounded-full bg-[#FFD9D5] text-[#B42318] text-[10px] px-3 py-1 h-fit">
-                      +3 since
-                      <br />
-                      yesterday
-                    </span>
+                    <div className="flex justify-between">
+
+                  <div className="w-9 h-9 rounded-lg bg-[#FFF4D8] flex items-center justify-center text-[#F79009]">
+                    <ClipboardList size={20} />
+                  </div>
+
+</div>
 
                   </div>
 
                   <div className="mt-5">
 
                     <div className="text-[27px] font-bold">
-                      12
+                      {meetings.filter((meeting) => meeting.status === "pending").length}
                     </div>
 
                     <div className="text-[11px] font-semibold tracking-wide text-[#475467] mt-1">
@@ -237,7 +239,17 @@ useEffect(() => {
                   <div className="mt-5">
 
                     <div className="text-[27px] font-bold">
-                      4
+                      {meetings.filter((meeting) => {
+                        if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                          return false;
+                        }
+
+                        const today = new Date().toLocaleDateString("en-CA", {
+                          timeZone: "Asia/Colombo",
+                        });
+
+                        return meeting.confirmed_date.slice(0, 10) === today;
+                      }).length}
                     </div>
 
                     <div className="text-[11px] font-semibold tracking-wide text-[#475467] mt-1">
@@ -266,15 +278,24 @@ useEffect(() => {
                     <div className="mt-5">
 
                       <div className="text-[27px] font-bold">
-                        2
-                      </div>
+                      {meetings.filter((meeting) => {
+                        if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                          return false;
+                        }
 
-                      <div className="text-[11px] font-semibold tracking-wide">
-                        UPCOMING LAB
-                        <br />
-                        SESSIONS
-                      </div>
+                        const today = new Date().toLocaleDateString("en-CA", {
+                          timeZone: "Asia/Colombo",
+                        });
 
+                        return meeting.confirmed_date.slice(0, 10) > today;
+                      }).length}
+                    </div>
+
+                    <div className="text-[11px] font-semibold tracking-wide">
+                      UPCOMING
+                      <br />
+                      MEETINGS
+                    </div>
                     </div>
 
                   </div>
@@ -303,19 +324,7 @@ useEffect(() => {
                   </div>
 
 
-                  <div className="flex gap-5 text-[#475467]">
-
-                    <button>
-                      <SlidersHorizontal size={18} />
-                    </button>
-
-                    <button>
-                      <ListFilter size={18} />
-                    </button>
-
-                  </div>
-
-                </div>
+                    </div>
 
 
                 {/* Requests */}
