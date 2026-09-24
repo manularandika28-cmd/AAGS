@@ -804,7 +804,7 @@ useEffect(() => {
 
                     <div className="absolute left-[7px] top-1 bottom-2 w-px bg-[#D0D5DD]"></div>
 
-                    {confirmedMeetings.length === 0 ? (
+                    {todaysMeetings.length === 0 ? (
                       <div className="text-center py-8 text-[#475467]">
                         No confirmed meetings scheduled.
                       </div>
