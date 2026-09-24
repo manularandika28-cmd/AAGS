@@ -711,12 +711,12 @@ export const proposeMeetingAlternative = async (req, res) => {
                AND status = 'pending'
              RETURNING *`,
             [
-            alternativeDate,
-            alternativeTime,
-            `Alternative time proposed: ${alternativeDate} at ${alternativeTime}`,
-            requestId,
-            lecturerId
-        ]
+                alternativeDate,
+                alternativeTime,
+                `Alternative time proposed: ${alternativeDate} at ${alternativeTime}`,
+                requestId,
+                lecturerId
+            ]
         );
 
         if (result.rows.length === 0) {
@@ -724,6 +724,34 @@ export const proposeMeetingAlternative = async (req, res) => {
                 error: 'Pending meeting request not found'
             });
         }
+
+        // Create notification for the student
+        const notificationResult = await pool.query(
+            `INSERT INTO notifications
+                (title, message, delivery_status, created_at)
+             VALUES
+                ($1, $2, 'delivered', NOW())
+             RETURNING notification_id`,
+            [
+                'Alternative Meeting Time',
+                `The lecturer proposed an alternative meeting time: ${alternativeDate} at ${alternativeTime}.`
+            ]
+        );
+
+        const notificationId =
+            notificationResult.rows[0].notification_id;
+
+        // Link notification to the student
+        await pool.query(
+            `INSERT INTO notification_students
+                (notification_id, student_id, received_at, is_read)
+             VALUES
+                ($1, $2, NOW(), false)`,
+            [
+                notificationId,
+                result.rows[0].student_id
+            ]
+        );
 
         return res.status(200).json({
             message: 'Alternative meeting time proposed',
