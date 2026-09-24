@@ -648,6 +648,34 @@ export const declineMeetingRequest = async (req, res) => {
             });
         }
 
+        // Create notification for the student
+        const notificationResult = await pool.query(
+            `INSERT INTO notifications
+                (title, message, delivery_status, created_at)
+             VALUES
+                ($1, $2, 'delivered', NOW())
+             RETURNING notification_id`,
+            [
+                'Meeting Declined',
+                'Your meeting request has been declined.'
+            ]
+        );
+
+        const notificationId =
+            notificationResult.rows[0].notification_id;
+
+        // Link notification to the student
+        await pool.query(
+            `INSERT INTO notification_students
+                (notification_id, student_id, received_at, is_read)
+             VALUES
+                ($1, $2, NOW(), false)`,
+            [
+                notificationId,
+                result.rows[0].student_id
+            ]
+        );
+
         return res.status(200).json({
             message: 'Meeting request declined',
             meeting: result.rows[0]
