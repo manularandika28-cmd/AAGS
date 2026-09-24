@@ -20,6 +20,7 @@ const LecturerDashboard = () => {
   const [lecturer, setLecturer] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [attendancePercentage, setAttendancePercentage] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [sessions, setSessions] = useState([]);
   useEffect(() => {
   const fetchLecturerDashboard = async () => {
@@ -134,6 +135,22 @@ const upcomingMeetings = meetings.filter((meeting) => {
   });
 
   return meeting.confirmed_date.slice(0, 10) > today;
+});
+const currentWeekStart = new Date();
+currentWeekStart.setHours(0, 0, 0, 0);
+
+const day = currentWeekStart.getDay();
+const diff = day === 0 ? -6 : 1 - day;
+
+currentWeekStart.setDate(currentWeekStart.getDate() + diff);
+currentWeekStart.setDate(
+  currentWeekStart.getDate() + weekOffset * 7
+);
+
+const weekDates = Array.from({ length: 7 }, (_, index) => {
+  const date = new Date(currentWeekStart);
+  date.setDate(currentWeekStart.getDate() + index);
+  return date;
 });
   return (
     <div className="flex min-h-screen">
@@ -383,11 +400,16 @@ const upcomingMeetings = meetings.filter((meeting) => {
 
                 <div className="flex items-center gap-3">
 
-                  <button className="text-slate-600 hover:text-slate-900">
+                  <button
+                      onClick={() => setWeekOffset((prev) => prev - 1)}
+                      className="text-slate-600 hover:text-slate-900"
+                    >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
-                  <button className="text-slate-600 hover:text-slate-900">
+                  <button 
+                  onClick={() => setWeekOffset((prev) => prev + 1)}
+                  className="text-slate-600 hover:text-slate-900">
                     <ChevronRight className="w-5 h-5" />
                   </button>
 
@@ -400,51 +422,49 @@ const upcomingMeetings = meetings.filter((meeting) => {
               <div className="mt-6">
 
                 {/* Weekdays */}
-                <div className="grid grid-cols-7 text-center mb-3">
+                {weekDates.map((date) => {
+                  const dateString = date.toLocaleDateString("en-CA", {
+                    timeZone: "Asia/Colombo",
+                  });
 
-                  <span className="text-[11px] font-semibold text-slate-500">M</span>
-                  <span className="text-[11px] font-semibold text-slate-500">T</span>
-                  <span className="text-[11px] font-semibold text-slate-500">W</span>
-                  <span className="text-[11px] font-semibold text-slate-500">T</span>
-                  <span className="text-[11px] font-semibold text-slate-500">F</span>
-                  <span className="text-[11px] font-semibold text-slate-500">S</span>
-                  <span className="text-[11px] font-semibold text-slate-500">S</span>
+                  const today = new Date().toLocaleDateString("en-CA", {
+                    timeZone: "Asia/Colombo",
+                  });
 
-                </div>
+                  const hasMeeting = meetings.some(
+                    (meeting) =>
+                      meeting.status === "confirmed" &&
+                      meeting.confirmed_date &&
+                      meeting.confirmed_date.slice(0, 10) === dateString
+                  );
 
+                  const isToday = dateString === today;
 
-                {/* Calendar dates */}
-                <div className="grid grid-cols-7 gap-y-2 text-center">
+                  return (
+                    <span
+                      key={dateString}
+                      className={`relative text-xs p-2 ${
+                        isToday
+                          ? "w-8 h-8 mx-auto rounded-full bg-[#06264A] text-white flex items-center justify-center"
+                          : "text-slate-700"
+                      }`}
+                    >
+                      {date.getDate()}
 
-                  <span className="text-xs text-slate-300 p-2">28</span>
-                  <span className="text-xs text-slate-300 p-2">29</span>
-                  <span className="text-xs text-slate-700 p-2">1</span>
-                  <span className="text-xs text-slate-700 p-2">2</span>
-                  <span className="text-xs text-slate-700 p-2">3</span>
-                  <span className="text-xs text-slate-700 p-2">4</span>
-                  <span className="text-xs text-slate-700 p-2">5</span>
+                      {hasMeeting && (
+                        <span
+                          className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                            isToday ? "bg-red-600" : "bg-[#06264A]"
+                          }`}
+                        ></span>
+                      )}
+                    </span>
+                  );
+                })}
 
-                  <span className="text-xs text-slate-700 p-2">6</span>
-                  <span className="text-xs text-slate-700 p-2">7</span>
+                  
 
-                  <span className="w-8 h-8 mx-auto rounded-full bg-[#06264A] text-white flex items-center justify-center text-xs">
-                    8
-                  </span>
-
-                  <span className="relative text-xs text-slate-700 p-2">
-                    9
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-600"></span>
-                  </span>
-
-                  <span className="relative text-xs text-slate-700 p-2">
-                    10
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#06264A]"></span>
-                  </span>
-
-                  <span className="text-xs text-slate-700 p-2">11</span>
-                  <span className="text-xs text-slate-700 p-2">12</span>
-
-                </div>
+                
 
               </div>
 
@@ -457,59 +477,59 @@ const upcomingMeetings = meetings.filter((meeting) => {
                 </h3>
 
 
-                {/* 11:30 AM */}
+                
                 <div className="grid grid-cols-[48px_1fr] gap-3 mb-4">
+                {todaysMeetings.length === 0 ? (
+                    <div className="text-sm text-slate-500 py-4">
+                      No meetings scheduled for today.
+                    </div>
+                  ) : (
+                    todaysMeetings
+                      .slice()
+                      .sort((a, b) =>
+                        a.confirmed_time.localeCompare(b.confirmed_time)
+                      )
+                      .map((meeting) => {
+                        const time = new Date(
+                          `1970-01-01T${meeting.confirmed_time}`
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        });
 
-                  <div>
-                    <strong className="block text-sm text-[#06264A]">
-                      11:30
-                    </strong>
+                        const [hour, minute] = time.split(":");
+                        const amPm = time.slice(-2);
+                        const displayTime = `${hour}:${minute}`;
 
-                    <span className="text-[11px] text-slate-500">
-                      AM
-                    </span>
-                  </div>
+                        return (
+                          <div
+                            key={meeting.request_id}
+                            className="grid grid-cols-[48px_1fr] gap-3 mb-4"
+                          >
+                            <div>
+                              <strong className="block text-sm text-[#06264A]">
+                                {displayTime}
+                              </strong>
 
-                  <div className="bg-[#EDF3FF] border-l-4 border-[#06264A] rounded-r-md p-3">
+                              <span className="text-[11px] text-slate-500">
+                                {amPm}
+                              </span>
+                            </div>
 
-                    <strong className="block text-sm text-slate-800">
-                      Dept. Sync
-                    </strong>
+                            <div className="bg-[#EDF3FF] border-l-4 border-[#06264A] rounded-r-md p-3">
+                              <strong className="block text-sm text-slate-800">
+                                {meeting.student_name}
+                              </strong>
 
-                    <span className="text-xs text-slate-600">
-                      Room 304
-                    </span>
-
-                  </div>
-
-                </div>
-
-
-                {/* 2:00 PM */}
-                <div className="grid grid-cols-[48px_1fr] gap-3">
-
-                  <div>
-                    <strong className="block text-sm text-[#06264A]">
-                      2:00
-                    </strong>
-
-                    <span className="text-[11px] text-slate-500">
-                      PM
-                    </span>
-                  </div>
-
-                  <div className="bg-[#FFF0EE] border-l-4 border-red-600 rounded-r-md p-3">
-
-                    <strong className="block text-sm text-slate-800">
-                      Student Consultation
-                    </strong>
-
-                    <span className="text-xs text-slate-600">
-                      Online (Zoom)
-                    </span>
-
-                  </div>
-
+                              <span className="text-xs text-slate-600">
+                                {meeting.purpose || "Meeting"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                  
                 </div>
 
               </div>
