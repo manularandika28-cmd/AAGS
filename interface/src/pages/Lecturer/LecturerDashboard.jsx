@@ -18,6 +18,9 @@ const LecturerDashboard = () => {
   const { user, accessToken } = useAuth();
 
   const [lecturer, setLecturer] = useState(null);
+  const [meetings, setMeetings] = useState([]);
+  const [attendancePercentage, setAttendancePercentage] = useState(0);
+  const [sessions, setSessions] = useState([]);
   useEffect(() => {
   const fetchLecturerDashboard = async () => {
     if (!accessToken) return;
@@ -37,7 +40,68 @@ const LecturerDashboard = () => {
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch dashboard");
       }
+      const meetingsResponse = await fetch(
+    "http://localhost:3000/api/lecturer/meetings",
+    {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    }
+);
+const sessionsResponse = await fetch(
+    "http://localhost:3000/api/lecturer/sessions",
+    {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    }
+);
 
+const sessionsData = await sessionsResponse.json();
+
+if (!sessionsResponse.ok) {
+    throw new Error(sessionsData.error || "Failed to fetch sessions");
+}
+let totalEnrolled = 0;
+let totalPresent = 0;
+
+for (const session of sessionsData.sessions) {
+    const attendanceResponse = await fetch(
+        `http://localhost:3000/api/lecturer/sessions/${session.session_id}/attendance`,
+        {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        }
+    );
+
+    const attendanceData = await attendanceResponse.json();
+
+    if (attendanceResponse.ok) {
+        totalEnrolled += Number(attendanceData.enrolled_count || 0);
+
+        totalPresent += attendanceData.attendance.filter(
+            (record) => record.status === "present"
+        ).length;
+    }
+}
+
+const percentage =
+    totalEnrolled > 0
+        ? (totalPresent / totalEnrolled) * 100
+        : 0;
+
+setAttendancePercentage(percentage);
+
+const meetingsData = await meetingsResponse.json();
+
+if (!meetingsResponse.ok) {
+    throw new Error(meetingsData.error || "Failed to fetch meetings");
+}
+
+
+setMeetings(meetingsData.meetings);
+setSessions(sessionsData.sessions);
       console.log("Lecturer dashboard data:", data);
       setLecturer(data.lecturer);
     } catch (error) {
@@ -47,6 +111,17 @@ const LecturerDashboard = () => {
 
   fetchLecturerDashboard();
 }, [accessToken]);
+const todaysMeetings = meetings.filter((meeting) => {
+  if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+    return false;
+  }
+
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Colombo",
+  });
+
+  return meeting.confirmed_date.slice(0, 10) === today;
+});
   return (
     <div className="flex min-h-screen">
 
@@ -95,11 +170,11 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  87.4%
+                  {attendancePercentage.toFixed(1)}%
                 </span>
 
                 <span className="text-xs font-medium text-green-600">
-                  ↗ +2.1%
+                  Current average
                 </span>
 
               </div>
@@ -107,13 +182,13 @@ const LecturerDashboard = () => {
             </div>
 
 
-            {/* -------- Pending Medicals Card -------- */}
+            {/* -------- Upcoming Sessions Card -------- */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm min-h-[140px]">
 
               <div className="flex items-start justify-between">
 
                 <span className="text-[11px] font-bold tracking-wider text-slate-600">
-                  PENDING MEDICALS
+                  UPCOMING SESSIONS
                 </span>
 
                 <div className="w-9 h-9 rounded-lg bg-[#FF5B4F] text-white flex items-center justify-center">
@@ -125,11 +200,17 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  14
+                  {sessions.filter((session) => {
+                    const today = new Date().toLocaleDateString("en-CA", {
+                      timeZone: "Asia/Colombo",
+                    });
+
+                    return session.session_date >= today;
+                  }).length}
                 </span>
 
                 <span className="text-xs font-medium text-red-600">
-                  Action Required
+                  Scheduled sessions
                 </span>
 
               </div>
@@ -155,12 +236,31 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  3
+                  {meetings.filter((meeting) => {
+                              if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                                  return false;
+                              }
+
+                              const today = new Date().toLocaleDateString("en-CA", {
+                                  timeZone: "Asia/Colombo",
+                              });
+
+                              return meeting.confirmed_date.slice(0, 10) === today;
+                          }).length}
                 </span>
 
-                <span className="text-xs text-slate-600">
-                  Next at 11:30 AM
+                
+                  <span className="text-xs text-slate-600">
+                  {todaysMeetings.length > 0
+                    ? `Next at ${new Date(
+                        `1970-01-01T${todaysMeetings[0].confirmed_time}`
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}`
+                    : "No meetings today"}
                 </span>
+                
 
               </div>
 
