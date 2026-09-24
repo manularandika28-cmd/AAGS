@@ -119,8 +119,21 @@ const todaysMeetings = meetings.filter((meeting) => {
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Asia/Colombo",
   });
+    return meeting.confirmed_date.slice(0, 10) === today;
+});
+const pendingMeetings = meetings.filter(
+  (meeting) => meeting.status === "pending"
+);
+const upcomingMeetings = meetings.filter((meeting) => {
+  if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+    return false;
+  }
 
-  return meeting.confirmed_date.slice(0, 10) === today;
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Colombo",
+  });
+
+  return meeting.confirmed_date.slice(0, 10) > today;
 });
   return (
     <div className="flex min-h-screen">
@@ -284,17 +297,13 @@ const todaysMeetings = meetings.filter((meeting) => {
                   Action Items
                 </h2>
 
-                <button className="text-[11px] font-bold text-[#06264A] hover:text-blue-600">
-                  VIEW ALL
-                </button>
-
-              </div>
+                         </div>
 
 
               {/* Items */}
               <div className="p-4 space-y-3">
 
-                {/* Medical Leave */}
+                {/* Pending Meeting Requests */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#FFD9D5] text-red-600 flex items-center justify-center shrink-0">
@@ -303,18 +312,19 @@ const todaysMeetings = meetings.filter((meeting) => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Medical Leave Approval: S. Perera
+                      Pending Meeting Requests
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Submitted 2 hours ago • ICT 202
+                      {pendingMeetings.length} meeting request
+                      {pendingMeetings.length !== 1 ? "s" : ""} awaiting your response
                     </p>
                   </div>
 
                 </div>
 
 
-                {/* Grade Roster */}
+                {/* Attendance Review */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#DCE9FF] text-[#174A88] flex items-center justify-center shrink-0">
@@ -323,18 +333,18 @@ const todaysMeetings = meetings.filter((meeting) => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Finalize Grade Roster: ET1014
+                      Attendance Review
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Due Tomorrow, 5:00 PM
+                      Review attendance records for your scheduled sessions
                     </p>
                   </div>
 
                 </div>
 
 
-                {/* Reschedule */}
+                {/* Upcoming Meetings */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#FFDFCC] text-[#8A3C12] flex items-center justify-center shrink-0">
@@ -343,11 +353,12 @@ const todaysMeetings = meetings.filter((meeting) => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Reschedule Request: Faculty Senate
+                      Upcoming Meetings
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Requested by Dean's Office
+                      {upcomingMeetings.length} upcoming meeting
+                      {upcomingMeetings.length !== 1 ? "s" : ""} scheduled
                     </p>
                   </div>
 
