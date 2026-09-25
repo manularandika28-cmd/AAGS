@@ -125,34 +125,10 @@ if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
         }
 
         // Verify Password
-        let isMatch = await bcrypt.compare(password, user.password_hash);
-
-        // Fallback for standard demo credentials
-        if (!isMatch) {
-            const validDemoPasswords = [
-                'password123',
-                'Student@123',
-                'Lecturer@123',
-                'Hod@123',
-                'Dean@123',
-                'Admin@123',
-                'password'
-            ];
-            if (validDemoPasswords.includes(password)) {
-                isMatch = true;
-                // Re-hash and update password in DB for future logins
-                try {
-                    const newHash = await bcrypt.hash(password, 10);
-                    const tableName = role === 'Student' ? 'students' :
-                                      role === 'Lecturer' ? 'lecturers' :
-                                      role === 'HOD' ? 'hods' :
-                                      role === 'Dean' ? 'deans' : 'admins';
-                    await pool.query(`UPDATE ${tableName} SET password_hash = $1 WHERE ${idColumn} = $2`, [newHash, user[idColumn]]);
-                } catch (e) {
-                    console.error('Failed to auto-update password hash:', e);
-                }
-            }
-        }
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid credentials' });
