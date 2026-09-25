@@ -6,6 +6,8 @@ import { pool } from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
+import passwordResetRoutes from './routes/passwordResetRoutes.js';
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -47,6 +49,7 @@ pool.connect((err, client, release) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/auth', passwordResetRoutes);
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {

@@ -1,0 +1,788 @@
+diff --git a/interface/src/App.jsx b/interface/src/App.jsx
+index 7b00b1a..d28b0da 100644
+--- a/interface/src/App.jsx
++++ b/interface/src/App.jsx
+@@ -12,6 +12,9 @@ import ProtectedRoute from './components/ProtectedRoute';
+ import Login from './pages/Login';
+ import Register from './pages/Register';
+ 
++import ForgotPassword from './pages/ForgotPassword';
++import ResetPassword from './pages/ResetPassword';
++
+ // =========================================
+ // AUTH
+ // =========================================
+@@ -120,6 +123,12 @@ function App() {
+               element={<Login />}
+             />
+ 
++            {/* =========================================
++                fogot pw/reset pw
++            ========================================= */}
++            <Route path="/forgot-password" element={<ForgotPassword />} />
++            <Route path="/reset-password" element={<ResetPassword />} />
++
+ 
+             {/* =========================================
+                 HOD ROUTES
+diff --git a/interface/src/pages/ForgotPassword.jsx b/interface/src/pages/ForgotPassword.jsx
+new file mode 100644
+index 0000000..56467d5
+--- /dev/null
++++ b/interface/src/pages/ForgotPassword.jsx
+@@ -0,0 +1,145 @@
++import React, { useState } from 'react';
++import { Link } from 'react-router-dom';
++import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
++import logo from '../Assets/logo.svg';
++
++const ForgotPassword = () => {
++    const [email, setEmail] = useState('');
++    const [isSubmitting, setIsSubmitting] = useState(false);
++    const [error, setError] = useState('');
++    const [submitted, setSubmitted] = useState(false);
++
++    const handleSubmit = async (e) => {
++        e.preventDefault();
++        setError('');
++        setIsSubmitting(true);
++
++        try {
++            const res = await fetch('/api/auth/forgot-password', {
++                method: 'POST',
++                headers: { 'Content-Type': 'application/json' },
++                body: JSON.stringify({ email })
++            });
++
++            if (!res.ok) {
++                const data = await res.json().catch(() => ({}));
++                throw new Error(data.error || 'Something went wrong. Please try again.');
++            }
++
++            // Backend always returns the same generic message whether or
++            // not the email exists, so we just show the "check your inbox" state.
++            setSubmitted(true);
++        } catch (err) {
++            setError(err.message);
++        } finally {
++            setIsSubmitting(false);
++        }
++    };
++
++    return (
++        <div className="min-h-screen flex flex-col items-center justify-center p-4">
++
++            <div className="bg-white border border-slate-200 rounded-xl shadow-md max-w-md w-full p-8 space-y-6 min-h-[600px] flex flex-col justify-center">
++
++                {/* HEADER */}
++                <div className="text-center space-y-2">
++                    <div className="w-15 h-15 rounded-full bg-blue-50 flex items-center justify-center text-[#071B38] mx-auto">
++                        <img src={logo} alt="University Logo" className="w-13 h-13" />
++                    </div>
++
++                    <h2 className="text-2xl font-bold text-[#071B38]">
++                        {submitted ? 'Check Your Email' : 'Reset Password'}
++                    </h2>
++
++                    <p className="text-xs text-slate-500">
++                        Faculty of Technology, University of Colombo
++                    </p>
++                </div>
++
++                {/* BACK BUTTON */}
++                <Link
++                    to="/login"
++                    className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-[#071B38]"
++                >
++                    <ArrowLeft className="w-3.5 h-3.5" />
++                    Back to Sign In
++                </Link>
++
++                {/* ERROR MESSAGE */}
++                {error && (
++                    <div className="bg-red-50 border border-red-300 text-red-700 text-xs p-3 rounded-md">
++                        {error}
++                    </div>
++                )}
++
++                {submitted ? (
++                    <div className="text-center space-y-3">
++                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
++                        <p className="text-xs text-slate-600 leading-relaxed">
++                            If an account exists for <span className="font-semibold text-slate-800">{email}</span>,
++                            we've sent a password reset link. It expires in 20 minutes.
++                        </p>
++                        <p className="text-xs text-slate-500">
++                            Didn't get it? Check your spam folder, or{' '}
++                            <button
++                                type="button"
++                                onClick={() => setSubmitted(false)}
++                                className="font-semibold text-[#071B38] hover:underline"
++                            >
++                                try again
++                            </button>.
++                        </p>
++                    </div>
++                ) : (
++                    <form onSubmit={handleSubmit} className="space-y-4">
++                        <div>
++                            <label className="block text-xs font-semibold text-slate-700 mb-1">
++                                Registered Email
++                            </label>
++
++                            <div className="relative flex items-center">
++                                <span className="absolute left-3 text-slate-400">
++                                    <Mail className="w-4 h-4" />
++                                </span>
++
++                                <input
++                                    type="email"
++                                    required
++                                    value={email}
++                                    onChange={(e) => setEmail(e.target.value)}
++                                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-[#071B38] text-xs text-slate-800"
++                                    placeholder="e.g. user@tech.cmb.ac.lk"
++                                />
++                            </div>
++
++                            <p className="text-[11px] text-slate-400 mt-1.5">
++                                Works for students, lecturers, HODs, deans and admins.
++                            </p>
++                        </div>
++
++                        <button
++                            type="submit"
++                            disabled={isSubmitting}
++                            className="w-full bg-[#071B38] hover:bg-[#0c2b59] text-white font-semibold py-2.5 rounded-md transition-colors shadow-sm disabled:opacity-50 text-xs flex items-center justify-center gap-2"
++                        >
++                            <span>{isSubmitting ? 'Sending...' : 'Send Reset Link'}</span>
++                            {!isSubmitting && <span>→</span>}
++                        </button>
++                    </form>
++                )}
++            </div>
++
++            {/* FOOTER */}
++            <div className="mt-6 text-center text-white text-[11px] text-slate-400 space-y-0.5">
++                <p>© 2026 University of Colombo. All rights reserved.</p>
++                <div className="space-x-2">
++                    <a href="#" className="hover:underline">Privacy Policy</a>
++                    <span>•</span>
++                    <a href="#" className="hover:underline">Terms of Use</a>
++                </div>
++            </div>
++        </div>
++    );
++};
++
++export default ForgotPassword;
+diff --git a/interface/src/pages/Login.jsx b/interface/src/pages/Login.jsx
+index db3e42c..01dfd87 100644
+--- a/interface/src/pages/Login.jsx
++++ b/interface/src/pages/Login.jsx
+@@ -326,12 +326,9 @@ const Login = () => {
+                                         Password
+                                     </label>
+ 
+-                                    <a
+-                                        href="#"
+-                                        className="text-xs font-medium text-[#071B38] hover:underline"
+-                                    >
++                                    <Link to="/forgot-password" className="text-xs font-medium text-[#071B38] hover:underline">
+                                         Forgot password?
+-                                    </a>
++                                    </Link>
+ 
+                                 </div>
+ 
+diff --git a/interface/src/pages/ResetPassword.jsx b/interface/src/pages/ResetPassword.jsx
+new file mode 100644
+index 0000000..6909fcf
+--- /dev/null
++++ b/interface/src/pages/ResetPassword.jsx
+@@ -0,0 +1,181 @@
++import React, { useState } from 'react';
++import { useNavigate, useSearchParams, Link } from 'react-router-dom';
++import { Lock, Eye, EyeOff, ArrowLeft, CheckCircle2 } from 'lucide-react';
++import logo from '../Assets/logo.svg';
++
++const ResetPassword = () => {
++    const [searchParams] = useSearchParams();
++    const navigate = useNavigate();
++
++    const token = searchParams.get('token') || '';
++    const email = searchParams.get('email') || '';
++
++    const [newPassword, setNewPassword] = useState('');
++    const [confirmPassword, setConfirmPassword] = useState('');
++    const [showPassword, setShowPassword] = useState(false);
++    const [error, setError] = useState('');
++    const [isSubmitting, setIsSubmitting] = useState(false);
++    const [success, setSuccess] = useState(false);
++
++    const handleSubmit = async (e) => {
++        e.preventDefault();
++        setError('');
++
++        if (!token || !email) {
++            setError('This reset link is missing required information. Please request a new one.');
++            return;
++        }
++        if (newPassword.length < 8) {
++            setError('Password must be at least 8 characters.');
++            return;
++        }
++        if (newPassword !== confirmPassword) {
++            setError('Passwords do not match.');
++            return;
++        }
++
++        setIsSubmitting(true);
++        try {
++            const res = await fetch('/api/auth/reset-password', {
++                method: 'POST',
++                headers: { 'Content-Type': 'application/json' },
++                body: JSON.stringify({ email, token, newPassword })
++            });
++
++            const data = await res.json().catch(() => ({}));
++            if (!res.ok) {
++                throw new Error(data.error || 'Could not reset your password.');
++            }
++
++            setSuccess(true);
++            setTimeout(() => navigate('/login'), 2500);
++        } catch (err) {
++            setError(err.message);
++        } finally {
++            setIsSubmitting(false);
++        }
++    };
++
++    return (
++        <div className="min-h-screen flex flex-col items-center justify-center p-4">
++
++            <div className="bg-white border border-slate-200 rounded-xl shadow-md max-w-md w-full p-8 space-y-6 min-h-[600px] flex flex-col justify-center">
++
++                {/* HEADER */}
++                <div className="text-center space-y-2">
++                    <div className="w-15 h-15 rounded-full bg-blue-50 flex items-center justify-center text-[#071B38] mx-auto">
++                        <img src={logo} alt="University Logo" className="w-13 h-13" />
++                    </div>
++
++                    <h2 className="text-2xl font-bold text-[#071B38]">
++                        {success ? 'Password Updated' : 'Set New Password'}
++                    </h2>
++
++                    <p className="text-xs text-slate-500">
++                        Faculty of Technology, University of Colombo
++                    </p>
++                </div>
++
++                <Link
++                    to="/login"
++                    className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-[#071B38]"
++                >
++                    <ArrowLeft className="w-3.5 h-3.5" />
++                    Back to Sign In
++                </Link>
++
++                {error && (
++                    <div className="bg-red-50 border border-red-300 text-red-700 text-xs p-3 rounded-md">
++                        {error}
++                    </div>
++                )}
++
++                {success ? (
++                    <div className="text-center space-y-3">
++                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
++                        <p className="text-xs text-slate-600 leading-relaxed">
++                            Your password has been updated. Redirecting you to sign in...
++                        </p>
++                    </div>
++                ) : (
++                    <form onSubmit={handleSubmit} className="space-y-4">
++                        {email && (
++                            <p className="text-xs text-slate-500 -mt-2">
++                                Resetting password for{' '}
++                                <span className="font-semibold text-[#071B38]">{email}</span>
++                            </p>
++                        )}
++
++                        <div>
++                            <label className="block text-xs font-semibold text-slate-700 mb-1">
++                                New Password
++                            </label>
++                            <div className="relative flex items-center">
++                                <span className="absolute left-3 text-slate-400">
++                                    <Lock className="w-4 h-4" />
++                                </span>
++                                <input
++                                    type={showPassword ? 'text' : 'password'}
++                                    required
++                                    minLength={8}
++                                    value={newPassword}
++                                    onChange={(e) => setNewPassword(e.target.value)}
++                                    className="w-full pl-9 pr-10 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-[#071B38] text-xs text-slate-800"
++                                    placeholder="••••••••"
++                                />
++                                <button
++                                    type="button"
++                                    onClick={() => setShowPassword(!showPassword)}
++                                    className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none"
++                                >
++                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
++                                </button>
++                            </div>
++                            <p className="text-[11px] text-slate-400 mt-1">At least 8 characters.</p>
++                        </div>
++
++                        <div>
++                            <label className="block text-xs font-semibold text-slate-700 mb-1">
++                                Confirm New Password
++                            </label>
++                            <div className="relative flex items-center">
++                                <span className="absolute left-3 text-slate-400">
++                                    <Lock className="w-4 h-4" />
++                                </span>
++                                <input
++                                    type={showPassword ? 'text' : 'password'}
++                                    required
++                                    value={confirmPassword}
++                                    onChange={(e) => setConfirmPassword(e.target.value)}
++                                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-[#071B38] text-xs text-slate-800"
++                                    placeholder="••••••••"
++                                />
++                            </div>
++                        </div>
++
++                        <button
++                            type="submit"
++                            disabled={isSubmitting}
++                            className="w-full bg-[#071B38] hover:bg-[#0c2b59] text-white font-semibold py-2.5 rounded-md transition-colors shadow-sm disabled:opacity-50 text-xs flex items-center justify-center gap-2"
++                        >
++                            <span>{isSubmitting ? 'Updating...' : 'Update Password'}</span>
++                            {!isSubmitting && <span>→</span>}
++                        </button>
++                    </form>
++                )}
++            </div>
++
++            {/* FOOTER */}
++            <div className="mt-6 text-center text-white text-[11px] text-slate-400 space-y-0.5">
++                <p>© 2026 University of Colombo. All rights reserved.</p>
++                <div className="space-x-2">
++                    <a href="#" className="hover:underline">Privacy Policy</a>
++                    <span>•</span>
++                    <a href="#" className="hover:underline">Terms of Use</a>
++                </div>
++            </div>
++        </div>
++    );
++};
++
++export default ResetPassword;
+diff --git a/interface/vite.config.js b/interface/vite.config.js
+index 659585a..5fb8d6a 100644
+--- a/interface/vite.config.js
++++ b/interface/vite.config.js
+@@ -11,4 +11,12 @@ export default defineConfig({
+   optimizeDeps: {
+     include: ['react/jsx-runtime', 'react/jsx-dev-runtime', 'framer-motion'],
+   },
++  server: {
++        proxy: {
++          '/api': {
++            target: 'http://localhost:3000',
++            changeOrigin: true
++          }
++        }
++      }
+ });
+\ No newline at end of file
+diff --git a/server/controllers/passwordResetController.js b/server/controllers/passwordResetController.js
+new file mode 100644
+index 0000000..b4c848f
+--- /dev/null
++++ b/server/controllers/passwordResetController.js
+@@ -0,0 +1,165 @@
++// server/controllers/passwordResetController.js
++import crypto from 'crypto';
++import bcrypt from 'bcryptjs';
++import { pool } from '../db.js';
++import { sendPasswordResetEmail } from '../utils/mailer.js';
++ 
++const TOKEN_TTL_MINUTES = 20;
++ 
++// Every role that can log in, and where its email/password_hash live.
++const ROLE_TABLES = [
++  { role: 'student', table: 'students', pk: 'student_id' },
++  { role: 'lecturer', table: 'lecturers', pk: 'lecturer_id' },
++  { role: 'hod', table: 'hods', pk: 'hod_id' },
++  { role: 'admin', table: 'admins', pk: 'admin_id' },
++  { role: 'dean', table: 'deans', pk: 'dean_id' }
++];
++ 
++const findUserByEmail = async (email) => {
++  for (const { role, table, pk } of ROLE_TABLES) {
++    const { rows } = await pool.query(
++      `SELECT ${pk} AS user_id, email FROM ${table} WHERE LOWER(email) = LOWER($1) LIMIT 1`,
++      [email]
++    );
++    if (rows.length > 0) {
++      return { role, table, pk, userId: rows[0].user_id, email: rows[0].email };
++    }
++  }
++  return null;
++};
++ 
++/**
++ * POST /api/auth/forgot-password
++ * body: { email }
++ */
++export const forgotPassword = async (req, res) => {
++  const { email } = req.body;
++  if (!email) {
++    return res.status(400).json({ error: 'Email is required.' });
++  }
++ 
++  const GENERIC_MESSAGE = {
++    message: 'If an account with that email exists, a reset link has been sent.'
++  };
++ 
++  try {
++    const user = await findUserByEmail(email);
++    if (!user) {
++      return res.status(200).json(GENERIC_MESSAGE);
++    }
++ 
++    // Invalidate any earlier unused tokens for this user before issuing a new one
++    await pool.query(
++      `UPDATE password_resets 
++       SET used = true
++       WHERE role = $1 AND user_id = $2 AND used = false`,
++      [user.role, user.userId]
++    );
++ 
++    const rawToken = crypto.randomBytes(32).toString('hex');
++    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
++    const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000);
++ 
++    await pool.query(
++      `INSERT INTO password_resets (role, user_id, token_hash, expires_at)
++       VALUES ($1, $2, $3, $4)`,
++      [user.role, user.userId, tokenHash, expiresAt]
++    );
++ 
++    const clientUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
++    const resetUrl = `${clientUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
++ 
++    if (typeof sendPasswordResetEmail === 'function') {
++      await sendPasswordResetEmail(user.email, resetUrl);
++    } else {
++      console.log('--------------------------------------------------');
++      console.log('🔑 [AAGS RESET LINK]:', resetUrl);
++      console.log('--------------------------------------------------');
++    }
++ 
++    return res.status(200).json(GENERIC_MESSAGE);
++  } catch (err) {
++    console.error('forgotPassword error:', err.message);
++    return res.status(200).json(GENERIC_MESSAGE);
++  }
++};
++ 
++/**
++ * POST /api/auth/reset-password
++ * body: { email, token, newPassword }
++ */
++export const resetPassword = async (req, res) => {
++  const { email, token, newPassword } = req.body;
++ 
++  if (!email || !token || !newPassword) {
++    return res.status(400).json({ error: 'Email, token and new password are required.' });
++  }
++  if (newPassword.length < 8) {
++    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
++  }
++ 
++  try {
++    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
++ 
++    const { rows } = await pool.query(
++      `SELECT reset_id, role, user_id, expires_at, used
++       FROM password_resets
++       WHERE token_hash = $1
++       LIMIT 1`,
++      [tokenHash]
++    );
++ 
++    if (rows.length === 0) {
++      return res.status(400).json({ error: 'Invalid or expired reset link.' });
++    }
++ 
++    const resetRow = rows[0];
++    if (resetRow.used || new Date(resetRow.expires_at) < new Date()) {
++      return res.status(400).json({ error: 'This reset link has expired or already been used.' });
++    }
++ 
++    const roleConfig = ROLE_TABLES.find((r) => r.role === resetRow.role);
++    if (!roleConfig) {
++      return res.status(400).json({ error: 'Invalid reset link.' });
++    }
++ 
++    // Defense-in-depth: confirm the email in the link still matches this user
++    const { rows: userRows } = await pool.query(
++      `SELECT ${roleConfig.pk} AS user_id 
++       FROM ${roleConfig.table}
++       WHERE ${roleConfig.pk} = $1 AND LOWER(email) = LOWER($2) 
++       LIMIT 1`,
++      [resetRow.user_id, email]
++    );
++ 
++    if (userRows.length === 0) {
++      return res.status(400).json({ error: 'Invalid or expired reset link.' });
++    }
++ 
++    const passwordHash = await bcrypt.hash(newPassword, 10);
++ 
++    await pool.query(
++      `UPDATE ${roleConfig.table} SET password_hash = $1 WHERE ${roleConfig.pk} = $2`,
++      [passwordHash, resetRow.user_id]
++    );
++ 
++    await pool.query(
++      `UPDATE password_resets SET used = true WHERE reset_id = $1`,
++      [resetRow.reset_id]
++    );
++ 
++    return res.status(200).json({ message: 'Password has been reset successfully.' });
++  } catch (err) {
++    console.error('resetPassword error:', err.message);
++    return res.status(500).json({ error: 'Server error resetting password.' });
++  }
++};
++ 
++// Aliases and default export for flexibility
++export const requestPasswordReset = forgotPassword;
++ 
++export default {
++  forgotPassword,
++  requestPasswordReset,
++  resetPassword
++};
+\ No newline at end of file
+diff --git a/server/package-lock.json b/server/package-lock.json
+index 35cdfe2..9f384d5 100644
+--- a/server/package-lock.json
++++ b/server/package-lock.json
+@@ -6,7 +6,8 @@
+         "": {
+             "name": "aags-server",
+             "dependencies": {
+-                "bcryptjs": "^3.0.2",
++                "bcrypt": "^6.0.0",
++                "bcryptjs": "^3.0.3",
+                 "cookie-parser": "^1.4.7",
+                 "cors": "^2.8.6",
+                 "dotenv": "^16.6.1",
+@@ -16,7 +17,7 @@
+                 "morgan": "^1.10.0",
+                 "multer": "^2.4.0",
+                 "mysql2": "^3.14.1",
+-                "nodemailer": "^7.0.5",
++                "nodemailer": "^7.0.13",
+                 "pg": "^8.23.0"
+             }
+         },
+@@ -76,6 +77,20 @@
+             "integrity": "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==",
+             "license": "MIT"
+         },
++        "node_modules/bcrypt": {
++            "version": "6.0.0",
++            "resolved": "https://registry.npmjs.org/bcrypt/-/bcrypt-6.0.0.tgz",
++            "integrity": "sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg==",
++            "hasInstallScript": true,
++            "license": "MIT",
++            "dependencies": {
++                "node-addon-api": "^8.3.0",
++                "node-gyp-build": "^4.8.4"
++            },
++            "engines": {
++                "node": ">= 18"
++            }
++        },
+         "node_modules/bcryptjs": {
+             "version": "3.0.3",
+             "resolved": "https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz",
+@@ -931,6 +946,26 @@
+                 "node": ">= 0.6"
+             }
+         },
++        "node_modules/node-addon-api": {
++            "version": "8.9.2",
++            "resolved": "https://registry.npmjs.org/node-addon-api/-/node-addon-api-8.9.2.tgz",
++            "integrity": "sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==",
++            "license": "MIT",
++            "engines": {
++                "node": "^18 || ^20 || >= 21"
++            }
++        },
++        "node_modules/node-gyp-build": {
++            "version": "4.8.4",
++            "resolved": "https://registry.npmjs.org/node-gyp-build/-/node-gyp-build-4.8.4.tgz",
++            "integrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==",
++            "license": "MIT",
++            "bin": {
++                "node-gyp-build": "bin.js",
++                "node-gyp-build-optional": "optional.js",
++                "node-gyp-build-test": "build-test.js"
++            }
++        },
+         "node_modules/nodemailer": {
+             "version": "7.0.13",
+             "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.13.tgz",
+diff --git a/server/package.json b/server/package.json
+index 8f2dd9a..c79347e 100644
+--- a/server/package.json
++++ b/server/package.json
+@@ -6,7 +6,8 @@
+         "start": "node server.js"
+     },
+     "dependencies": {
+-        "bcryptjs": "^3.0.2",
++        "bcrypt": "^6.0.0",
++        "bcryptjs": "^3.0.3",
+         "cookie-parser": "^1.4.7",
+         "cors": "^2.8.6",
+         "dotenv": "^16.6.1",
+@@ -16,7 +17,7 @@
+         "morgan": "^1.10.0",
+         "multer": "^2.4.0",
+         "mysql2": "^3.14.1",
+-        "nodemailer": "^7.0.5",
++        "nodemailer": "^7.0.13",
+         "pg": "^8.23.0"
+     }
+ }
+diff --git a/server/routes/authRoutes.js b/server/routes/authRoutes.js
+index 93a9f4c..f52a213 100644
+--- a/server/routes/authRoutes.js
++++ b/server/routes/authRoutes.js
+@@ -1,5 +1,6 @@
+ import express from 'express';
+ import { login, refreshToken, register, logout } from '../controllers/authController.js';
++import { forgotPassword, resetPassword } from '../controllers/passwordResetController.js';
+ 
+ const router = express.Router();
+ 
+@@ -8,4 +9,7 @@ router.get('/refresh', refreshToken);
+ router.post('/register', register);
+ router.post('/logout', logout);
+ 
++router.post('/forgot-password', forgotPassword);
++router.post('/reset-password', resetPassword);
++
+ export default router;
+\ No newline at end of file
+diff --git a/server/routes/passwordResetRoutes.js b/server/routes/passwordResetRoutes.js
+new file mode 100644
+index 0000000..b5edd29
+--- /dev/null
++++ b/server/routes/passwordResetRoutes.js
+@@ -0,0 +1,18 @@
++// passwordResetRoutes.js
++import express from 'express';
++import { requestPasswordReset, resetPassword } from '../controllers/passwordResetController.js';
++const router = express.Router();
++
++router.post('/forgot-password', requestPasswordReset);
++router.post('/reset-password', resetPassword);
++
++export default router;
++
++// In your main app.js / server.js, mount alongside your existing auth routes:
++//
++//   const passwordResetRoutes = require('./routes/passwordResetRoutes');
++//   app.use('/api/auth', passwordResetRoutes);
++//
++// This gives you:
++//   POST /api/auth/forgot-password
++//   POST /api/auth/reset-password
+diff --git a/server/server.js b/server/server.js
+index f8aacb2..de4e736 100644
+--- a/server/server.js
++++ b/server/server.js
+@@ -6,6 +6,8 @@ import { pool } from './db.js';
+ import authRoutes from './routes/authRoutes.js';
+ import adminRoutes from './routes/adminRoutes.js';
+ import studentRoutes from './routes/studentRoutes.js';
++import passwordResetRoutes from './routes/passwordResetRoutes.js';
++
+ 
+ const app = express();
+ const port = process.env.PORT || 3000;
+@@ -47,6 +49,7 @@ pool.connect((err, client, release) => {
+ app.use('/api/auth', authRoutes);
+ app.use('/api/admin', adminRoutes);
+ app.use('/api/student', studentRoutes);
++app.use('/api/auth', passwordResetRoutes);
+ 
+ // Start the server
+ app.listen(port, '0.0.0.0', () => {
+diff --git a/server/utils/mailer.js b/server/utils/mailer.js
+new file mode 100644
+index 0000000..7b87181
+--- /dev/null
++++ b/server/utils/mailer.js
+@@ -0,0 +1,49 @@
++// mailer.js
++//
++// Uses SMTP credentials from environment variables — add these to
++// your .env (never hardcode credentials):
++//
++//   SMTP_HOST=smtp.gmail.com          (or your provider)
++//   SMTP_PORT=587
++//   SMTP_USER=your-sending-address@example.com
++//   SMTP_PASS=your-app-password
++//   MAIL_FROM="AAGS - University of Colombo <no-reply@aags.lk>"
++//   FRONTEND_URL=http://localhost:5173
++
++import nodemailer from 'nodemailer';
++
++const transporter = nodemailer.createTransport({
++  host: process.env.SMTP_HOST,
++  port: Number(process.env.SMTP_PORT || 587),
++  secure: Number(process.env.SMTP_PORT) === 465, // true only for port 465
++  auth: {
++    user: process.env.SMTP_USER,
++    pass: process.env.SMTP_PASS
++  }
++});
++
++export async function sendPasswordResetEmail(toEmail, resetUrl) {
++  await transporter.sendMail({
++    from: process.env.MAIL_FROM || process.env.SMTP_USER,
++    to: toEmail,
++    subject: 'Reset your AAGS password',
++    html: `
++      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
++        <h2 style="color:#071B38;">Reset your password</h2>
++        <p>We received a request to reset the password for this account.
++           This link expires in <strong>20 minutes</strong>.</p>
++        <p style="margin: 24px 0;">
++          <a href="${resetUrl}"
++             style="background:#071B38;color:#fff;padding:12px 24px;
++                    border-radius:6px;text-decoration:none;font-weight:bold;">
++            Reset Password
++          </a>
++        </p>
++        <p style="color:#64748b;font-size:12px;">
++          If you didn't request this, you can safely ignore this email —
++          your password will remain unchanged.
++        </p>
++      </div>
++    `
++  });
++}

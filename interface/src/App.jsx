@@ -12,6 +12,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 // =========================================
 // AUTH
 // =========================================
@@ -119,6 +122,12 @@ function App() {
               path="/Login"
               element={<Login />}
             />
+
+            {/* =========================================
+                fogot pw/reset pw
+            ========================================= */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
 
             {/* =========================================
