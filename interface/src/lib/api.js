@@ -1,3 +1,14 @@
+// Meetings Service Functions
+export async function fetchMeetingRequests() {
+  return request('/meetings');
+}
+
+export async function updateMeetingStatus(requestId, status) {
+  return request(`/meetings/${requestId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
 const API_BASE_URL = 'http://localhost:5000/api';
 
 async function request(endpoint, options = {}) {
