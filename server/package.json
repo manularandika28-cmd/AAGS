@@ -18,5 +18,14 @@
         "mysql2": "^3.14.1",
         "nodemailer": "^7.0.5",
         "pg": "^8.23.0"
+    },
+    "version": "1.0.0",
+    "description": "",
+    "main": "server.js",
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "nodemon": "^3.1.14"
     }
 }
