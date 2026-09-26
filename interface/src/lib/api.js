@@ -1,3 +1,14 @@
+// Medical Review Service Functions
+export async function fetchMedicalSubmissions() {
+  return request('/medicals');
+}
+
+export async function updateMedicalStatus(submissionId, status, reviewedBy = 'HOD') {
+  return request(`/medicals/${submissionId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, reviewed_by: reviewedBy }),
+  });
+}
 // Meetings Service Functions
 export async function fetchMeetingRequests() {
   return request('/meetings');
