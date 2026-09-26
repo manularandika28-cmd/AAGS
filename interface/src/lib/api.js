@@ -1,3 +1,20 @@
-const API=import.meta.env.VITE_API_URL||'http://localhost:4000/api';
-export async function api(path,options={}){const token=localStorage.getItem('aags_token');const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;const res=await fetch(API+path,{...options,headers});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.message||'Request failed');return data}
-export const auth={login:(identifier,password)=>api('/auth/login',{method:'POST',body:JSON.stringify({identifier,password})}),me:()=>api('/auth/me')};
+const API_BASE_URL = 'http://localhost:5000/api';
+
+async function request(endpoint, options = {}) {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+}
+
+export { API_BASE_URL, request };
