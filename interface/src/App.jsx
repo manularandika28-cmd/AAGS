@@ -11,13 +11,14 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SettingsPage from './pages/settings';
 
-<<<<<<< HEAD
-=======
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 // =========================================
 // AUTH
 // =========================================
->>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
 
 
 // =========================================
@@ -27,11 +28,6 @@ import HODDashboard from './pages/HOD/HOD_dashboard';
 import MeetingRequests from './pages/HOD/Meeting_requests';
 import MedicalReview from './pages/HOD/Medical_review';
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
 // Lecturer
 import LecturerDashboard from './pages/Lecturer/LecturerDashboard';
 import AttendanceManager from './pages/Lecturer/AttendanceManager';
@@ -54,125 +50,6 @@ import AuditTrail from './pages/Administrator/AuditTrail';
 import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
-<<<<<<< HEAD
-function App() {
-  return (
-    <BrowserRouter>
-    <AuthProvider>
-      {/* =========================================
-          GLOBAL BACKGROUND VIDEO
-      ========================================= */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        >
-          <source src={backgroundVideo} type="video/mp4" />
-        </video>
-
-        {/* Dark/white overlay - adjust opacity if needed */}
-        <div className="absolute inset-0 bg-white/10" />
-      </div>
-
-      {/* =========================================
-          APPLICATION CONTENT
-      ========================================= */}
-      <div className="relative z-10 min-h-screen">
-                <Routes>
-          {/* Login */}
-          <Route path="/login" element={<Login />} />
-
-          {/* =====================================
-              HOD ROUTES
-          ===================================== */}
-          <Route
-            path="/hod/dashboard"
-            element={<ProtectedRoute allowedRoles={['HOD']}><HODDashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/hod/meetings"
-            element={<ProtectedRoute allowedRoles={['HOD']}><MeetingRequests /></ProtectedRoute>}
-          />
-          <Route
-            path="/hod/medical"
-            element={<ProtectedRoute allowedRoles={['HOD']}><MedicalReview /></ProtectedRoute>}
-          />
-
-          {/* =====================================
-              LECTURER ROUTES
-          ===================================== */}
-          <Route
-            path="/lecturer/dashboard"
-            element={<ProtectedRoute allowedRoles={['Lecturer']}><LecturerDashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/lecturer/attendance"
-            element={<ProtectedRoute allowedRoles={['Lecturer']}><AttendanceManager /></ProtectedRoute>}
-          />
-          <Route
-            path="/lecturer/meetings"
-            element={<ProtectedRoute allowedRoles={['Lecturer']}><MeetingManagement /></ProtectedRoute>}
-          />
-
-          {/* =====================================
-              STUDENT ROUTES
-          ===================================== */}
-          <Route
-            path="/Student/dashboard"
-            element={<ProtectedRoute allowedRoles={['Student']}><StudentDashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/Student/meetings"
-            element={<ProtectedRoute allowedRoles={['Student']}><MeetingScheduler /></ProtectedRoute>}
-          />
-          <Route
-            path="/Student/medical"
-            element={<ProtectedRoute allowedRoles={['Student']}><MedicalHub /></ProtectedRoute>}
-          />
-          <Route
-            path="/Student/academic-records"
-            element={<ProtectedRoute allowedRoles={['Student']}><AcademicRecords /></ProtectedRoute>}
-          />
-
-          {/* =====================================
-              ADMIN ROUTES
-          ===================================== */}
-          <Route
-            path="/admin/dashboard"
-            element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/admin/users"
-            element={<ProtectedRoute allowedRoles={['Admin']}><UserManagement /></ProtectedRoute>}
-          />
-          <Route
-            path="/admin/audit-logs"
-            element={<ProtectedRoute allowedRoles={['Admin']}><AuditTrail /></ProtectedRoute>}
-          />
-          <Route
-            path="/admin/system-configuration"
-            element={<ProtectedRoute allowedRoles={['Admin']}><SystemConfiguration /></ProtectedRoute>}
-          />
-          <Route
-            path="/admin/Roles-And-Permissions"
-            element={<ProtectedRoute allowedRoles={['Admin']}><RolesAndPermissions /></ProtectedRoute>}
-          />
-
-          {/* =====================================
-              DEFAULT ROUTE
-          ===================================== */}
-          <Route
-            path="*"
-            element={<Navigate to="/login" replace />}
-          />
-        </Routes>
-      </div>
-      </AuthProvider>
-    </BrowserRouter>
-=======
 // Dean
 // =========================================
 import DeanDashboard from './pages/Dean/DeanDashboard';
@@ -246,6 +123,12 @@ function App() {
               path="/Login"
               element={<Login />}
             />
+
+            {/* =========================================
+                fogot pw/reset pw
+            ========================================= */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
 
             {/* =========================================
@@ -437,6 +320,27 @@ function App() {
               }
             />
 
+            {/* =========================================
+    SETTINGS
+========================================= */}
+
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        'Student',
+        'Lecturer',
+        'HOD',
+        'Dean',
+        'Admin'
+      ]}
+    >
+      <SettingsPage />
+    </ProtectedRoute>
+  }
+/>
+
 
             {/* =========================================
                 UNKNOWN ROUTES
@@ -459,7 +363,7 @@ function App() {
       </BrowserRouter>
 
     </AuthProvider>
->>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
   );
 }
+
 export default App;
