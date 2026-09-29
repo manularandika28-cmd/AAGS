@@ -7,7 +7,8 @@ import {
     X,
     RefreshCw,
     MessageSquare,
-    AlertCircle
+    AlertCircle,
+    Bell
 } from 'lucide-react';
 
 import Sidenavbar from '../../components/Sidenavbar';
@@ -25,6 +26,19 @@ export default function DeanMeetingRequests() {
     const [processingId, setProcessingId] = useState(null);
     const [error, setError] = useState('');
     const [filter, setFilter] = useState('pending');
+    const [notification, setNotification] = useState({
+        show: false,
+        message: ''
+    });
+
+    useEffect(() => {
+        if (notification.show) {
+            const timer = setTimeout(() => {
+                setNotification((prev) => ({ ...prev, show: false }));
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification.show]);
 
     // =========================================================
     // FETCH MEETING REQUESTS
@@ -82,6 +96,10 @@ export default function DeanMeetingRequests() {
                     ? data
                     : []
             );
+            setNotification({
+                show: true,
+                message: 'Meeting requests refreshed successfully!'
+            });
 
         } catch (err) {
 
@@ -355,9 +373,29 @@ export default function DeanMeetingRequests() {
     // PAGE
     // =========================================================
 
-    return (
+   return (
 
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen relative">
+
+            {/* Center Notification Toast */}
+            {notification.show && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#071B38]/95 text-white backdrop-blur-xl border border-white/20 shadow-2xl px-5 py-3 rounded-2xl transition-all duration-300">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                        <Bell size={18} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-white/90">Notification</p>
+                        <p className="text-xs text-white/70">{notification.message}</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setNotification((prev) => ({ ...prev, show: false }))}
+                        className="ml-3 text-white/50 hover:text-white transition-colors cursor-pointer"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
 
             <Sidenavbar
                 activeItem="meeting-requests"
