@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, ClipboardX, Download, TrendingUp } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
@@ -106,8 +107,33 @@ export default function DeanDashboard() {
   ];
 
   const handleGenerateReport = () => {
-    window.print();
-  };
+  const reportData = [
+    {
+      'Metric / Description': 'Total Enrolled Students',
+      'Value': stats.totalEnrolledStudents,
+      'Status / Note': 'Currently enrolled'
+    },
+    {
+      'Metric / Description': 'Faculty Attendance Average (%)',
+      'Value': `${stats.facultyAttendanceAverage}%`,
+      'Status / Note': 'Faculty attendance average'
+    },
+    {
+      'Metric / Description': 'Pending Final Approvals',
+      'Value': stats.pendingFinalApprovals,
+      'Status / Note': stats.pendingFinalApprovals > 0 ? 'Action required' : 'Up to date'
+    }
+  ];
+
+  const worksheet = XLSX.utils.json_to_sheet(reportData);
+  worksheet['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 30 }];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Dashboard Stats');
+
+  const currentDate = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(workbook, `Dean_Dashboard_Report_${currentDate}.xlsx`);
+};
 
   return (
     <div className="flex min-h-screen ">
