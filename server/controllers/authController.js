@@ -109,6 +109,25 @@ switch (requestedRole) {
 }
 
 if (!user) {
+    await pool.query(
+        `
+        INSERT INTO audit_logs
+            (action, target, performed_by, ip_address, role, severity, module, details)
+        VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+            'Failed login attempt',
+            email,
+            null,
+            req.ip,
+            requestedRole,
+            'Warning',
+            'Authentication',
+            `Login failed: account not found for ${requestedRole}`
+        ]
+    );
+
     return res.status(401).json({
         error: `This account is not authorized to log in as ${requestedRole}.`
     });
@@ -155,8 +174,29 @@ if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
         }
 
         if (!isMatch) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
+    await pool.query(
+        `
+        INSERT INTO audit_logs
+            (action, target, performed_by, ip_address, role, severity, module, details)
+        VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+            'Failed login attempt',
+            user.email,
+            null,
+            req.ip,
+            role,
+            'Warning',
+            'Authentication',
+            `Login failed: invalid password for ${role}`
+        ]
+    );
+
+    return res.status(401).json({
+        error: 'Invalid credentials'
+    });
+}
 
         // Generate Tokens
         const payload = {
@@ -168,6 +208,25 @@ if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
 
         const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
         const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: '7d' });
+
+        await pool.query(
+    `
+    INSERT INTO audit_logs
+        (action, target, performed_by, ip_address, role, severity, module, details)
+    VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+        'User login successful',
+        payload.name,
+        role === 'Admin' ? payload.userId : null,
+        req.ip,
+        role,
+        'Info',
+        'Authentication',
+        `${role} logged into the system`
+    ]
+);
 
         // Set Refresh Token in HTTP-Only Cookie
         res.cookie('refreshToken', refreshToken, {
@@ -257,8 +316,42 @@ export const register = async (req, res) => {
     }
 };
 
-// Logout
-export const logout = (req, res) => {
-    res.clearCookie('refreshToken');
-    return res.status(200).json({ message: 'Logged out successfully' });
+export const logout = async (req, res) => {
+    try {
+        const user = req.body;
+
+        await pool.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'User logout',
+                user?.name || 'Unknown User',
+                user?.role === 'Admin' ? user.userId : null,
+                req.ip,
+                user?.role || 'Unknown',
+                'Info',
+                'Authentication',
+                `${user?.role || 'User'} logged out of the system`
+            ]
+        );
+
+        res.clearCookie('refreshToken');
+
+        return res.status(200).json({
+            message: 'Logged out successfully'
+        });
+
+    } catch (error) {
+        console.error('Logout audit error:', error);
+
+        res.clearCookie('refreshToken');
+
+        return res.status(200).json({
+            message: 'Logged out successfully'
+        });
+    }
 };

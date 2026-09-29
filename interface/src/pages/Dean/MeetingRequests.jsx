@@ -1,421 +1,934 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Download,
-  Plus,
-  ClipboardX,
-  Calendar as CalendarIcon,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
+    CalendarDays,
+    Clock,
+    User,
+    Check,
+    X,
+    RefreshCw,
+    MessageSquare,
+    AlertCircle
 } from 'lucide-react';
 
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
+import { useAuth } from '../../context/AuthContext';
 
-// =========================================
-// MOCK DATA
-// Replace with real API data once the
-// backend endpoints are ready.
-// =========================================
-const SUMMARY_STATS = [
-  {
-    id: 'pending',
-    label: 'Pending Approvals',
-    value: '12',
-    icon: ClipboardX,
-    iconBg: 'bg-slate-100',
-    iconColor: 'text-[#071B38]',
-    footer: '+3 since yesterday',
-    footerColor: 'text-amber-600',
-  },
-  {
-    id: 'today',
-    label: "Today's Meetings",
-    value: '5',
-    icon: CalendarIcon,
-    iconBg: 'bg-slate-100',
-    iconColor: 'text-[#071B38]',
-    footer: 'Next: 10:30 AM (HOD IAT)',
-    footerColor: 'text-slate-500',
-  },
-  {
-    id: 'escalated',
-    label: 'Escalated (Student)',
-    value: '2',
-    icon: AlertTriangle,
-    iconBg: 'bg-red-50',
-    iconColor: 'text-red-500',
-    footer: 'Requires immediate attention',
-    footerColor: 'text-red-500',
-    highlight: true,
-  },
-];
-
-const QUICK_FILTERS = ['IAT Dept', 'AT Dept', 'High Urgency'];
-
-const PRIORITY_REQUESTS = [
-  {
-    id: 1,
-    initials: 'SR',
-    title: 'Curriculum Revision Approval',
-    tag: 'HIGH URGENCY',
-    tagColor: 'bg-red-100 text-red-600',
-    requestedBy: 'Dr. S. Rathnayake (HOD - ICT)',
-    description:
-      'Requires final sign-off on the proposed curriculum changes for the upcoming semester before Senate submission.',
-    meta: ['Proposed: Tomorrow, 10:00 AM', '30 mins'],
-    actions: [
-      { label: 'Decline', variant: 'ghost' },
-      { label: 'Delegate', variant: 'outline' },
-      { label: 'Approve & Schedule', variant: 'solid' },
-    ],
-    accent: 'border-l-red-400',
-  },
-  {
-    id: 2,
-    initials: 'KP',
-    avatar: true,
-    title: 'Special Medical Leave Appeal',
-    tag: 'STUDENT ESCALATION',
-    tagColor: 'bg-amber-100 text-amber-700',
-    requestedBy: 'K. Perera (ET Dept, 3rd Year)',
-    description:
-      'Appeal regarding medical leave rejection for end-semester examinations. Escalated from HOD ET.',
-    meta: ['Flexible', '15 mins'],
-    actions: [
-      { label: 'Decline', variant: 'ghost' },
-      { label: 'Delegate to HOD ET', variant: 'outline' },
-      { label: 'Approve', variant: 'solid' },
-    ],
-    accent: 'border-l-amber-400',
-  },
-  {
-    id: 3,
-    initials: 'IA',
-    title: 'Industry Partnership Discussion',
-    tag: null,
-    requestedBy: 'Dr. I. Abeykoon (Director, Industry Linkages)',
-    description: null,
-    meta: ['Next Week'],
-    actions: [
-      { label: 'Decline', variant: 'ghost' },
-      { label: 'Approve', variant: 'solid' },
-    ],
-    accent: 'border-l-slate-200',
-  },
-];
-
-const TODAY_SCHEDULE = [
-  {
-    id: 1,
-    time: '09:00 AM - 10:00 AM',
-    title: 'Faculty Board Meeting',
-    location: 'Board Room',
-    status: 'done',
-  },
-  {
-    id: 2,
-    time: '10:30 AM - 11:00 AM (Now)',
-    title: 'Discussion with HOD IAT',
-    location: "Dean's Office",
-    status: 'active',
-  },
-  {
-    id: 3,
-    time: '01:00 PM - 01:30 PM',
-    title: 'Student Representative Council',
-    location: 'Online (Zoom)',
-    status: 'upcoming',
-  },
-];
-
-const CALENDAR_DAYS = [
-  25, 26, 27, 28, 29, 30, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-];
-const CALENDAR_START_OFFSET = 0; // Mon 25 is the first cell in this mock month
-const TODAY_DATE = 6;
-
-function ActionButton({ label, variant }) {
-  const base =
-    'text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap';
-
-  const styles = {
-    ghost: 'text-slate-500 hover:bg-slate-100',
-    outline: 'border border-slate-300 text-slate-700 hover:bg-slate-50',
-    solid: 'bg-[#071B38] text-white hover:bg-[#0a2549]',
-  };
-
-  return <button className={`${base} ${styles[variant]}`}>{label}</button>;
-}
+const API_BASE = 'http://localhost:3000/api/dean';
 
 export default function DeanMeetingRequests() {
-  const [sortBy, setSortBy] = useState('urgency');
 
-  return (
-    <div className="flex min-h-screen ">
-      {/* Shared sidebar */}
-      <Sidenavbar activeItem="meetings" role="Dean" />
+    const { accessToken, refreshAccessToken } = useAuth();
 
-      <div className="flex-1 flex flex-col">
-        {/* Shared topbar */}
-        
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [processingId, setProcessingId] = useState(null);
+    const [error, setError] = useState('');
+    const [filter, setFilter] = useState('pending');
 
-        <main className="flex-1 p-8">
-          {/* Page header */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                Dean's Meeting Requests
-              </h1>
-              <p className="text-sm text-white/70 mt-1">
-                Review, approve, and delegate high-level academic
-                appointments.
-              </p>
-            </div>
+    // =========================================================
+    // FETCH MEETING REQUESTS
+    // =========================================================
 
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 bg-[#071B38] hover:bg-[#0a2549] text-white text-sm font-medium px-4 py-2.5 rounded-lg">
-                <Download size={16} />
-                Export
-              </button>
-              <button className="flex items-center gap-2 bg-[#071B38] hover:bg-[#0a2549] text-white text-sm font-medium px-4 py-2.5 rounded-lg">
-                <Plus size={16} />
-                New Appointment
-              </button>
-            </div>
-          </div>
+    const fetchMeetingRequests = async (retry = true) => {
+        setLoading(true);
+        setError('');
 
-          {/* Summary row: stat cards + quick filters */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-6">
-            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {SUMMARY_STATS.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={stat.id}
-                    className={`rounded-2xl p-5 shadow-sm border backdrop-blur-md ${
-  stat.highlight
-    ? 'bg-red-100/30 border-white/70'
-    : 'bg-white/30 border-white/70'
-}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-white">
-                        {stat.label}
-                      </span>
-                      <span
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${stat.iconBg}`}
-                      >
-                        <Icon size={16} className={stat.iconColor} />
-                      </span>
-                    </div>
-                    <div className="text-3xl  font-bold text-white mt-3">
-                      {stat.value}
-                    </div>
-                    <div
-                      className={`text-xs text-white font-medium mt-2 ${stat.footerColor}`}
-                    >
-                      {stat.footer}
-                    </div>
-                  </div>
+        try {
+            const response = await fetch(
+                `${API_BASE}/meeting-requests?status=${filter}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                }
+            );
+
+            // -------------------------------------------------
+            // TOKEN EXPIRED
+            // -------------------------------------------------
+
+            if (
+                response.status === 401 ||
+                response.status === 403
+            ) {
+
+                if (retry) {
+                    const newToken =
+                        await refreshAccessToken();
+
+                    if (newToken) {
+                        return fetchMeetingRequests(false);
+                    }
+                }
+
+                throw new Error(
+                    'Your session has expired. Please log in again.'
                 );
-              })}
-            </div>
+            }
 
-            <div className="
-  bg-[#071B38]/55
-  backdrop-blur-xl
-  border border-white/25
-  rounded-2xl
-  p-5
-  text-white
-  shadow-lg
-">
-              <span className="text-xs font-medium text-slate-300">
-                Quick Filters
-              </span>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {QUICK_FILTERS.map((filter) => (
-                  <button
-                    key={filter}
-                    className="text-xs font-medium bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg"
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+            const data = await response.json();
 
-      {/* Main content: priority requests + calendar/schedule */}
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  {/* Priority Requests */}
-  <div className="lg:col-span-2 bg-white/15 backdrop-blur-xl border border-white/30 rounded-xl shadow-sm p-5">
-  <div className="flex items-center justify-between mb-4">
-    <h2 className="font-semibold text-white tracking-tight">
-      Priority Requests
-                </h2>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="text-xs text-white border border-white/30 rounded-md px-2 py-1"
-                >
-                  <option value="urgency">Sort by Urgency</option>
-                  <option value="date">Sort by Date</option>
-                  <option value="requester">Sort by Requester</option>
-                </select>
-              </div>
+            if (!response.ok) {
+                throw new Error(
+                    data.error ||
+                    'Failed to load meeting requests'
+                );
+            }
 
-              <div className="space-y-4">
-                {PRIORITY_REQUESTS.map((req) => (
-                  <div
-                    key={req.id}
-                    className={`border-l-4 ${req.accent} rounded-lg bg-slate-50/60 p-4`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 shrink-0">
-                        {req.initials}
-                      </div>
+            setRequests(
+                Array.isArray(data)
+                    ? data
+                    : []
+            );
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-medium text-[#071B38] text-sm">
-                            {req.title}
-                          </h3>
-                          {req.tag && (
-                            <span
-                              className={`text-[10px] font-semibold px-2 py-0.5 rounded ${req.tagColor}`}
-                            >
-                              {req.tag}
-                            </span>
-                          )}
+        } catch (err) {
+
+            console.error(
+                'Dean meeting requests error:',
+                err
+            );
+
+            setError(
+                err.message ||
+                'Failed to load meeting requests'
+            );
+
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // =========================================================
+    // LOAD WHEN PAGE / FILTER / TOKEN CHANGES
+    // =========================================================
+
+    useEffect(() => {
+
+        if (accessToken) {
+            fetchMeetingRequests();
+        }
+
+    }, [accessToken, filter]);
+
+    // =========================================================
+    // UPDATE REQUEST STATUS
+    //
+    // IMPORTANT:
+    // Database enum:
+    // pending
+    // accepted
+    // rejected
+    // cancelled
+    // completed
+    // =========================================================
+
+    const updateRequestStatus = async (
+        requestId,
+        status
+    ) => {
+
+        const actionText =
+            status === 'accepted'
+                ? 'accept'
+                : 'reject';
+
+        const confirmed = window.confirm(
+            `Are you sure you want to ${actionText} this meeting request?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setProcessingId(requestId);
+        setError('');
+
+        try {
+
+            const response = await fetch(
+                `${API_BASE}/meeting-requests/${requestId}/${status}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type':
+                            'application/json',
+
+                        Authorization:
+                            `Bearer ${accessToken}`,
+                    },
+                }
+            );
+
+            // -------------------------------------------------
+            // TOKEN EXPIRED
+            // -------------------------------------------------
+
+            if (
+                response.status === 401 ||
+                response.status === 403
+            ) {
+
+                const newToken =
+                    await refreshAccessToken();
+
+                if (newToken) {
+
+                    const retryResponse =
+                        await fetch(
+                            `${API_BASE}/meeting-requests/${requestId}/${status}`,
+                            {
+                                method: 'PATCH',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/json',
+
+                                    Authorization:
+                                        `Bearer ${newToken}`,
+                                },
+                            }
+                        );
+
+                    const retryData =
+                        await retryResponse.json();
+
+                    if (!retryResponse.ok) {
+
+                        throw new Error(
+                            retryData.error ||
+                            `Failed to ${actionText} meeting request`
+                        );
+                    }
+
+                    await fetchMeetingRequests(false);
+
+                    return;
+                }
+
+                throw new Error(
+                    'Your session has expired. Please log in again.'
+                );
+            }
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    `Failed to ${actionText} meeting request`
+                );
+            }
+
+            await fetchMeetingRequests(false);
+
+        } catch (err) {
+
+            console.error(
+                `Dean meeting request ${status} error:`,
+                err
+            );
+
+            setError(
+                err.message ||
+                `Failed to ${actionText} meeting request`
+            );
+
+        } finally {
+
+            setProcessingId(null);
+        }
+    };
+
+    // =========================================================
+    // FORMAT DATE
+    // =========================================================
+
+    const formatDate = (date) => {
+
+        if (!date) {
+            return '-';
+        }
+
+        return new Date(date).toLocaleDateString(
+            'en-GB',
+            {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }
+        );
+    };
+
+    // =========================================================
+    // FORMAT TIME
+    // =========================================================
+
+    const formatTime = (time) => {
+
+        if (!time) {
+            return '-';
+        }
+
+        const [hours, minutes] =
+            time.split(':');
+
+        const date = new Date();
+
+        date.setHours(
+            Number(hours),
+            Number(minutes),
+            0,
+            0
+        );
+
+        return date.toLocaleTimeString(
+            'en-US',
+            {
+                hour: 'numeric',
+                minute: '2-digit'
+            }
+        );
+    };
+
+    // =========================================================
+    // GET REQUESTER ROLE
+    // =========================================================
+
+    const getRequesterRole = (request) => {
+
+        if (
+            request.requester_role === 'HOD' ||
+            request.role === 'HOD'
+        ) {
+            return 'HOD';
+        }
+
+        return 'Lecturer';
+    };
+
+    // =========================================================
+    // GET REQUESTER NAME
+    // =========================================================
+
+    const getRequesterName = (request) => {
+
+        return (
+            request.requester_name ||
+            request.name ||
+            request.lecturer_name ||
+            request.hod_name ||
+            'Unknown User'
+        );
+    };
+
+    // =========================================================
+    // STATUS STYLE
+    // =========================================================
+
+    const getStatusStyle = (status) => {
+
+        switch (
+            String(status).toLowerCase()
+        ) {
+
+            case 'accepted':
+                return 'bg-emerald-100 text-emerald-700';
+
+            case 'rejected':
+            case 'cancelled':
+                return 'bg-red-100 text-red-700';
+
+            case 'completed':
+                return 'bg-blue-100 text-blue-700';
+
+            case 'pending':
+            default:
+                return 'bg-amber-100 text-amber-700';
+        }
+    };
+
+    // =========================================================
+    // PAGE
+    // =========================================================
+
+    return (
+
+        <div className="flex min-h-screen">
+
+            <Sidenavbar
+                activeItem="meeting-requests"
+                role="Dean"
+            />
+
+            <div className="flex-1 flex flex-col">
+
+                <Topnavbar
+                    title="Dean Meeting Requests - AAGS"
+                    searchPlaceholder="Search requests..."
+                    userName="Prof. N. Perera"
+                    userRole="Dean, FOT"
+                />
+
+                <main className="flex-1 p-8">
+
+                    {/* =========================================
+                        HEADER
+                    ========================================= */}
+
+                    <div className="flex items-start justify-between mb-6">
+
+                        <div>
+
+                            <h1 className="text-2xl font-bold text-white">
+                                Meeting Requests
+                            </h1>
+
+                            <p className="text-sm text-white/70 mt-1">
+                                Review meeting requests submitted
+                                by Lecturers and Heads of Department.
+                            </p>
+
                         </div>
 
-                        <p className="text-xs text-black mt-1">
-                          Requested by {req.requestedBy}
-                        </p>
+                        <button
+                            type="button"
+                            onClick={() =>
+                                fetchMeetingRequests()
+                            }
+                            disabled={loading}
+                            className="flex items-center gap-2 bg-[#071B38] hover:bg-[#0a2549] disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+                        >
 
-                        {req.description && (
-                          <p className="text-sm text-slate-600 mt-2">
-                            {req.description}
-                          </p>
+                            <RefreshCw
+                                size={16}
+                                className={
+                                    loading
+                                        ? 'animate-spin'
+                                        : ''
+                                }
+                            />
+
+                            Refresh
+
+                        </button>
+
+                    </div>
+
+                    <hr className="border-slate-200 mb-6" />
+
+                    {/* =========================================
+                        POLICY
+                    ========================================= */}
+
+                    <div className="mb-6 rounded-xl border border-blue-300/30 bg-blue-500/10 backdrop-blur-xl p-4">
+
+                        <div className="flex items-start gap-3">
+
+                            <AlertCircle
+                                size={19}
+                                className="text-blue-300 mt-0.5 shrink-0"
+                            />
+
+                            <div>
+
+                                <p className="text-sm font-semibold text-white">
+                                    Dean Meeting Policy
+                                </p>
+
+                                <p className="text-xs text-white/70 mt-1">
+                                    Only Lecturers and Heads of
+                                    Department can submit meeting
+                                    requests to the Dean. Student
+                                    meeting requests are not displayed
+                                    or processed on this page.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {/* =========================================
+                        FILTER
+                    ========================================= */}
+
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+
+                        <div className="flex items-center gap-2">
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setFilter('pending')
+                                }
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    filter === 'pending'
+                                        ? 'bg-white text-[#071B38]'
+                                        : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                            >
+                                Pending
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setFilter('all')
+                                }
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    filter === 'all'
+                                        ? 'bg-white text-[#071B38]'
+                                        : 'bg-white/10 text-white hover:bg-white/20'
+                                }`}
+                            >
+                                All Requests
+                            </button>
+
+                        </div>
+
+                        <div className="text-sm text-white/70">
+
+                            {requests.length}{' '}
+
+                            {requests.length === 1
+                                ? 'request'
+                                : 'requests'}
+
+                        </div>
+
+                    </div>
+
+                    {/* =========================================
+                        ERROR
+                    ========================================= */}
+
+                    {error && (
+
+                        <div className="mb-5 rounded-xl border border-red-300/30 bg-red-500/10 p-4">
+
+                            <div className="flex items-center gap-3">
+
+                                <AlertCircle
+                                    size={18}
+                                    className="text-red-300"
+                                />
+
+                                <p className="text-sm text-red-200">
+                                    {error}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    )}
+
+                    {/* =========================================
+                        LOADING
+                    ========================================= */}
+
+                    {loading && (
+
+                        <div className="rounded-2xl bg-white/10 border border-white/20 p-12 text-center">
+
+                            <RefreshCw
+                                size={30}
+                                className="animate-spin text-white mx-auto mb-3"
+                            />
+
+                            <p className="text-sm text-white/70">
+                                Loading meeting requests...
+                            </p>
+
+                        </div>
+
+                    )}
+
+                    {/* =========================================
+                        EMPTY
+                    ========================================= */}
+
+                    {!loading &&
+                        requests.length === 0 && (
+
+                            <div className="rounded-2xl bg-white/10 border border-white/20 p-12 text-center">
+
+                                <CalendarDays
+                                    size={42}
+                                    className="text-white/50 mx-auto mb-4"
+                                />
+
+                                <h2 className="text-lg font-semibold text-white">
+                                    No meeting requests
+                                </h2>
+
+                                <p className="text-sm text-white/60 mt-2">
+                                    There are currently no meeting
+                                    requests matching this filter.
+                                </p>
+
+                            </div>
+
                         )}
 
-                        <div className="flex items-center gap-4 text-xs text-black mt-2">
-                          {req.meta.map((m) => (
-                            <span
-                              key={m}
-                              className="flex items-center gap-1"
-                            >
-                              <Clock size={12} />
-                              {m}
-                            </span>
-                          ))}
-                        </div>
+                    {/* =========================================
+                        REQUEST LIST
+                    ========================================= */}
 
-                        <div className="flex items-center gap-2 mt-3">
-                          {req.actions.map((a) => (
-                            <ActionButton
-                              key={a.label}
-                              label={a.label}
-                              variant={a.variant}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    {!loading &&
+                        requests.length > 0 && (
 
-              <button className="w-full text-center text-sm text-[#071B38] font-medium mt-4 hover:underline">
-                View all pending requests &rarr;
-              </button>
+                            <div className="space-y-4">
+
+                                {requests.map((request) => {
+
+                                    const requesterRole =
+                                        getRequesterRole(
+                                            request
+                                        );
+
+                                    const requesterName =
+                                        getRequesterName(
+                                            request
+                                        );
+
+                                    const status =
+                                        String(
+                                            request.status ||
+                                            'pending'
+                                        ).toLowerCase();
+
+                                    const isPending =
+                                        status === 'pending';
+
+                                    return (
+
+                                        <div
+                                            key={
+                                                request.request_id
+                                            }
+                                            className="rounded-2xl p-5 shadow-xl backdrop-blur-2xl border border-white/30 bg-white/10"
+                                        >
+
+                                            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+
+                                                {/* REQUESTER */}
+
+                                                <div className="flex items-start gap-4">
+
+                                                    <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+
+                                                        <User
+                                                            size={19}
+                                                            className="text-white"
+                                                        />
+
+                                                    </div>
+
+                                                    <div>
+
+                                                        <div className="flex flex-wrap items-center gap-2">
+
+                                                            <h2 className="text-base font-semibold text-white">
+
+                                                                {
+                                                                    requesterName
+                                                                }
+
+                                                            </h2>
+
+                                                            <span className="px-2 py-0.5 rounded-full bg-blue-400/15 text-blue-200 text-xs font-medium">
+
+                                                                {
+                                                                    requesterRole
+                                                                }
+
+                                                            </span>
+
+                                                            <span
+                                                                className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(status)}`}
+                                                            >
+
+                                                                {status
+                                                                    .charAt(
+                                                                        0
+                                                                    )
+                                                                    .toUpperCase() +
+                                                                    status.slice(
+                                                                        1
+                                                                    )}
+
+                                                            </span>
+
+                                                        </div>
+
+                                                        {requesterRole ===
+                                                            'Lecturer' &&
+                                                            request.lecturer_email && (
+
+                                                                <p className="text-xs text-white/60 mt-1">
+
+                                                                    {
+                                                                        request.lecturer_email
+                                                                    }
+
+                                                                </p>
+
+                                                            )}
+
+                                                        {requesterRole ===
+                                                            'HOD' &&
+                                                            request.hod_email && (
+
+                                                                <p className="text-xs text-white/60 mt-1">
+
+                                                                    {
+                                                                        request.hod_email
+                                                                    }
+
+                                                                </p>
+
+                                                            )}
+
+                                                    </div>
+
+                                                </div>
+
+                                                {/* =================================
+                                                    ACTION BUTTONS
+                                                ================================= */}
+
+                                                {isPending && (
+
+                                                    <div className="flex items-center gap-2">
+
+                                                        {/* ACCEPT */}
+
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                processingId ===
+                                                                request.request_id
+                                                            }
+                                                            onClick={() =>
+                                                                updateRequestStatus(
+                                                                    request.request_id,
+                                                                    'accepted'
+                                                                )
+                                                            }
+                                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                                                        >
+
+                                                            <Check
+                                                                size={16}
+                                                            />
+
+                                                            Approve
+
+                                                        </button>
+
+                                                        {/* REJECT */}
+
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                processingId ===
+                                                                request.request_id
+                                                            }
+                                                            onClick={() =>
+                                                                updateRequestStatus(
+                                                                    request.request_id,
+                                                                    'rejected'
+                                                                )
+                                                            }
+                                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                                                        >
+
+                                                            <X
+                                                                size={16}
+                                                            />
+
+                                                            Reject
+
+                                                        </button>
+
+                                                    </div>
+
+                                                )}
+
+                                            </div>
+
+                                            {/* =================================
+                                                DETAILS
+                                            ================================= */}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-5 border-t border-white/15">
+
+                                                {/* DATE */}
+
+                                                <div className="flex items-center gap-3">
+
+                                                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+
+                                                        <CalendarDays
+                                                            size={17}
+                                                            className="text-white/80"
+                                                        />
+
+                                                    </div>
+
+                                                    <div>
+
+                                                        <p className="text-xs text-white/50">
+                                                            Preferred Date
+                                                        </p>
+
+                                                        <p className="text-sm text-white font-medium mt-0.5">
+
+                                                            {
+                                                                formatDate(
+                                                                    request.preferred_date
+                                                                )
+                                                            }
+
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                                {/* TIME */}
+
+                                                <div className="flex items-center gap-3">
+
+                                                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+
+                                                        <Clock
+                                                            size={17}
+                                                            className="text-white/80"
+                                                        />
+
+                                                    </div>
+
+                                                    <div>
+
+                                                        <p className="text-xs text-white/50">
+                                                            Preferred Time
+                                                        </p>
+
+                                                        <p className="text-sm text-white font-medium mt-0.5">
+
+                                                            {
+                                                                formatTime(
+                                                                    request.preferred_time
+                                                                )
+                                                            }
+
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                                {/* REQUEST ID */}
+
+                                                <div className="flex items-center gap-3">
+
+                                                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+
+                                                        <MessageSquare
+                                                            size={17}
+                                                            className="text-white/80"
+                                                        />
+
+                                                    </div>
+
+                                                    <div>
+
+                                                        <p className="text-xs text-white/50">
+                                                            Request ID
+                                                        </p>
+
+                                                        <p className="text-sm text-white font-medium mt-0.5">
+
+                                                            #
+                                                            {
+                                                                request.request_id
+                                                            }
+
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                            {/* =================================
+                                                PURPOSE
+                                            ================================= */}
+
+                                            <div className="mt-5">
+
+                                                <p className="text-xs text-white/50 mb-1">
+                                                    Purpose
+                                                </p>
+
+                                                <p className="text-sm text-white/90 leading-relaxed">
+
+                                                    {
+                                                        request.purpose ||
+                                                        'No purpose provided.'
+                                                    }
+
+                                                </p>
+
+                                            </div>
+
+                                            {/* =================================
+                                                RESPONSE
+                                            ================================= */}
+
+                                            {request.response && (
+
+                                                <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
+
+                                                    <p className="text-xs text-white/50 mb-1">
+                                                        Response
+                                                    </p>
+
+                                                    <p className="text-sm text-white/80">
+
+                                                        {
+                                                            request.response
+                                                        }
+
+                                                    </p>
+
+                                                </div>
+
+                                            )}
+
+                                        </div>
+
+                                    );
+
+                                })}
+
+                            </div>
+
+                        )}
+
+                </main>
+
             </div>
 
-            {/* Calendar + Today's Schedule */}
-            <div className="space-y-6 ">
-              {/* Calendar */}
-             <div className="bg-white/60 backdrop-blur-xl rounded-xl border border-slate-100 shadow-sm p-5">
-  <div className="flex items-center justify-between mb-3">
-    <h2 className="font-semibold text-[#071B38] text-sm">
-      October 2023
-                  </h2>
-                  <div className="flex items-center gap-1">
-                    <button className="p-1 rounded hover:bg-slate-100">
-                      <ChevronLeft size={14} />
-                    </button>
-                    <button className="p-1 rounded hover:bg-slate-100">
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
+        </div>
 
-                <div className="grid grid-cols-7 gap-y-2 text-white text-center text-[11px]">
-                  {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
-                    <span key={d} className="text-black font-medium">
-                      {d}
-                    </span>
-                  ))}
-
-                  {CALENDAR_DAYS.map((day, idx) => {
-                    const isPrevMonth = idx < CALENDAR_START_OFFSET + 6; // 25-30 shown greyed
-                    const isToday = day === TODAY_DATE && !isPrevMonth;
-
-                    return (
-                      <span
-                        key={`${day}-${idx}`}
-                        className={`w-6 h-6 mx-auto flex items-center justify-center rounded-full ${
-                          isToday
-                            ? 'bg-[#071B38] text-white font-semibold'
-                            : isPrevMonth
-                            ? 'text-slate-300'
-                            : 'text-slate-600 hover:bg-slate-100 cursor-pointer'
-                        }`}
-                      >
-                        {day}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Today's Schedule */}
-              <div className="bg-white/60 backdrop-blur-xl rounded-xl border border-slate-100 shadow-sm p-5">
-                <h2 className="font-semibold text-[#071B38] text-sm mb-4">
-                  Today's Schedule
-                </h2>
-
-                <div className="space-y-4">
-                  {TODAY_SCHEDULE.map((item) => (
-                    <div key={item.id} className="flex gap-3">
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${
-                          item.status === 'done'
-                            ? 'bg-emerald-500'
-                            : item.status === 'active'
-                            ? 'bg-blue-500 animate-pulse'
-                            : 'bg-slate-300'
-                        }`}
-                      />
-                      <div>
-                        <p className="text-xs text-black">{item.time}</p>
-                        <p className="text-sm font-medium text-[#071B38]">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-black">
-                          {item.location}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+    );
 }

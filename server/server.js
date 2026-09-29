@@ -6,6 +6,7 @@ import { pool } from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import lecturerRoutes from './routes/lecturerRoutes.js';
+import deanRoutes from './routes/deanRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -47,6 +48,8 @@ pool.connect((err, client, release) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/lecturer', lecturerRoutes);
+app.use('/api/dean', deanRoutes);
+
 // Start the server
 app.listen(port, '0.0.0.0', () => {
   console.log(`Backend server running on http://localhost:${port}`);
