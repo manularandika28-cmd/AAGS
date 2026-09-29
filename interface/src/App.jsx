@@ -11,6 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SettingsPage from './pages/settings';
 
 // =========================================
 // AUTH
@@ -309,6 +310,27 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* =========================================
+    SETTINGS
+========================================= */}
+
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        'Student',
+        'Lecturer',
+        'HOD',
+        'Dean',
+        'Admin'
+      ]}
+    >
+      <SettingsPage />
+    </ProtectedRoute>
+  }
+/>
 
 
             {/* =========================================
