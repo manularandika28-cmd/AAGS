@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from 'react';
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
+import { useAuth } from '../../context/AuthContext';
 
 import {
   LayoutDashboard,
@@ -31,6 +32,92 @@ import {
 } from "lucide-react";
 
 const MeetingManagement = () => {
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const { accessToken, user } = useAuth();
+  const [meetings, setMeetings] = useState([]);
+  const [showAlternativeForm, setShowAlternativeForm] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [alternativeDate, setAlternativeDate] = useState("");
+  const [alternativeTime, setAlternativeTime] = useState("");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const confirmedMeetings = meetings.filter(
+  (meeting) => meeting.status === "confirmed"
+);
+const today = new Date();
+const dayOfWeek = today.getDay();
+
+const daysFromMonday = dayOfWeek === 0
+  ? 6
+  : dayOfWeek - 1;
+
+const scheduleStartDate = new Date(today);
+
+scheduleStartDate.setDate(
+  today.getDate() - daysFromMonday + weekOffset * 7
+);
+
+const scheduleEndDate = new Date(scheduleStartDate);
+scheduleEndDate.setDate(scheduleStartDate.getDate() + 6);
+
+const scheduleDateRange = `${scheduleStartDate.toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+})} - ${scheduleEndDate.toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+})}`;
+const scheduleDates = Array.from({ length: 7 }, (_, index) => {
+  const date = new Date(scheduleStartDate);
+  date.setDate(scheduleStartDate.getDate() + index);
+  return date;
+});
+
+
+const todaysMeetings = confirmedMeetings.filter((meeting) => {
+  if (!meeting.confirmed_date) return false;
+
+  const meetingDate = new Date(meeting.confirmed_date);
+
+  return (
+    meetingDate.getFullYear() === today.getFullYear() &&
+    meetingDate.getMonth() === today.getMonth() &&
+    meetingDate.getDate() === today.getDate()
+  );
+});
+
+useEffect(() => {
+    const fetchMeetings = async () => {
+        try {
+            const response = await fetch(
+                'http://localhost:3000/api/lecturer/meetings',
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error(data.error);
+                return;
+            }
+
+            setMeetings(data.meetings);
+            console.log("Lecturer meetings:", data.meetings);
+        } catch (error) {
+            console.error('Failed to fetch meetings:', error);
+        }
+    };
+
+    if (accessToken) {
+        fetchMeetings();
+    }
+}, [accessToken]);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -81,7 +168,9 @@ const MeetingManagement = () => {
 
 
                 {/* New appointment */}
-                <button className="bg-[#062746] text-white rounded-lg px-5 py-3 flex items-center gap-2 text-[13px] font-semibold hover:bg-[#0A365D]">
+                <button 
+                onClick={() => setShowAppointmentModal(true)}
+                className="bg-[#062746] text-white rounded-lg px-5 py-3 flex items-center gap-2 text-[13px] font-semibold hover:bg-[#0A365D]">
 
                   <Plus size={18} />
 
@@ -113,18 +202,20 @@ const MeetingManagement = () => {
 
                     </div>
 
-                    <span className="rounded-full bg-[#FFD9D5] text-[#B42318] text-[10px] px-3 py-1 h-fit">
-                      +3 since
-                      <br />
-                      yesterday
-                    </span>
+                    <div className="flex justify-between">
+
+                  <div className="w-9 h-9 rounded-lg bg-[#FFF4D8] flex items-center justify-center text-[#F79009]">
+                    <ClipboardList size={20} />
+                  </div>
+
+</div>
 
                   </div>
 
                   <div className="mt-5">
 
                     <div className="text-[27px] font-bold">
-                      12
+                      {meetings.filter((meeting) => meeting.status === "pending").length}
                     </div>
 
                     <div className="text-[11px] font-semibold tracking-wide text-[#475467] mt-1">
@@ -148,7 +239,17 @@ const MeetingManagement = () => {
                   <div className="mt-5">
 
                     <div className="text-[27px] font-bold">
-                      4
+                      {meetings.filter((meeting) => {
+                        if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                          return false;
+                        }
+
+                        const today = new Date().toLocaleDateString("en-CA", {
+                          timeZone: "Asia/Colombo",
+                        });
+
+                        return meeting.confirmed_date.slice(0, 10) === today;
+                      }).length}
                     </div>
 
                     <div className="text-[11px] font-semibold tracking-wide text-[#475467] mt-1">
@@ -177,15 +278,24 @@ const MeetingManagement = () => {
                     <div className="mt-5">
 
                       <div className="text-[27px] font-bold">
-                        2
-                      </div>
+                      {meetings.filter((meeting) => {
+                        if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                          return false;
+                        }
 
-                      <div className="text-[11px] font-semibold tracking-wide">
-                        UPCOMING LAB
-                        <br />
-                        SESSIONS
-                      </div>
+                        const today = new Date().toLocaleDateString("en-CA", {
+                          timeZone: "Asia/Colombo",
+                        });
 
+                        return meeting.confirmed_date.slice(0, 10) > today;
+                      }).length}
+                    </div>
+
+                    <div className="text-[11px] font-semibold tracking-wide">
+                      UPCOMING
+                      <br />
+                      MEETINGS
+                    </div>
                     </div>
 
                   </div>
@@ -214,227 +324,337 @@ const MeetingManagement = () => {
                   </div>
 
 
-                  <div className="flex gap-5 text-[#475467]">
-
-                    <button>
-                      <SlidersHorizontal size={18} />
-                    </button>
-
-                    <button>
-                      <ListFilter size={18} />
-                    </button>
-
-                  </div>
-
-                </div>
+                    </div>
 
 
                 {/* Requests */}
                 <div className="p-4 space-y-4">
 
-
-                  {/* =================================================
-                      REQUEST 1
-                  ================================================== */}
-                  <div className="border border-[#D0D5DD] rounded-lg p-4">
-
-                    {/* Student */}
-                    <div className="flex items-center justify-between">
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
-                          AS
-                        </div>
-
-                        <div>
-
-                          <h3 className="text-[14px] font-bold">
-                            Amaya Silva
-                          </h3>
-
-                          <p className="text-[13px] text-[#475467]">
-                            STU-2021-045
-                          </p>
-
-                        </div>
-
-                      </div>
-
-
-                      <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
-                        THESIS REVIEW
-                      </span>
-
+                  {meetings.length === 0 ? (
+                    <div className="text-center py-8 text-[#475467]">
+                      No meeting requests found.
                     </div>
+                  ) : (
+                    meetings
+                      .filter((meeting) => meeting.status === "pending")
+                      .map((meeting) => {
+
+                      const meetingDate = meeting.preferred_date
+                        ? new Date(meeting.preferred_date).toLocaleDateString(
+                            "en-US",
+                            {
+                              timeZone: "Asia/Colombo",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            }
+                          )
+                        : "Date not available";
+
+                      const meetingTime = meeting.preferred_time
+                        ? meeting.preferred_time.slice(0, 5)
+                        : "--";
+
+                      const initials = meeting.student_name
+                        .split(" ")
+                        .map((name) => name[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <div
+                          key={meeting.request_id}
+                          className="border border-[#D0D5DD] rounded-lg p-4"
+                        >
+
+                          {/* Student */}
+                          <div className="flex items-center justify-between">
+
+                            <div className="flex items-center gap-3">
+
+                              <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
+                                {initials}
+                              </div>
+
+                              <div>
+
+                                <h3 className="text-[14px] font-bold">
+                                  {meeting.student_name}
+                                </h3>
+
+                                <p className="text-[13px] text-[#475467]">
+                                  Student ID: {meeting.student_id}
+                                </p>
+
+                              </div>
+
+                            </div>
+
+                            <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
+                              {meeting.status?.toUpperCase()}
+                            </span>
+
+                          </div>
 
 
-                    {/* Date and time */}
-                    <div className="mt-3 bg-[#F8FAFC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px] text-[#475467]">
+                          {/* Purpose */}
+                          <div className="mt-3">
 
-                      <CalendarDays size={16} />
+                            <p className="text-[13px] font-semibold text-[#344054]">
+                              {meeting.purpose}
+                            </p>
 
-                      <span>
-                        Oct 24, 2023
-                      </span>
-
-                      <span>
-                        •
-                      </span>
-
-                      <Clock3 size={16} />
-
-                      <span>
-                        10:00 AM - 10:30 AM
-                      </span>
-
-                    </div>
+                          </div>
 
 
-                    {/* Buttons */}
-                    <div className="flex justify-end gap-2 mt-4">
+                          {/* Date and Time */}
+                          <div className="mt-3 bg-[#F8FAFC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px] text-[#475467]">
 
-                      <button className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#FEF3F2]">
-                        Decline
-                      </button>
+                            <CalendarDays size={16} />
 
-                      <button className="border border-[#98A2B3] text-[#475467] rounded-md px-4 py-2 text-[12px] font-semibold hover:bg-[#F2F4F7]">
-                        Reschedule
-                      </button>
+                            <span>
+                              {meetingDate}
+                            </span>
 
-                      <button className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]">
+                            <span>
+                              •
+                            </span>
 
-                        <Check size={14} />
+                            <Clock3 size={16} />
 
-                        Approve
+                            <span>
+                              {meetingTime}
+                            </span>
 
-                      </button>
-
-                    </div>
-
-                  </div>
+                          </div>
 
 
-                  {/* =================================================
-                      REQUEST 2 - OVERLAP
-                  ================================================== */}
-                  <div className="border border-[#F04438] border-l-4 rounded-lg bg-[#FFF8F7] p-4">
-
-                    {/* Student */}
-                    <div className="flex items-center justify-between">
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-10 h-10 rounded-full bg-[#EDF2FF] text-[#23456D] flex items-center justify-center font-medium">
-                          KP
-                        </div>
-
-                        <div>
-
-                          <h3 className="text-[14px] font-bold">
-                            Kasun Perera
-                          </h3>
-
-                          <p className="text-[13px] text-[#475467]">
-                            STU-2022-112
-                          </p>
-
-                        </div>
-
-                      </div>
+                          {/* Location */}
+                          {meeting.location && (
+                            <div className="mt-2 text-[12px] text-[#475467]">
+                              <strong>Location:</strong> {meeting.location}
+                            </div>
+                          )}
 
 
-                      <span className="bg-[#F0F3F8] text-[#475467] rounded-full px-3 py-1 text-[10px] font-medium tracking-wide">
-                        LAB GUIDANCE
-                      </span>
+                          {/* Response */}
+                          {meeting.response && (
+                            <div className="mt-2 text-[12px] text-[#475467]">
+                              <strong>Response:</strong> {meeting.response}
+                            </div>
+                          )}
+                          {meeting.status === "pending" && (
+                            <div className="flex justify-end gap-2 mt-4">
+                              <button
+                                onClick={() => {
+                                  setSelectedMeeting(meeting);
+                                  setAlternativeDate("");
+                                  setAlternativeTime("");
+                                  setShowAlternativeForm(true);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px] font-medium hover:bg-[#F9FAFB]"
+                              >
+                                Alternative
+                              </button>
+                              <button
+                                      onClick={async () => {
+                                    try {
+                                      const response = await fetch(
+                                        `http://localhost:3000/api/lecturer/meetings/${meeting.request_id}/decline`,
+                                        {
+                                          method: "PATCH",
+                                          headers: {
+                                            Authorization: `Bearer ${accessToken}`,
+                                          },
+                                        }
+                                      );
 
-                    </div>
+                                      const data = await response.json();
 
+                                      if (!response.ok) {
+                                        alert(data.error || "Failed to decline meeting.");
+                                        return;
+                                      }
 
-                    {/* Date */}
-                    <div className="mt-3 bg-[#F5F8FC] rounded-md px-3 py-2 flex items-center gap-3 text-[13px]">
+                                      alert("Meeting request declined.");
 
-                      <CalendarDays size={16} />
+                                      setMeetings((currentMeetings) =>
+                                        currentMeetings.map((item) =>
+                                          item.request_id === meeting.request_id
+                                            ? data.meeting
+                                            : item
+                                        )
+                                      );
 
-                      <span>
-                        Oct 24, 2023
-                      </span>
+                                    } catch (error) {
+                                      console.error("Decline meeting error:", error);
+                                      alert("Could not connect to the server.");
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px] font-medium hover:bg-[#F9FAFB]"
+                                >
+                                  Decline
+                                </button>
+                                <button
+                                onClick={async () => {
+                                 try {
+                                const response = await fetch(
+                                      `http://localhost:3000/api/lecturer/meetings/${meeting.request_id}/approve`,
+                                      {
+                                        method: "PATCH",
+                                        headers: {
+                                          Authorization: `Bearer ${accessToken}`,
+                                        },
+                                      }
+                                    );
 
-                      <span>
-                        •
-                      </span>
+                                    const data = await response.json();
 
-                      <Clock3 size={16} />
+                                    if (!response.ok) {
+                                      alert(data.error || "Failed to approve meeting.");
+                                      return;
+                                    }
 
-                      <span className="text-[#F04438] font-semibold">
-                        14:00 PM - 15:00 PM
-                      </span>
+                                    alert("Meeting request approved.");
 
-                    </div>
+                                    setMeetings((currentMeetings) =>
+                                      currentMeetings.map((item) =>
+                                        item.request_id === meeting.request_id
+                                          ? data.meeting
+                                          : item
+                                      )
+                                    );
 
+                                  } catch (error) {
+                                    console.error("Approve meeting error:", error);
+                                    alert("Could not connect to the server.");
+                                  }
+                                }}
+                                className="bg-[#12B76A] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 hover:bg-[#0E9F5D]"
+                              >
+                                <Check size={14} />
+                                Approve
+                              </button>
+                            </div>
+                          )}
+                                    {showAlternativeForm && selectedMeeting?.request_id === meeting.request_id && (
+            <div className="mt-4 p-4 border border-[#D0D5DD] rounded-lg bg-[#F9FAFB]">
 
-                    {/* Alert */}
-                    <div className="mt-3 bg-[#FFD9D5] rounded-md p-3 flex gap-2">
+              <h3 className="text-[14px] font-semibold text-[#344054] mb-4">
+                Propose Alternative Meeting Time
+              </h3>
 
-                      <AlertTriangle
-                        size={18}
-                        className="text-[#B42318] shrink-0"
-                      />
+              <div className="grid grid-cols-2 gap-4">
 
-                      <div className="text-[12px] text-[#B42318]">
+                <div>
+                  <label className="block text-[12px] font-medium text-[#344054] mb-1">
+                    Alternative Date
+                  </label>
 
-                        <div className="font-semibold">
-                          Overlap Alert
-                        </div>
-
-                        <div className="mt-1">
-                          Clashes with existing:
-                          <strong>
-                            {" "} "Faculty Senate Meeting"
-                          </strong>
-                          {" "} (13:30 - 15:30)
-                        </div>
-
-                      </div>
-
-                    </div>
-
-
-                    {/* Buttons */}
-                    <div className="flex justify-end gap-2 mt-4">
-
-                      <button className="border border-[#F04438] text-[#F04438] rounded-md px-4 py-2 text-[12px] font-semibold">
-                        Decline
-                      </button>
-
-                      <button className="border border-[#98A2B3] text-[#475467] rounded-md px-3 py-2 text-[12px] font-semibold flex items-center gap-1">
-
-                        <CalendarClock size={14} />
-
-                        Propose New Time
-
-                      </button>
-
-                      <button
-                        disabled
-                        className="bg-[#BCE8D0] text-white rounded-md px-4 py-2 text-[12px] font-semibold flex items-center gap-1 opacity-70"
-                      >
-
-                        <Check size={14} />
-
-                        Approve
-
-                      </button>
-
-                    </div>
-
-                  </div>
-
+                  <input
+                    type="date"
+                    value={alternativeDate}
+                    onChange={(e) => setAlternativeDate(e.target.value)}
+                    className="w-full border border-[#D0D5DD] rounded-lg px-3 py-2 text-[13px]"
+                  />
                 </div>
 
-              </section>
+                <div>
+                  <label className="block text-[12px] font-medium text-[#344054] mb-1">
+                    Alternative Time
+                  </label>
+
+                  <input
+                    type="time"
+                    value={alternativeTime}
+                    onChange={(e) => setAlternativeTime(e.target.value)}
+                    className="w-full border border-[#D0D5DD] rounded-lg px-3 py-2 text-[13px]"
+                  />
+                </div>
+
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+
+                <button
+                  onClick={() => {
+                    setShowAlternativeForm(false);
+                    setSelectedMeeting(null);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-[#D0D5DD] text-[#344054] text-[13px]"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+  if (!alternativeDate || !alternativeTime) {
+    alert("Please select an alternative date and time.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/lecturer/meetings/${selectedMeeting.request_id}/alternative`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          alternativeDate,
+          alternativeTime,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Failed to propose alternative time.");
+      return;
+    }
+
+    alert("Alternative meeting time proposed.");
+
+    setMeetings((currentMeetings) =>
+  currentMeetings.map((item) =>
+    item.request_id === selectedMeeting.request_id
+      ? { ...item, ...data.meeting }
+      : item
+  )
+);
+    setShowAlternativeForm(false);
+    setSelectedMeeting(null);
+    setAlternativeDate("");
+    setAlternativeTime("");
+
+  } catch (error) {
+    console.error("Alternative meeting error:", error);
+    alert("Could not connect to the server.");
+  }
+}}
+                  className="px-4 py-2 rounded-lg bg-[#062746] text-white text-[13px]"
+                >
+                  Propose Alternative
+                </button>
+
+              </div>
 
             </div>
+          )}
+
+                                  </div>
+                                );
+                              })
+                            )}
+
+                          </div>
+                        </section>
+
+                      </div>
 
 
             {/* =================================================
@@ -454,8 +674,8 @@ const MeetingManagement = () => {
                       Weekly Schedule
                     </h2>
 
-                    <p className="text-[13px] text-[#475467] mt-1">
-                      Oct 23 - Oct 29, 2023
+                    <p className="text-[11px] text-[#667085] mt-1">
+                      {scheduleDateRange}
                     </p>
 
                   </div>
@@ -463,11 +683,17 @@ const MeetingManagement = () => {
 
                   <div className="flex gap-4">
 
-                    <button className="text-[#344054]">
+                    <button
+                      onClick={() => setWeekOffset((current) => current - 1)}
+                      className="text-[#344054]"
+                    >
                       <ChevronLeft size={19} />
                     </button>
 
-                    <button className="text-[#344054]">
+                    <button
+                      onClick={() => setWeekOffset((current) => current + 1)}
+                      className="text-[#344054]"
+                    >
                       <ChevronRight size={19} />
                     </button>
 
@@ -498,60 +724,77 @@ const MeetingManagement = () => {
                   )}
 
                 </div>
+                  {/* Schedule dates */}
+                  <div className="grid grid-cols-7 text-center">
+                    {scheduleDates.map((date, index) => {
+                      console.log(
+                          "Confirmed meetings:",
+                          confirmedMeetings.map((meeting) => ({
+                            request_id: meeting.request_id,
+                            confirmed_date: meeting.confirmed_date,
+                          }))
+                        );
 
+                        const hasMeeting = confirmedMeetings.some((meeting) => {
+                          if (!meeting.confirmed_date) return false;
 
-                {/* Previous week */}
-                <div className="grid grid-cols-7 text-center mb-2">
+                          const meetingDateKey = String(meeting.confirmed_date).slice(0, 10);
 
-                  {["16", "17", "18", "19", "20", "21", "22"].map(
-                    (date) => (
-                      <span
-                        key={date}
-                        className="text-[12px] text-[#98A2B3] py-2"
-                      >
-                        {date}
-                      </span>
-                    )
-                  )}
+                          const calendarDateKey =
+                            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-                </div>
+                          return meetingDateKey === calendarDateKey;
+                        });
 
+                        const isToday =
+                          date.getFullYear() === today.getFullYear() &&
+                          date.getMonth() === today.getMonth() &&
+                          date.getDate() === today.getDate();
+                      
+                      
+                      return (
+                        <span
+                          key={index}
+                          className={`relative text-[12px] py-2 ${
+                            isToday && hasMeeting
+                              ? "font-semibold text-red-600"
+                              : isToday
+                              ? "font-semibold text-blue-600"
+                              : hasMeeting
+                              ? "font-semibold text-green-600"
+                              : "text-[#475467]"
+                          }`}
+                        >
+                          {date.getDate()}
 
-                {/* Current week */}
-                <div className="grid grid-cols-7 text-center">
+                          {hasMeeting && (
+                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {/* Calendar Legend */}
+                    <div className="flex items-center justify-center gap-5 pt-3">
 
-                  <span className="text-[12px] py-2">
-                    23
-                  </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span className="text-[10px] text-[#475467]">Today</span>
+                      </div>
 
-                  <span className="w-8 h-8 mx-auto rounded-md bg-[#062746] text-white flex items-center justify-center text-[12px] font-semibold">
-                    24
-                  </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                        <span className="text-[10px] text-[#475467]">Meeting</span>
+                      </div>
 
-                  <span className="text-[12px] py-2">
-                    25
-                  </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                        <span className="text-[10px] text-[#475467]">
+                          Today + Meeting
+                        </span>
+                      </div>
 
-                  <span className="relative text-[12px] py-2">
-                    26
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
-                  </span>
-
-                  <span className="relative text-[12px] py-2">
-                    27
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#062746]"></span>
-                  </span>
-
-                  <span className="text-[12px] py-2">
-                    28
-                  </span>
-
-                  <span className="text-[12px] py-2">
-                    29
-                  </span>
-
-                </div>
-
+              </div>
               </div>
 
 
@@ -561,99 +804,72 @@ const MeetingManagement = () => {
               <div className="p-4">
 
                 <h3 className="text-[12px] font-bold text-[#475467] mb-5">
-                  TODAY'S AGENDA (OCT 24)
+                  TODAY'S AGENDA 
                 </h3>
 
 
                 {/* Timeline */}
-                <div className="relative pl-6">
+                  <div className="relative pl-6">
 
-                  {/* Vertical line */}
-                  <div className="absolute left-[7px] top-1 bottom-2 w-px bg-[#D0D5DD]"></div>
+                    <div className="absolute left-[7px] top-1 bottom-2 w-px bg-[#D0D5DD]"></div>
 
+                    {todaysMeetings.length === 0 ? (
+                      <div className="text-center py-8 text-[#475467]">
+                        No confirmed meetings scheduled.
+                      </div>
+                    ) : (
+                      todaysMeetings.map((meeting) => {
+                        const meetingDate = meeting.confirmed_date
+                          ? new Date(meeting.confirmed_date).toLocaleDateString(
+                              "en-US",
+                              {
+                                timeZone: "Asia/Colombo",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric"
+                              }
+                            )
+                          : "Date not available";
 
-                  {/* ===========================================
-                      EVENT 1
-                  ============================================ */}
-                  <div className="relative mb-5">
+                        const meetingTime = meeting.confirmed_time
+                          ? meeting.confirmed_time.slice(0, 5)
+                          : "--";
 
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#496B99]"></div>
+                        return (
+                          <div
+                            key={meeting.request_id}
+                            className="relative mb-5"
+                          >
 
-                    <p className="text-[11px] text-[#475467] mb-2">
-                      08:00 AM - 10:00 AM
-                    </p>
+                            <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#496B99]"></div>
 
-                    <div className="bg-[#F2F5FB] border border-[#D8E2F2] rounded-md p-3">
+                            <p className="text-[11px] text-[#475467] mb-2">
+                              {meetingDate} - {meetingTime}
+                            </p>
 
-                      <h4 className="text-[14px] font-semibold">
-                        Undergraduate Lecture: Data Structures
-                      </h4>
+                            <div className="bg-[#F2F5FB] border border-[#D8E2F2] rounded-md p-3">
 
-                      <p className="text-[11px] text-[#475467] mt-2 flex items-center gap-1">
+                              <h4 className="text-[14px] font-semibold">
+                                {meeting.purpose}
+                              </h4>
 
-                        <MapPin size={13} />
+                              <p className="text-[11px] text-[#475467] mt-2 flex items-center gap-1">
+                                <Users size={13} />
+                                {meeting.student_name}
+                              </p>
 
-                        Auditorium A
+                              <p className="text-[11px] text-[#475467] mt-1 flex items-center gap-1">
+                                <MapPin size={13} />
+                                {meeting.location || "Location not assigned"}
+                              </p>
 
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ===========================================
-                      EVENT 2 - PENDING
-                  ============================================ */}
-                  <div className="relative mb-5">
-
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#D0D5DD]"></div>
-
-                    <p className="text-[11px] text-[#98A2B3] mb-2">
-                      10:00 AM - 10:30 AM
-                    </p>
-
-                    <div className="border border-dashed border-[#BFD1E8] bg-[#FAFCFF] rounded-md p-3">
-
-                      <p className="text-[14px] italic text-[#667085]">
-                        Pending: Thesis Review (Amaya S.)
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ===========================================
-                      EVENT 3
-                  ============================================ */}
-                  <div className="relative">
-
-                    <div className="absolute -left-[22px] top-2 w-2 h-2 rounded-full bg-[#C0392B]"></div>
-
-                    <p className="text-[11px] text-[#475467] mb-2">
-                      13:30 PM - 15:30 PM
-                    </p>
-
-                    <div className="bg-[#FFD9D5] border border-[#FF9B91] rounded-md p-3">
-
-                      <h4 className="text-[14px] font-semibold text-[#4A1714]">
-                        Faculty Senate Meeting
-                      </h4>
-
-                      <p className="text-[11px] text-[#6B2A25] mt-2 flex items-center gap-1">
-
-                        <Users size={13} />
-
-                        Main Boardroom
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                 </div>
+
 
               </div>
 
@@ -664,8 +880,190 @@ const MeetingManagement = () => {
         </main>
 
       </div>
+      
+      {showAppointmentModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    
+    <div className="bg-white rounded-xl shadow-xl w-[500px] p-6">
+      
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-[#071B38]">
+          Create New Appointment
+        </h2>
+
+        <button
+          onClick={() => setShowAppointmentModal(false)}
+          className="text-gray-500 hover:text-gray-700 text-xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-4">
+
+        {/* Student */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Student
+          </label>
+          <input
+            type="text"
+            placeholder="Enter student name or ID"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Purpose */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Purpose
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Thesis Review"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Date */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Date
+          </label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        {/* Time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-3">
+          <button
+            onClick={() => setShowAppointmentModal(false)}
+            className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              alert("Appointment created successfully.");
+              setShowAppointmentModal(false);
+            }}
+            className="px-5 py-2 rounded-lg bg-[#062746] text-white hover:bg-[#0A365D]"
+          >
+            Create Appointment
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
+{showTimeModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-xl w-[450px] p-6">
+
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-[#071B38]">
+          Propose New Time
+        </h2>
+
+        <button
+          onClick={() => setShowTimeModal(false)}
+          className="text-gray-500 hover:text-gray-700 text-xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-4">
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            New Date
+          </label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-[#062746]"
+            />
+          </div>
+
+        </div>
+
+        <div className="flex justify-end gap-3 pt-3">
+
+          <button
+            onClick={() => setShowTimeModal(false)}
+            className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              alert("New meeting time proposed successfully.");
+              setShowTimeModal(false);
+            }}
+            className="px-5 py-2 rounded-lg bg-[#062746] text-white hover:bg-[#0A365D]"
+          >
+            Propose Time
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
+    
   );
 };
 

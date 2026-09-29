@@ -8,6 +8,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
 
+import lecturerRoutes from './routes/lecturerRoutes.js';
+import deanRoutes from './routes/deanRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -50,6 +52,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/auth', passwordResetRoutes);
+app.use('/api/lecturer', lecturerRoutes);
+app.use('/api/dean', deanRoutes);
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {
