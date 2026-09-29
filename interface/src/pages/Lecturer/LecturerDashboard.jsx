@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +15,143 @@ import {
 } from "lucide-react";
 
 const LecturerDashboard = () => {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
+
+  const [lecturer, setLecturer] = useState(null);
+  const [meetings, setMeetings] = useState([]);
+  const [attendancePercentage, setAttendancePercentage] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [sessions, setSessions] = useState([]);
+  useEffect(() => {
+  const fetchLecturerDashboard = async () => {
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/lecturer/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch dashboard");
+      }
+      const meetingsResponse = await fetch(
+    "http://localhost:3000/api/lecturer/meetings",
+    {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    }
+);
+const sessionsResponse = await fetch(
+    "http://localhost:3000/api/lecturer/sessions",
+    {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    }
+);
+
+const sessionsData = await sessionsResponse.json();
+
+if (!sessionsResponse.ok) {
+    throw new Error(sessionsData.error || "Failed to fetch sessions");
+}
+let totalEnrolled = 0;
+let totalPresent = 0;
+
+for (const session of sessionsData.sessions) {
+    const attendanceResponse = await fetch(
+        `http://localhost:3000/api/lecturer/sessions/${session.session_id}/attendance`,
+        {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        }
+    );
+
+    const attendanceData = await attendanceResponse.json();
+
+    if (attendanceResponse.ok) {
+        totalEnrolled += Number(attendanceData.enrolled_count || 0);
+
+        totalPresent += attendanceData.attendance.filter(
+            (record) => record.status === "present"
+        ).length;
+    }
+}
+
+const percentage =
+    totalEnrolled > 0
+        ? (totalPresent / totalEnrolled) * 100
+        : 0;
+
+setAttendancePercentage(percentage);
+
+const meetingsData = await meetingsResponse.json();
+
+if (!meetingsResponse.ok) {
+    throw new Error(meetingsData.error || "Failed to fetch meetings");
+}
+
+
+setMeetings(meetingsData.meetings);
+setSessions(sessionsData.sessions);
+      console.log("Lecturer dashboard data:", data);
+      setLecturer(data.lecturer);
+    } catch (error) {
+      console.error("Dashboard error:", error);
+    }
+  };
+
+  fetchLecturerDashboard();
+}, [accessToken]);
+const todaysMeetings = meetings.filter((meeting) => {
+  if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+    return false;
+  }
+
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Colombo",
+  });
+    return meeting.confirmed_date.slice(0, 10) === today;
+});
+const pendingMeetings = meetings.filter(
+  (meeting) => meeting.status === "pending"
+);
+const upcomingMeetings = meetings.filter((meeting) => {
+  if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+    return false;
+  }
+
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Colombo",
+  });
+
+  return meeting.confirmed_date.slice(0, 10) > today;
+});
+const currentWeekStart = new Date();
+currentWeekStart.setHours(0, 0, 0, 0);
+
+const day = currentWeekStart.getDay();
+const diff = day === 0 ? -6 : 1 - day;
+
+currentWeekStart.setDate(currentWeekStart.getDate() + diff);
+currentWeekStart.setDate(
+  currentWeekStart.getDate() + weekOffset * 7
+);
+
+const weekDates = Array.from({ length: 7 }, (_, index) => {
+  const date = new Date(currentWeekStart);
+  date.setDate(currentWeekStart.getDate() + index);
+  return date;
+});
   return (
     <div className="flex min-h-screen">
 
@@ -38,7 +174,7 @@ const LecturerDashboard = () => {
             </h1>
 
             <p className="text-[15px] text-white/80 mt-2">
-              Welcome back, {user.name}. Here is your daily digest.
+              Welcome back, {lecturer?.name || user.name}. Here is your daily digest.
             </p>
           </div>
 
@@ -64,11 +200,11 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  87.4%
+                  {attendancePercentage.toFixed(1)}%
                 </span>
 
                 <span className="text-xs font-medium text-green-600">
-                  ↗ +2.1%
+                  Current average
                 </span>
 
               </div>
@@ -76,13 +212,13 @@ const LecturerDashboard = () => {
             </div>
 
 
-            {/* -------- Pending Medicals Card -------- */}
+            {/* -------- Upcoming Sessions Card -------- */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm min-h-[140px]">
 
               <div className="flex items-start justify-between">
 
                 <span className="text-[11px] font-bold tracking-wider text-slate-600">
-                  PENDING MEDICALS
+                  UPCOMING SESSIONS
                 </span>
 
                 <div className="w-9 h-9 rounded-lg bg-[#FF5B4F] text-white flex items-center justify-center">
@@ -94,11 +230,17 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  14
+                  {sessions.filter((session) => {
+                    const today = new Date().toLocaleDateString("en-CA", {
+                      timeZone: "Asia/Colombo",
+                    });
+
+                    return session.session_date >= today;
+                  }).length}
                 </span>
 
                 <span className="text-xs font-medium text-red-600">
-                  Action Required
+                  Scheduled sessions
                 </span>
 
               </div>
@@ -124,12 +266,31 @@ const LecturerDashboard = () => {
               <div className="flex items-baseline gap-3 mt-7">
 
                 <span className="text-4xl font-bold text-[#06264A]">
-                  3
+                  {meetings.filter((meeting) => {
+                              if (meeting.status !== "confirmed" || !meeting.confirmed_date) {
+                                  return false;
+                              }
+
+                              const today = new Date().toLocaleDateString("en-CA", {
+                                  timeZone: "Asia/Colombo",
+                              });
+
+                              return meeting.confirmed_date.slice(0, 10) === today;
+                          }).length}
                 </span>
 
-                <span className="text-xs text-slate-600">
-                  Next at 11:30 AM
+                
+                  <span className="text-xs text-slate-600">
+                  {todaysMeetings.length > 0
+                    ? `Next at ${new Date(
+                        `1970-01-01T${todaysMeetings[0].confirmed_time}`
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}`
+                    : "No meetings today"}
                 </span>
+                
 
               </div>
 
@@ -153,17 +314,13 @@ const LecturerDashboard = () => {
                   Action Items
                 </h2>
 
-                <button className="text-[11px] font-bold text-[#06264A] hover:text-blue-600">
-                  VIEW ALL
-                </button>
-
-              </div>
+                         </div>
 
 
               {/* Items */}
               <div className="p-4 space-y-3">
 
-                {/* Medical Leave */}
+                {/* Pending Meeting Requests */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#FFD9D5] text-red-600 flex items-center justify-center shrink-0">
@@ -172,18 +329,19 @@ const LecturerDashboard = () => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Medical Leave Approval: S. Perera
+                      Pending Meeting Requests
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Submitted 2 hours ago • ICT 202
+                      {pendingMeetings.length} meeting request
+                      {pendingMeetings.length !== 1 ? "s" : ""} awaiting your response
                     </p>
                   </div>
 
                 </div>
 
 
-                {/* Grade Roster */}
+                {/* Attendance Review */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#DCE9FF] text-[#174A88] flex items-center justify-center shrink-0">
@@ -192,18 +350,18 @@ const LecturerDashboard = () => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Finalize Grade Roster: ET1014
+                      Attendance Review
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Due Tomorrow, 5:00 PM
+                      Review attendance records for your scheduled sessions
                     </p>
                   </div>
 
                 </div>
 
 
-                {/* Reschedule */}
+                {/* Upcoming Meetings */}
                 <div className="flex items-center gap-4 border border-slate-200 rounded-lg p-4">
 
                   <div className="w-10 h-10 rounded-full bg-[#FFDFCC] text-[#8A3C12] flex items-center justify-center shrink-0">
@@ -212,11 +370,12 @@ const LecturerDashboard = () => {
 
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
-                      Reschedule Request: Faculty Senate
+                      Upcoming Meetings
                     </h3>
 
                     <p className="text-xs text-slate-600 mt-1">
-                      Requested by Dean's Office
+                      {upcomingMeetings.length} upcoming meeting
+                      {upcomingMeetings.length !== 1 ? "s" : ""} scheduled
                     </p>
                   </div>
 
@@ -241,11 +400,16 @@ const LecturerDashboard = () => {
 
                 <div className="flex items-center gap-3">
 
-                  <button className="text-slate-600 hover:text-slate-900">
+                  <button
+                      onClick={() => setWeekOffset((prev) => prev - 1)}
+                      className="text-slate-600 hover:text-slate-900"
+                    >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
-                  <button className="text-slate-600 hover:text-slate-900">
+                  <button 
+                  onClick={() => setWeekOffset((prev) => prev + 1)}
+                  className="text-slate-600 hover:text-slate-900">
                     <ChevronRight className="w-5 h-5" />
                   </button>
 
@@ -258,51 +422,49 @@ const LecturerDashboard = () => {
               <div className="mt-6">
 
                 {/* Weekdays */}
-                <div className="grid grid-cols-7 text-center mb-3">
+                {weekDates.map((date) => {
+                  const dateString = date.toLocaleDateString("en-CA", {
+                    timeZone: "Asia/Colombo",
+                  });
 
-                  <span className="text-[11px] font-semibold text-slate-500">M</span>
-                  <span className="text-[11px] font-semibold text-slate-500">T</span>
-                  <span className="text-[11px] font-semibold text-slate-500">W</span>
-                  <span className="text-[11px] font-semibold text-slate-500">T</span>
-                  <span className="text-[11px] font-semibold text-slate-500">F</span>
-                  <span className="text-[11px] font-semibold text-slate-500">S</span>
-                  <span className="text-[11px] font-semibold text-slate-500">S</span>
+                  const today = new Date().toLocaleDateString("en-CA", {
+                    timeZone: "Asia/Colombo",
+                  });
 
-                </div>
+                  const hasMeeting = meetings.some(
+                    (meeting) =>
+                      meeting.status === "confirmed" &&
+                      meeting.confirmed_date &&
+                      meeting.confirmed_date.slice(0, 10) === dateString
+                  );
 
+                  const isToday = dateString === today;
 
-                {/* Calendar dates */}
-                <div className="grid grid-cols-7 gap-y-2 text-center">
+                  return (
+                    <span
+                      key={dateString}
+                      className={`relative text-xs p-2 ${
+                        isToday
+                          ? "w-8 h-8 mx-auto rounded-full bg-[#06264A] text-white flex items-center justify-center"
+                          : "text-slate-700"
+                      }`}
+                    >
+                      {date.getDate()}
 
-                  <span className="text-xs text-slate-300 p-2">28</span>
-                  <span className="text-xs text-slate-300 p-2">29</span>
-                  <span className="text-xs text-slate-700 p-2">1</span>
-                  <span className="text-xs text-slate-700 p-2">2</span>
-                  <span className="text-xs text-slate-700 p-2">3</span>
-                  <span className="text-xs text-slate-700 p-2">4</span>
-                  <span className="text-xs text-slate-700 p-2">5</span>
+                      {hasMeeting && (
+                        <span
+                          className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                            isToday ? "bg-red-600" : "bg-[#06264A]"
+                          }`}
+                        ></span>
+                      )}
+                    </span>
+                  );
+                })}
 
-                  <span className="text-xs text-slate-700 p-2">6</span>
-                  <span className="text-xs text-slate-700 p-2">7</span>
+                  
 
-                  <span className="w-8 h-8 mx-auto rounded-full bg-[#06264A] text-white flex items-center justify-center text-xs">
-                    8
-                  </span>
-
-                  <span className="relative text-xs text-slate-700 p-2">
-                    9
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-600"></span>
-                  </span>
-
-                  <span className="relative text-xs text-slate-700 p-2">
-                    10
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#06264A]"></span>
-                  </span>
-
-                  <span className="text-xs text-slate-700 p-2">11</span>
-                  <span className="text-xs text-slate-700 p-2">12</span>
-
-                </div>
+                
 
               </div>
 
@@ -315,59 +477,59 @@ const LecturerDashboard = () => {
                 </h3>
 
 
-                {/* 11:30 AM */}
+                
                 <div className="grid grid-cols-[48px_1fr] gap-3 mb-4">
+                {todaysMeetings.length === 0 ? (
+                    <div className="text-sm text-slate-500 py-4">
+                      No meetings scheduled for today.
+                    </div>
+                  ) : (
+                    todaysMeetings
+                      .slice()
+                      .sort((a, b) =>
+                        a.confirmed_time.localeCompare(b.confirmed_time)
+                      )
+                      .map((meeting) => {
+                        const time = new Date(
+                          `1970-01-01T${meeting.confirmed_time}`
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        });
 
-                  <div>
-                    <strong className="block text-sm text-[#06264A]">
-                      11:30
-                    </strong>
+                        const [hour, minute] = time.split(":");
+                        const amPm = time.slice(-2);
+                        const displayTime = `${hour}:${minute}`;
 
-                    <span className="text-[11px] text-slate-500">
-                      AM
-                    </span>
-                  </div>
+                        return (
+                          <div
+                            key={meeting.request_id}
+                            className="grid grid-cols-[48px_1fr] gap-3 mb-4"
+                          >
+                            <div>
+                              <strong className="block text-sm text-[#06264A]">
+                                {displayTime}
+                              </strong>
 
-                  <div className="bg-[#EDF3FF] border-l-4 border-[#06264A] rounded-r-md p-3">
+                              <span className="text-[11px] text-slate-500">
+                                {amPm}
+                              </span>
+                            </div>
 
-                    <strong className="block text-sm text-slate-800">
-                      Dept. Sync
-                    </strong>
+                            <div className="bg-[#EDF3FF] border-l-4 border-[#06264A] rounded-r-md p-3">
+                              <strong className="block text-sm text-slate-800">
+                                {meeting.student_name}
+                              </strong>
 
-                    <span className="text-xs text-slate-600">
-                      Room 304
-                    </span>
-
-                  </div>
-
-                </div>
-
-
-                {/* 2:00 PM */}
-                <div className="grid grid-cols-[48px_1fr] gap-3">
-
-                  <div>
-                    <strong className="block text-sm text-[#06264A]">
-                      2:00
-                    </strong>
-
-                    <span className="text-[11px] text-slate-500">
-                      PM
-                    </span>
-                  </div>
-
-                  <div className="bg-[#FFF0EE] border-l-4 border-red-600 rounded-r-md p-3">
-
-                    <strong className="block text-sm text-slate-800">
-                      Student Consultation
-                    </strong>
-
-                    <span className="text-xs text-slate-600">
-                      Online (Zoom)
-                    </span>
-
-                  </div>
-
+                              <span className="text-xs text-slate-600">
+                                {meeting.purpose || "Meeting"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                  
                 </div>
 
               </div>
