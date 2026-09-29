@@ -11,4 +11,12 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react/jsx-runtime', 'react/jsx-dev-runtime', 'framer-motion'],
   },
+  server: {
+        proxy: {
+          '/api': {
+            target: 'http://localhost:3000',
+            changeOrigin: true
+          }
+        }
+      }
 });
