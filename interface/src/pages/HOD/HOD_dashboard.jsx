@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
@@ -5,13 +6,36 @@ import {
   Users,
   FileClock,
   Radio,
+=======
+import React, { useState } from 'react';
+import Sidenavbar from '../../components/Sidenavbar';
+import Topnavbar from '../../components/Topnavbar';
+import { useAuth } from '../../context/AuthContext';
+
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  PlusSquare, 
+  LogOut, 
+  Bell, 
+  HelpCircle, 
+  UserCheck, 
+  Clock, 
+  Activity, 
+>>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
   CalendarOff,
   ArrowUpRight,
   ArrowRight,
   ArrowDownRight
 } from 'lucide-react';
 
+<<<<<<< HEAD
 const HODDashboard = () => {
+=======
+export default function HODDashboard() {
+  const { user } = useAuth();
+
+>>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
   const modules = [
     { code: 'IT3010', lecturer: 'Dr. A. Perera', students: 120, attendance: 92, color: 'bg-emerald-500', trend: ArrowUpRight, trendColor: 'text-emerald-500' },
     { code: 'IT3045', lecturer: 'Prof. S. Jayasinghe', students: 85, attendance: 78, color: 'bg-amber-500', trend: ArrowRight, trendColor: 'text-amber-500' },
@@ -19,6 +43,7 @@ const HODDashboard = () => {
   ];
 
   return (
+<<<<<<< HEAD
     <div className="flex min-h-screen text-slate-800 font-sans antialiased">
       <Sidenavbar />
 
@@ -51,6 +76,28 @@ const HODDashboard = () => {
               </div>
               <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Pending Medicals</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">12</p>
+=======
+    /* min-h-screen ensures the dark navy sidebar extends all the way to the bottom */
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      {/* Sidebar Navigation */}
+      <Sidenavbar />
+      
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        
+        {/* Top Header */}
+        <Topnavbar />
+
+        {/* Dashboard Body */}
+        <main className="p-8 space-y-6 flex-1">
+          
+          {/* Header Bar */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900">Department Overview</h1>
+              <p className="text-sm text-slate-500 mt-1">Information Technology Department - Fall Semester 2024</p>
+>>>>>>> 74e34fcd3be90eb8e692e49a450bc1364e9f5aee
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
