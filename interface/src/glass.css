@@ -1,0 +1,207 @@
+/* iOS-style Liquid Glass — import once: import './glass.css'; */
+
+.glass-card,
+.glass-modal,
+.glass-inner,
+.glass-btn,
+.glass-input {
+  --g-border: rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
+  backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
+}
+
+/* Main panels */
+.glass-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 55%, rgba(255,255,255,0.12) 100%);
+  border: 1px solid var(--g-border);
+  border-radius: 28px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 24px rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+/* Specular highlight */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 60% at 15% 0%, rgba(255,255,255,0.28) 0%, transparent 55%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.glass-card > *:not(.absolute) { position: relative; }
+.glass-card > .absolute { position: absolute !important; }
+
+/* Modal */
+.glass-modal {
+  position: relative;
+  background: linear-gradient(135deg, rgba(30,41,70,0.55), rgba(15,23,42,0.45));
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 28px;
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.5);
+  color: #fff;
+}
+
+/* Nested items (role cards, etc.) */
+.glass-inner {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Buttons & pills */
+.glass-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.10));
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.glass-btn:hover {
+  background: linear-gradient(180deg, rgba(241,119,35,0.85), rgba(241,119,35,0.6));
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(241,119,35,0.35), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.glass-btn:active { transform: scale(0.97); }
+
+/* Inputs / selects */
+.glass-input {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  color: #fff !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+}
+.glass-input::placeholder { color: rgba(255,255,255,0.5); }
+.glass-input:focus { border-color: rgba(255,255,255,0.7) !important; box-shadow: 0 0 0 3px rgba(255,255,255,0.15); }
+.glass-input option { color: #0f172a; }
+
+/* Recolor existing Tailwind text/borders inside glass surfaces */
+.glass-card .text-slate-900, .glass-modal .text-slate-900 { color: #fff; }
+.glass-card .text-slate-800, .glass-card .text-slate-700,
+.glass-modal .text-slate-700 { color: rgba(255,255,255,0.92); }
+.glass-card .text-slate-600, .glass-card .text-slate-500,
+.glass-modal .text-slate-500, .glass-modal .text-slate-600 { color: rgba(255,255,255,0.72); }
+.glass-card .text-slate-400, .glass-modal .text-slate-400 { color: rgba(255,255,255,0.55); }
+.glass-card .border-slate-100, .glass-card .border-slate-200 { border-color: rgba(255,255,255,0.15); }
+.glass-card .divide-slate-100 > * + * { border-color: rgba(255,255,255,0.12); }
+.glass-card tr:hover { background: rgba(255,255,255,0.08) !important; }
+.glass-card .bg-slate-50, .glass-card .bg-slate-200 { background: rgba(255,255,255,0.14); }
+.glass-card .bg-slate-50:hover { background: rgba(255,255,255,0.22); }
+.glass-card .text-indigo-600 { color: #a5b4fc; }
+.glass-card .text-emerald-600 { color: #6ee7b7; }
+.glass-card .bg-emerald-50 { background: rgba(16,185,129,0.22); }
+.glass-card .bg-amber-50 { background: rgba(245,158,11,0.22); }
+.glass-card .text-amber-600 { color: #fcd34d; }
+
+.glass-card tbody tr { transition: background .2s ease; }
+.glass-card thead tr { border-color: rgba(255,255,255,0.2); }
+
+/* Auto-style every form field inside modals (no className edits needed) */
+.glass-modal input,
+.glass-modal select,
+.glass-modal textarea {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  color: #fff !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+}
+.glass-modal input::placeholder,
+.glass-modal textarea::placeholder { color: rgba(255,255,255,0.5); }
+.glass-modal input:focus,
+.glass-modal select:focus,
+.glass-modal textarea:focus {
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+}
+.glass-modal option { color: #0f172a; background: #fff; }
+
+
+/* ============================================================
+   LIGHT MODE — smoky frosted glass (white text stays readable
+   on a bright video). Works when <html> or <body> has class
+   "light" or data-theme="light".
+   ============================================================ */
+:is(.light, [data-theme='light']) .glass-card {
+  background: linear-gradient(145deg, rgba(95,104,118,0.46) 0%, rgba(62,70,84,0.34) 100%);
+  border: 1px solid rgba(255,255,255,0.42);
+  -webkit-backdrop-filter: blur(32px) saturate(140%);
+  backdrop-filter: blur(32px) saturate(140%);
+  box-shadow:
+    0 20px 50px rgba(30,40,60,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(255,255,255,0.12);
+}
+:is(.light, [data-theme='light']) .glass-card::before { opacity: 0.35; }
+
+:is(.light, [data-theme='light']) .glass-inner {
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.28);
+}
+
+:is(.light, [data-theme='light']) .glass-btn {
+  background: linear-gradient(180deg, rgba(110,118,132,0.55), rgba(70,78,92,0.45));
+  border: 1px solid rgba(255,255,255,0.4);
+  border-bottom-color: rgba(232,185,49,0.75); /* warm accent edge */
+  box-shadow: 0 8px 22px rgba(30,40,60,0.28), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+:is(.light, [data-theme='light']) .glass-btn:hover {
+  background: linear-gradient(180deg, rgba(241,119,35,0.9), rgba(241,119,35,0.65));
+}
+
+:is(.light, [data-theme='light']) .glass-input,
+:is(.light, [data-theme='light']) .glass-modal input,
+:is(.light, [data-theme='light']) .glass-modal textarea {
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.32) !important;
+}
+
+:is(.light, [data-theme='light']) .glass-modal {
+  background: linear-gradient(145deg, rgba(85,94,110,0.62), rgba(50,58,74,0.55));
+  border: 1px solid rgba(255,255,255,0.42);
+  box-shadow: 0 30px 80px rgba(30,40,60,0.4), inset 0 1px 0 rgba(255,255,255,0.55);
+}
+
+/* ---------- Background video: brighten in light mode ----------
+   Add className="bg-video" to your <video> tag. */
+.bg-video { transition: filter .6s ease; }
+:is(.light, [data-theme='light']) .bg-video {
+  filter: brightness(1.5) saturate(1.15) contrast(0.92);
+}
+
+/* Video overlay: subtle dark tint in dark mode, soft light wash in light mode */
+.bg-overlay { background: rgba(0, 0, 0, 0.22); transition: background .6s ease; }
+:is(.light, [data-theme='light']) .bg-overlay { background: rgba(255, 255, 255, 0.10); }
+
+/* ============ LIGHT MODE — stronger, unmistakable smoky glass ============ */
+:is(.light, [data-theme='light']) .glass-card {
+  background: linear-gradient(150deg, rgba(58,66,80,0.66) 0%, rgba(34,42,56,0.58) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.5) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(150%) !important;
+  backdrop-filter: blur(34px) saturate(150%) !important;
+  box-shadow:
+    0 24px 60px rgba(20,30,50,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.65),
+    inset 0 -1px 0 rgba(255,255,255,0.15) !important;
+}
+:is(.light, [data-theme='light']) .glass-inner {
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+}
+:is(.light, [data-theme='light']) .glass-btn {
+  background: linear-gradient(180deg, rgba(74,84,100,0.7), rgba(40,48,62,0.65)) !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  border-bottom-color: rgba(232,185,49,0.85) !important;
+}
+:is(.light, [data-theme='light']) .glass-btn:hover {
+  background: linear-gradient(180deg, rgba(241,119,35,0.92), rgba(241,119,35,0.7)) !important;
+}
+:is(.light, [data-theme='light']) .glass-modal {
+  background: linear-gradient(150deg, rgba(52,60,76,0.78), rgba(30,38,52,0.72)) !important;
+}

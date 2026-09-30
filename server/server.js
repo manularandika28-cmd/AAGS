@@ -7,7 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
-
+import hodRoutes from './routes/hodRoutes.js';
 import lecturerRoutes from './routes/lecturerRoutes.js';
 import deanRoutes from './routes/deanRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
@@ -58,6 +58,7 @@ app.use('/api/lecturer', lecturerRoutes);
 app.use('/api/dean', deanRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/hod', hodRoutes);
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {

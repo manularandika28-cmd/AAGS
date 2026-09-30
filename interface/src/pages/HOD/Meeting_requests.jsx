@@ -1,397 +1,351 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
-import { useAuth } from '../../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Stethoscope, 
-  LogOut, 
-  Search, 
-  Bell, 
-  HelpCircle, 
-  Plus, 
-  MoreVertical, 
-  Clock, 
-  CheckCircle2, 
+import { createHodMeeting, getHodMeetings, updateHodMeeting } from '../../lib/api';
+import {
   AlertTriangle,
-  Filter,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Plus,
+  RefreshCw,
+  Search,
   X
 } from 'lucide-react';
 
+const statusLabels = {
+  pending: 'Pending',
+  confirmed: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled'
+};
+
+const getInitials = (name = '') =>
+  String(name)
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'ST';
+
+const getTodayKey = () => {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+};
+
+const formatMeetingTime = (time) => {
+  if (!time) return 'Time not set';
+  const [hours, minutes] = String(time).split(':');
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
 export default function MeetingRequests() {
-  // Navigation & Interactive States
-  const [activeNav, setActiveNav] = useState('Meeting Scheduler');
+  const [meetings, setMeetings] = useState([]);
+  const [counts, setCounts] = useState({ pending: 0, confirmedToday: 0, rejected: 0 });
+  const [lecturers, setLecturers] = useState([]);
+  const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [lecturerSearch, setLecturerSearch] = useState('');
-  const [showNewEventModal, setShowNewEventModal] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newMeeting, setNewMeeting] = useState(() => ({
+    studentId: '',
+    lecturerId: '',
+    preferredDate: getTodayKey(),
+    preferredTime: '09:00',
+    purpose: ''
+  }));
 
-  // Dynamic Data States
-  const [requests, setRequests] = useState([
-    { id: 1, name: 'Amal Silva', regNo: 'IT/2020/045', topic: 'Final Year Project Supervision', time: 'Oct 24, 10:00 AM', status: 'Pending', avatar: 'AS' },
-    { id: 2, name: 'Kasun Perera', regNo: 'IT/2021/112', topic: 'Module Registration Issue', time: 'Oct 24, 11:30 AM', status: 'Approved', avatar: 'KP' },
-    { id: 3, name: 'Nishanthi Fernando', regNo: 'IT/2019/003', topic: 'Research Grant Discussion', time: 'Oct 25, 09:00 AM', status: 'Conflict', avatar: 'NF' }
-  ]);
+  const fetchMeetings = useCallback(async (quiet = false) => {
+    try {
+      quiet ? setRefreshing(true) : setLoading(true);
+      setError('');
+      const data = await getHodMeetings();
+      setMeetings(Array.isArray(data.meetings) ? data.meetings : []);
+      setCounts({
+        pending: Number(data.counts?.pending || 0),
+        confirmedToday: Number(data.counts?.confirmedToday || 0),
+        rejected: Number(data.counts?.rejected || 0)
+      });
+      setLecturers(Array.isArray(data.lecturers) ? data.lecturers : []);
+      setStudents(Array.isArray(data.students) ? data.students : []);
+    } catch (fetchError) {
+      console.error('HOD meetings error:', fetchError);
+      setError(fetchError.message || 'Failed to load meeting requests');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-  const [lecturers, setLecturers] = useState([
-    { id: 1, name: 'Dr. Ruwan Bandara', role: 'Software Eng.', status: 'Free', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
-    { id: 2, name: 'Dr. Samanthi Dias', role: 'Data Science', status: 'In Class', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80' }
-  ]);
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
 
-  const [newEvent, setNewEvent] = useState({ student: '', topic: '', time: 'Oct 26, 10:00 AM' });
+  const filteredMeetings = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return meetings;
+    return meetings.filter((meeting) =>
+      [meeting.studentName, meeting.studentId, meeting.lecturerName, meeting.purpose]
+        .some((value) => String(value || '').toLowerCase().includes(term))
+    );
+  }, [meetings, searchTerm]);
 
-  // Action Functions
-  const handleStatusChange = (id, newStatus) => {
-    setRequests(requests.map(req => req.id === id ? { ...req, status: newStatus } : req));
-    setActiveDropdown(null);
+  const filteredLecturers = useMemo(() => {
+    const term = lecturerSearch.trim().toLowerCase();
+    if (!term) return lecturers;
+    return lecturers.filter((lecturer) =>
+      [lecturer.name, lecturer.email]
+        .some((value) => String(value || '').toLowerCase().includes(term))
+    );
+  }, [lecturers, lecturerSearch]);
+
+  const todaySchedule = useMemo(() => meetings
+    .filter((meeting) =>
+      String(meeting.status).toLowerCase() === 'confirmed' &&
+      (meeting.confirmedDate || meeting.preferredDate) === getTodayKey()
+    )
+    .sort((first, second) =>
+      String(first.confirmedTime || first.preferredTime || '')
+        .localeCompare(String(second.confirmedTime || second.preferredTime || ''))
+    ), [meetings]);
+
+  const handleStatusChange = async (requestId, status) => {
+    try {
+      setActionLoading(requestId);
+      setNotice('');
+      await updateHodMeeting(requestId, status);
+      setNotice(`Meeting request ${status === 'confirmed' ? 'approved' : 'rejected'}.`);
+      await fetchMeetings(true);
+    } catch (actionError) {
+      console.error('HOD meeting update error:', actionError);
+      setError(actionError.message || 'Failed to update meeting request');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleCreateEvent = (e) => {
-    e.preventDefault();
-    if (!newEvent.student || !newEvent.topic) return;
-    
-    const created = {
-      id: Date.now(),
-      name: newEvent.student,
-      regNo: `IT/2024/${Math.floor(100 + Math.random() * 900)}`,
-      topic: newEvent.topic,
-      time: newEvent.time,
-      status: 'Pending',
-      avatar: newEvent.student.split(' ').map(n => n[0]).join('').toUpperCase()
-    };
-
-    setRequests([created, ...requests]);
-    setNewEvent({ student: '', topic: '', time: 'Oct 26, 10:00 AM' });
-    setShowNewEventModal(false);
+  const handleCreateMeeting = async (event) => {
+    event.preventDefault();
+    try {
+      setCreating(true);
+      setError('');
+      await createHodMeeting(newMeeting);
+      setNotice('Meeting request created.');
+      setShowCreateForm(false);
+      setNewMeeting({
+        studentId: '',
+        lecturerId: '',
+        preferredDate: getTodayKey(),
+        preferredTime: '09:00',
+        purpose: ''
+      });
+      await fetchMeetings(true);
+    } catch (createError) {
+      console.error('HOD meeting creation error:', createError);
+      setError(createError.message || 'Failed to create meeting request');
+    } finally {
+      setCreating(false);
+    }
   };
-
-  const filteredRequests = requests.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.topic.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredLecturers = lecturers.filter(l =>
-    l.name.toLowerCase().includes(lecturerSearch.toLowerCase()) ||
-    l.role.toLowerCase().includes(lecturerSearch.toLowerCase())
-  );
 
   return (
-    <div className="flex h-screen text-slate-800 font-sans antialiased overflow-hidden">
-      
-      {/* Sidebar Navigation */}
-      <Sidenavbar activeNav={activeNav} setActiveNav={setActiveNav} />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        
-        {/* Top Navbar */}
-        
-
-        {/* Dashboard Body */}
-        <main className="p-8 space-y-6">
-          
-          {/* Section Header */}
-          <div className="flex items-center justify-between">
+    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      <Sidenavbar />
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <Topnavbar />
+        <main className="p-8 space-y-6 flex-1">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Meeting Request Management</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Coordinate departmental schedules and handle student meeting requests.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Review meeting requests and view your department’s confirmed schedule.</p>
             </div>
-            <button 
-              onClick={() => setShowNewEventModal(true)}
-              className="flex items-center gap-2 bg-[#051E3D] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Event
-            </button>
-          </div>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-3 gap-6">
-            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-50 text-amber-500 rounded-full">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-500 block">Pending Requests</span>
-                  <span className="text-2xl font-bold text-slate-900">
-                    {requests.filter(r => r.status === 'Pending').length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-500 rounded-full">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-500 block">Approved Today</span>
-                  <span className="text-2xl font-bold text-slate-900">
-                    {requests.filter(r => r.status === 'Approved').length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-rose-50 text-rose-500 rounded-full">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-500 block">Schedule Conflicts</span>
-                  <span className="text-2xl font-bold text-slate-900">
-                    {requests.filter(r => r.status === 'Conflict').length}
-                  </span>
-                </div>
-              </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowCreateForm(true)} className="flex items-center gap-2 bg-[#051E3D] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+                <Plus className="w-4 h-4" /> New Event
+              </button>
+              <button
+                type="button"
+                onClick={() => fetchMeetings(true)}
+                disabled={refreshing || loading}
+                className="flex items-center gap-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
             </div>
           </div>
 
-          {/* Layout Columns */}
-          <div className="grid grid-cols-3 gap-6">
-            
-            {/* Table Column */}
-            <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-800">Student Meeting Requests</h3>
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  className="text-xs text-indigo-600 font-semibold flex items-center gap-1 hover:underline"
-                >
-                  View All &rarr;
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-3 font-semibold">Student</th>
-                      <th className="px-6 py-3 font-semibold">Topic</th>
-                      <th className="px-6 py-3 font-semibold">Proposed Time</th>
-                      <th className="px-6 py-3 font-semibold">Status</th>
-                      <th className="px-6 py-3 font-semibold text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredRequests.map((req) => (
-                      <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">
-                              {req.avatar}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-slate-900">{req.name}</div>
-                              <div className="text-[10px] text-slate-400">{req.regNo}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-700 max-w-[180px]">
-                          {req.topic}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-600">{req.time}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold inline-block ${
-                            req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                            req.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                            'bg-rose-100 text-rose-700'
-                          }`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right relative">
-                          <button 
-                            onClick={() => setActiveDropdown(activeDropdown === req.id ? null : req.id)}
-                            className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-
-                          {/* Action Dropdown */}
-                          {activeDropdown === req.id && (
-                            <div className="absolute right-6 top-10 w-32 bg-white border border-slate-200 rounded-md shadow-lg z-20 py-1 text-left text-xs">
-                              <button 
-                                onClick={() => handleStatusChange(req.id, 'Approved')} 
-                                className="w-full px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium"
-                              >
-                                Approve
-                              </button>
-                              <button 
-                                onClick={() => handleStatusChange(req.id, 'Pending')} 
-                                className="w-full px-3 py-1.5 hover:bg-slate-50 text-amber-600 font-medium"
-                              >
-                                Mark Pending
-                              </button>
-                              <button 
-                                onClick={() => handleStatusChange(req.id, 'Conflict')} 
-                                className="w-full px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium"
-                              >
-                                Mark Conflict
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {error && (
+            <div className="flex items-center justify-between gap-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg p-3 text-sm">
+              <span>{error}</span>
+              <button type="button" onClick={() => fetchMeetings()} className="font-semibold underline">Try again</button>
             </div>
+          )}
+          {notice && <p className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg p-3 text-sm">{notice}</p>}
 
-            {/* Right Side Widgets Column */}
-            <div className="space-y-6">
-              
-              {/* Departmental Schedule Widget */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-slate-800 text-sm">Departmental Schedule (Today)</h3>
-                
-                <div className="mt-4 space-y-3 relative before:absolute before:inset-0 before:left-2 before:w-0.5 before:bg-slate-100">
-                  <div className="relative pl-6">
-                    <div className="absolute left-1 top-1.5 w-2 h-2 rounded-full bg-slate-800 ring-4 ring-white"></div>
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      <div className="flex justify-between items-start">
-                        <span className="font-semibold text-xs text-slate-800 max-w-[130px]">Curriculum Review Comm.</span>
-                        <span className="text-[10px] font-bold text-slate-500">09:00 AM</span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 mt-2 block">Board Room A</span>
-                    </div>
-                  </div>
-
-                  <div className="relative pl-6">
-                    <div className="absolute left-1 top-1.5 w-2 h-2 rounded-full bg-slate-300 ring-4 ring-white"></div>
-                    <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
-                      <div className="flex justify-between items-start">
-                        <span className="font-semibold text-xs text-slate-600">Faculty Board Pre-meet</span>
-                        <span className="text-[10px] font-bold text-slate-400">11:00 AM</span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 mt-2 block">Online (Zoom)</span>
-                    </div>
-                  </div>
+          {showCreateForm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+              <form onSubmit={handleCreateMeeting} className="relative w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-2xl">
+                <button type="button" aria-label="Close form" onClick={() => setShowCreateForm(false)} className="absolute right-4 top-4 text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-bold text-slate-900">Schedule New Meeting</h2>
+                <label className="block text-xs font-semibold text-slate-700">Student
+                  <select required value={newMeeting.studentId} onChange={(event) => setNewMeeting({ ...newMeeting, studentId: event.target.value })} className="mt-1 w-full rounded-md border border-slate-300 p-2">
+                    <option value="">Select a department student</option>
+                    {students.map((student) => <option key={student.id} value={student.id}>{student.name} ({student.id})</option>)}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold text-slate-700">Lecturer
+                  <select required value={newMeeting.lecturerId} onChange={(event) => setNewMeeting({ ...newMeeting, lecturerId: event.target.value })} className="mt-1 w-full rounded-md border border-slate-300 p-2">
+                    <option value="">Select a department lecturer</option>
+                    {lecturers.map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.name}</option>)}
+                  </select>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-xs font-semibold text-slate-700">Date
+                    <input required type="date" min={getTodayKey()} value={newMeeting.preferredDate} onChange={(event) => setNewMeeting({ ...newMeeting, preferredDate: event.target.value })} className="mt-1 w-full rounded-md border border-slate-300 p-2" />
+                  </label>
+                  <label className="block text-xs font-semibold text-slate-700">Time
+                    <input required type="time" value={newMeeting.preferredTime} onChange={(event) => setNewMeeting({ ...newMeeting, preferredTime: event.target.value })} className="mt-1 w-full rounded-md border border-slate-300 p-2" />
+                  </label>
                 </div>
-
-                <button className="w-full mt-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50 transition-colors">
-                  View Full Calendar
-                </button>
-              </div>
-
-              {/* Lecturer Availability Widget */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-800 text-sm">Lecturer Availability</h3>
-                  <button className="text-slate-400 hover:text-slate-600">
-                    <Filter className="w-4 h-4" />
-                  </button>
+                <label className="block text-xs font-semibold text-slate-700">Topic
+                  <textarea required maxLength={500} value={newMeeting.purpose} onChange={(event) => setNewMeeting({ ...newMeeting, purpose: event.target.value })} className="mt-1 w-full rounded-md border border-slate-300 p-2" rows="3" />
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowCreateForm(false)} className="rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600">Cancel</button>
+                  <button type="submit" disabled={creating || students.length === 0 || lecturers.length === 0} className="rounded-md bg-[#051E3D] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">{creating ? 'Saving...' : 'Save Meeting'}</button>
                 </div>
+              </form>
+            </div>
+          )}
 
-                <div className="space-y-3">
-                  {filteredLecturers.map((lec) => (
-                    <div key={lec.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img src={lec.avatar} alt={lec.name} className="w-9 h-9 rounded-full object-cover" />
-                        <div>
-                          <div className="font-bold text-xs text-slate-800">{lec.name}</div>
-                          <div className="text-[10px] text-slate-400">{lec.role}</div>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1 ${
-                        lec.status === 'Free' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${lec.status === 'Free' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                        {lec.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
+              <div className="p-3 bg-amber-50 text-amber-500 rounded-full"><Clock className="w-6 h-6" /></div>
+              <div><span className="text-xs font-medium text-slate-500 block">Pending Requests</span><span className="text-2xl font-bold text-slate-900">{counts.pending}</span></div>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
+              <div className="p-3 bg-emerald-50 text-emerald-500 rounded-full"><CheckCircle2 className="w-6 h-6" /></div>
+              <div><span className="text-xs font-medium text-slate-500 block">Approved Today</span><span className="text-2xl font-bold text-slate-900">{counts.confirmedToday}</span></div>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
+              <div className="p-3 bg-rose-50 text-rose-500 rounded-full"><AlertTriangle className="w-6 h-6" /></div>
+              <div><span className="text-xs font-medium text-slate-500 block">Rejected Requests</span><span className="text-2xl font-bold text-slate-900">{counts.rejected}</span></div>
+            </div>
+          </div>
 
-                <div className="mt-4 relative">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <section className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
+                <h2 className="font-bold text-slate-800">Department Meeting Requests</h2>
+                <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
-                    type="text"
-                    placeholder="Check staff schedule..."
-                    value={lecturerSearch}
-                    onChange={(e) => setLecturerSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-indigo-500"
+                    type="search"
+                    placeholder="Search student or topic..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    className="w-56 pl-8 pr-3 py-2 text-xs bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
+              {loading ? (
+                <p className="p-10 text-center text-sm text-slate-500">Loading meeting requests...</p>
+              ) : filteredMeetings.length === 0 ? (
+                <p className="p-10 text-center text-sm text-slate-500">No meeting requests found.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Student</th>
+                        <th className="px-5 py-3 font-semibold">Topic / Lecturer</th>
+                        <th className="px-5 py-3 font-semibold">Proposed time</th>
+                        <th className="px-5 py-3 font-semibold">Status</th>
+                        <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredMeetings.map((meeting) => {
+                        const status = String(meeting.status || 'pending').toLowerCase();
+                        const pending = status === 'pending';
+                        return (
+                          <tr key={meeting.id} className="hover:bg-slate-50/50">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">{getInitials(meeting.studentName)}</div>
+                                <div><div className="font-semibold text-slate-900">{meeting.studentName || 'Unknown Student'}</div><div className="text-[10px] text-slate-400">{meeting.studentId || 'ID unavailable'}</div></div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 max-w-[220px]">
+                              <div className="font-medium text-slate-700">{meeting.purpose || 'No topic provided'}</div>
+                              <div className="text-[10px] text-slate-400 mt-1">{meeting.lecturerName || 'Lecturer unavailable'}</div>
+                            </td>
+                            <td className="px-5 py-4 font-medium text-slate-600 whitespace-nowrap">{meeting.preferredDate || 'Date unset'} · {formatMeetingTime(meeting.preferredTime)}</td>
+                            <td className="px-5 py-4">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold inline-block ${status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : status === 'rejected' || status === 'cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {statusLabels[status] || status}
+                              </span>
+                              {meeting.response && <p className="mt-1 max-w-40 text-[10px] text-slate-400">{meeting.response}</p>}
+                            </td>
+                            <td className="px-5 py-4 text-right whitespace-nowrap">
+                              {pending ? (
+                                <div className="inline-flex gap-2">
+                                  <button type="button" onClick={() => handleStatusChange(meeting.id, 'confirmed')} disabled={actionLoading === meeting.id} className="px-2.5 py-1.5 rounded-md bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50">Approve</button>
+                                  <button type="button" onClick={() => handleStatusChange(meeting.id, 'rejected')} disabled={actionLoading === meeting.id} className="px-2.5 py-1.5 rounded-md border border-rose-300 text-rose-600 font-semibold hover:bg-rose-50 disabled:opacity-50">Reject</button>
+                                </div>
+                              ) : <span className="text-slate-400">—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
+            <div className="space-y-6">
+              <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-indigo-600" /><h2 className="font-bold text-slate-800 text-sm">Confirmed Schedule Today</h2></div>
+                <div className="mt-4 space-y-3">
+                  {todaySchedule.length === 0 ? <p className="text-xs text-slate-500">No confirmed meetings scheduled today.</p> : todaySchedule.slice(0, 5).map((meeting) => (
+                    <div key={meeting.id} className="p-3 rounded-lg border border-slate-100 bg-slate-50">
+                      <div className="flex justify-between gap-2"><span className="font-semibold text-xs text-slate-800">{meeting.studentName || 'Student'}</span><span className="text-[10px] font-bold text-slate-500">{formatMeetingTime(meeting.confirmedTime || meeting.preferredTime)}</span></div>
+                      <p className="text-[11px] text-slate-500 mt-1">{meeting.purpose || 'Meeting'} · {meeting.lecturerName || 'Lecturer'}</p>
+                      {meeting.location && <p className="text-[10px] text-slate-400 mt-1">{meeting.location}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h2 className="font-bold text-slate-800 text-sm">Department Lecturer Schedules</h2>
+                <div className="mt-4 space-y-3">
+                  {filteredLecturers.length === 0 ? <p className="text-xs text-slate-500">No lecturers found.</p> : filteredLecturers.map((lecturer) => (
+                    <div key={lecturer.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0"><div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">{getInitials(lecturer.name)}</div><div className="min-w-0"><div className="font-bold text-xs text-slate-800 truncate">{lecturer.name}</div><div className="text-[10px] text-slate-400 truncate">{lecturer.email || 'Department lecturer'}</div></div></div>
+                      <span className="text-[10px] text-slate-500 text-right">{lecturer.scheduleStatus}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="search" placeholder="Search lecturers..." value={lecturerSearch} onChange={(event) => setLecturerSearch(event.target.value)} className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-indigo-500" /></div>
+              </section>
             </div>
           </div>
         </main>
       </div>
-
-      {/* New Event Modal */}
-      {showNewEventModal && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl relative">
-            <button 
-              onClick={() => setShowNewEventModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Schedule New Meeting</h3>
-            
-            <form onSubmit={handleCreateEvent} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Student Name</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. John Doe" 
-                  value={newEvent.student}
-                  onChange={(e) => setNewEvent({ ...newEvent, student: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Meeting Topic</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Thesis Progress" 
-                  value={newEvent.topic}
-                  onChange={(e) => setNewEvent({ ...newEvent, topic: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Time & Date</label>
-                <input 
-                  type="text" 
-                  value={newEvent.time}
-                  onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewEventModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-md font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#051E3D] text-white rounded-md font-semibold hover:bg-slate-800"
-                >
-                  Save Meeting
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
