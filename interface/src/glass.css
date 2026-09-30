@@ -15,7 +15,7 @@
   position: relative;
   background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.07) 55%, rgba(255,255,255,0.12) 100%);
   border: 1px solid var(--g-border);
-  border-radius: 24px;
+  border-radius: 28px;
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.55),
@@ -121,3 +121,87 @@
   box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
 }
 .glass-modal option { color: #0f172a; background: #fff; }
+
+
+/* ============================================================
+   LIGHT MODE — smoky frosted glass (white text stays readable
+   on a bright video). Works when <html> or <body> has class
+   "light" or data-theme="light".
+   ============================================================ */
+:is(.light, [data-theme='light']) .glass-card {
+  background: linear-gradient(145deg, rgba(95,104,118,0.46) 0%, rgba(62,70,84,0.34) 100%);
+  border: 1px solid rgba(255,255,255,0.42);
+  -webkit-backdrop-filter: blur(32px) saturate(140%);
+  backdrop-filter: blur(32px) saturate(140%);
+  box-shadow:
+    0 20px 50px rgba(30,40,60,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(255,255,255,0.12);
+}
+:is(.light, [data-theme='light']) .glass-card::before { opacity: 0.35; }
+
+:is(.light, [data-theme='light']) .glass-inner {
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.28);
+}
+
+:is(.light, [data-theme='light']) .glass-btn {
+  background: linear-gradient(180deg, rgba(110,118,132,0.55), rgba(70,78,92,0.45));
+  border: 1px solid rgba(255,255,255,0.4);
+  border-bottom-color: rgba(232,185,49,0.75); /* warm accent edge */
+  box-shadow: 0 8px 22px rgba(30,40,60,0.28), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+:is(.light, [data-theme='light']) .glass-btn:hover {
+  background: linear-gradient(180deg, rgba(241,119,35,0.9), rgba(241,119,35,0.65));
+}
+
+:is(.light, [data-theme='light']) .glass-input,
+:is(.light, [data-theme='light']) .glass-modal input,
+:is(.light, [data-theme='light']) .glass-modal textarea {
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.32) !important;
+}
+
+:is(.light, [data-theme='light']) .glass-modal {
+  background: linear-gradient(145deg, rgba(85,94,110,0.62), rgba(50,58,74,0.55));
+  border: 1px solid rgba(255,255,255,0.42);
+  box-shadow: 0 30px 80px rgba(30,40,60,0.4), inset 0 1px 0 rgba(255,255,255,0.55);
+}
+
+/* ---------- Background video: brighten in light mode ----------
+   Add className="bg-video" to your <video> tag. */
+.bg-video { transition: filter .6s ease; }
+:is(.light, [data-theme='light']) .bg-video {
+  filter: brightness(1.5) saturate(1.15) contrast(0.92);
+}
+
+/* Video overlay: subtle dark tint in dark mode, soft light wash in light mode */
+.bg-overlay { background: rgba(0, 0, 0, 0.22); transition: background .6s ease; }
+:is(.light, [data-theme='light']) .bg-overlay { background: rgba(255, 255, 255, 0.10); }
+
+/* ============ LIGHT MODE — stronger, unmistakable smoky glass ============ */
+:is(.light, [data-theme='light']) .glass-card {
+  background: linear-gradient(150deg, rgba(58,66,80,0.66) 0%, rgba(34,42,56,0.58) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.5) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(150%) !important;
+  backdrop-filter: blur(34px) saturate(150%) !important;
+  box-shadow:
+    0 24px 60px rgba(20,30,50,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.65),
+    inset 0 -1px 0 rgba(255,255,255,0.15) !important;
+}
+:is(.light, [data-theme='light']) .glass-inner {
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+}
+:is(.light, [data-theme='light']) .glass-btn {
+  background: linear-gradient(180deg, rgba(74,84,100,0.7), rgba(40,48,62,0.65)) !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  border-bottom-color: rgba(232,185,49,0.85) !important;
+}
+:is(.light, [data-theme='light']) .glass-btn:hover {
+  background: linear-gradient(180deg, rgba(241,119,35,0.92), rgba(241,119,35,0.7)) !important;
+}
+:is(.light, [data-theme='light']) .glass-modal {
+  background: linear-gradient(150deg, rgba(52,60,76,0.78), rgba(30,38,52,0.72)) !important;
+}
