@@ -10,8 +10,6 @@ import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://localhost:3000/api';
 
-
-
 const Topnavbar = () => {
    const navigate = useNavigate();
    const { isLight, toggle } = useTheme();
@@ -24,8 +22,14 @@ const Topnavbar = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    const [notificationOpen, setNotificationOpen] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
+    const [profilePictureUrl, setProfilePictureUrl] =
+        useState(null);
+
+    const [notificationOpen, setNotificationOpen] =
+        useState(false);
+
+    const [profileOpen, setProfileOpen] =
+        useState(false);
 
     const notificationRef = useRef(null);
     const profileRef = useRef(null);
@@ -42,7 +46,9 @@ const Topnavbar = () => {
         const parts = name.trim().split(/\s+/);
 
         if (parts.length === 1) {
-            return parts[0].substring(0, 2).toUpperCase();
+            return parts[0]
+                .substring(0, 2)
+                .toUpperCase();
         }
 
         return (
@@ -66,19 +72,27 @@ const Topnavbar = () => {
                 {
                     method: 'GET',
                     headers: {
-                        Authorization: `Bearer ${accessToken}`,
+                        Authorization:
+                            `Bearer ${accessToken}`,
                     },
                 }
             );
 
             if (!response.ok) {
-                throw new Error('Failed to fetch notifications');
+                throw new Error(
+                    'Failed to fetch notifications'
+                );
             }
 
             const data = await response.json();
 
-            setNotifications(data.notifications || []);
-            setUnreadCount(data.unreadCount || 0);
+            setNotifications(
+                data.notifications || []
+            );
+
+            setUnreadCount(
+                data.unreadCount || 0
+            );
 
         } catch (error) {
             console.error(
@@ -90,12 +104,95 @@ const Topnavbar = () => {
 
     /*
     |--------------------------------------------------------------------------
-    | Initial notification load
+    | Fetch profile picture
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    | We add ?v=timestamp to the URL.
+    |
+    | Supabase keeps the same object path:
+    |
+    | profile-pictures/admin/1
+    |
+    | But the browser sees a new URL each time:
+    |
+    | profile-pictures/admin/1?v=123
+    |
+    | This prevents the browser from displaying the old cached image.
+    |--------------------------------------------------------------------------
+    */
+
+    const fetchProfilePicture = async () => {
+        if (!accessToken || !user) return;
+
+        try {
+            const response = await fetch(
+                `${API_BASE}/settings/profile`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    'Failed to fetch profile'
+                );
+            }
+
+            const data = await response.json();
+
+            if (data.profile_picture_url) {
+                const freshUrl =
+                    `${data.profile_picture_url}?v=${Date.now()}`;
+
+                setProfilePictureUrl(freshUrl);
+            } else {
+                setProfilePictureUrl(null);
+            }
+
+        } catch (error) {
+            console.error(
+                'Profile picture fetch error:',
+                error
+            );
+        }
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Initial load
     |--------------------------------------------------------------------------
     */
 
     useEffect(() => {
         fetchNotifications();
+        fetchProfilePicture();
+    }, [accessToken, user]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Refresh profile picture periodically
+    |--------------------------------------------------------------------------
+    |
+    | This means even if Settings changes the picture while the navbar
+    | remains mounted, the navbar will eventually pick up the new image.
+    |--------------------------------------------------------------------------
+    */
+
+    useEffect(() => {
+        if (!accessToken || !user) return;
+
+        const profileInterval =
+            setInterval(() => {
+                fetchProfilePicture();
+            }, 10 * 1000);
+
+        return () =>
+            clearInterval(profileInterval);
     }, [accessToken, user]);
 
     /*
@@ -111,7 +208,8 @@ const Topnavbar = () => {
             fetchNotifications();
         }, 60 * 1000);
 
-        return () => clearInterval(interval);
+        return () =>
+            clearInterval(interval);
     }, [accessToken, user]);
 
     /*
@@ -124,14 +222,18 @@ const Topnavbar = () => {
         const handleClickOutside = (event) => {
             if (
                 notificationRef.current &&
-                !notificationRef.current.contains(event.target)
+                !notificationRef.current.contains(
+                    event.target
+                )
             ) {
                 setNotificationOpen(false);
             }
 
             if (
                 profileRef.current &&
-                !profileRef.current.contains(event.target)
+                !profileRef.current.contains(
+                    event.target
+                )
             ) {
                 setProfileOpen(false);
             }
@@ -156,14 +258,17 @@ const Topnavbar = () => {
     |--------------------------------------------------------------------------
     */
 
-    const markAsRead = async (notificationId) => {
+    const markAsRead = async (
+        notificationId
+    ) => {
         try {
             const response = await fetch(
                 `${API_BASE}/notifications/${notificationId}/read`,
                 {
                     method: 'PATCH',
                     headers: {
-                        Authorization: `Bearer ${accessToken}`,
+                        Authorization:
+                            `Bearer ${accessToken}`,
                     },
                 }
             );
@@ -174,9 +279,10 @@ const Topnavbar = () => {
                 );
             }
 
-            setNotifications(prev =>
-                prev.map(notification =>
-                    notification.notification_id === notificationId
+            setNotifications((prev) =>
+                prev.map((notification) =>
+                    notification.notification_id ===
+                    notificationId
                         ? {
                               ...notification,
                               is_read: true,
@@ -185,7 +291,7 @@ const Topnavbar = () => {
                 )
             );
 
-            setUnreadCount(prev =>
+            setUnreadCount((prev) =>
                 Math.max(prev - 1, 0)
             );
 
@@ -210,7 +316,8 @@ const Topnavbar = () => {
                 {
                     method: 'PATCH',
                     headers: {
-                        Authorization: `Bearer ${accessToken}`,
+                        Authorization:
+                            `Bearer ${accessToken}`,
                     },
                 }
             );
@@ -221,8 +328,8 @@ const Topnavbar = () => {
                 );
             }
 
-            setNotifications(prev =>
-                prev.map(notification => ({
+            setNotifications((prev) =>
+                prev.map((notification) => ({
                     ...notification,
                     is_read: true,
                 }))
@@ -258,12 +365,15 @@ const Topnavbar = () => {
     const formatNotificationTime = (date) => {
         if (!date) return '';
 
-        const notificationDate = new Date(date);
+        const notificationDate =
+            new Date(date);
+
         const now = new Date();
 
         const difference =
             Math.floor(
-                (now - notificationDate) / 1000
+                (now - notificationDate) /
+                    1000
             );
 
         if (difference < 60) {
@@ -291,11 +401,18 @@ const Topnavbar = () => {
         return notificationDate.toLocaleDateString();
     };
 
+    /*
+    |--------------------------------------------------------------------------
+    | No authenticated user
+    |--------------------------------------------------------------------------
+    */
+
     if (!user) {
         return null;
     }
 
-    const initials = getInitials(user.name);
+    const initials =
+        getInitials(user.name);
 
     return (
         <header
@@ -306,7 +423,14 @@ const Topnavbar = () => {
                 TITLE
             ========================================================= */}
 
-            <h1 className="text-h3 font-bold text-white tracking-tight">
+            <h1
+                className="
+                    text-h3
+                    font-bold
+                    text-white
+                    tracking-tight
+                "
+            >
                 AAGS {user.role} Dashboard
             </h1>
 
@@ -315,8 +439,13 @@ const Topnavbar = () => {
                 RIGHT ACTIONS
             ========================================================= */}
 
-            <div className="flex items-center space-x-5">
-
+            <div
+                className="
+                    flex
+                    items-center
+                    space-x-5
+                "
+            >
 
                 {/* =====================================================
                     NOTIFICATIONS
@@ -326,11 +455,13 @@ const Topnavbar = () => {
                     className="relative"
                     ref={notificationRef}
                 >
+
                     <button
                         onClick={() => {
                             setNotificationOpen(
-                                prev => !prev
+                                (prev) => !prev
                             );
+
                             setProfileOpen(false);
                         }}
                         className="
@@ -406,19 +537,33 @@ const Topnavbar = () => {
                                     justify-between
                                 "
                             >
+
                                 <div>
-                                    <h3 className="text-white font-semibold">
+                                    <h3
+                                        className="
+                                            text-white
+                                            font-semibold
+                                        "
+                                    >
                                         Notifications
                                     </h3>
 
-                                    <p className="text-white/50 text-xs mt-0.5">
+                                    <p
+                                        className="
+                                            text-white/50
+                                            text-xs
+                                            mt-0.5
+                                        "
+                                    >
                                         {unreadCount} unread
                                     </p>
                                 </div>
 
                                 {unreadCount > 0 && (
                                     <button
-                                        onClick={markAllAsRead}
+                                        onClick={
+                                            markAllAsRead
+                                        }
                                         className="
                                             text-xs
                                             text-white/70
@@ -428,19 +573,31 @@ const Topnavbar = () => {
                                             gap-1
                                         "
                                     >
-                                        <CheckCheck className="w-3.5 h-3.5" />
+                                        <CheckCheck
+                                            className="
+                                                w-3.5
+                                                h-3.5
+                                            "
+                                        />
 
                                         Mark all read
                                     </button>
                                 )}
+
                             </div>
 
 
                             {/* Notification list */}
 
-                            <div className="max-h-[380px] overflow-y-auto">
+                            <div
+                                className="
+                                    max-h-[380px]
+                                    overflow-y-auto
+                                "
+                            >
 
                                 {notifications.length === 0 ? (
+
                                     <div
                                         className="
                                             py-10
@@ -449,13 +606,23 @@ const Topnavbar = () => {
                                             text-sm
                                         "
                                     >
-                                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                                        <Bell
+                                            className="
+                                                w-8
+                                                h-8
+                                                mx-auto
+                                                mb-2
+                                                opacity-40
+                                            "
+                                        />
 
                                         No notifications
                                     </div>
+
                                 ) : (
+
                                     notifications.map(
-                                        notification => (
+                                        (notification) => (
                                             <div
                                                 key={
                                                     notification.notification_id
@@ -474,7 +641,12 @@ const Topnavbar = () => {
                                                 `}
                                             >
 
-                                                <div className="flex gap-3">
+                                                <div
+                                                    className="
+                                                        flex
+                                                        gap-3
+                                                    "
+                                                >
 
                                                     <div
                                                         className="
@@ -487,9 +659,20 @@ const Topnavbar = () => {
                                                         "
                                                     />
 
-                                                    <div className="flex-1 min-w-0">
+                                                    <div
+                                                        className="
+                                                            flex-1
+                                                            min-w-0
+                                                        "
+                                                    >
 
-                                                        <div className="flex justify-between gap-2">
+                                                        <div
+                                                            className="
+                                                                flex
+                                                                justify-between
+                                                                gap-2
+                                                            "
+                                                        >
 
                                                             <h4
                                                                 className={`
@@ -507,7 +690,13 @@ const Topnavbar = () => {
                                                                 }
                                                             </h4>
 
-                                                            <span className="text-[10px] text-white/40 whitespace-nowrap">
+                                                            <span
+                                                                className="
+                                                                    text-[10px]
+                                                                    text-white/40
+                                                                    whitespace-nowrap
+                                                                "
+                                                            >
                                                                 {formatNotificationTime(
                                                                     notification.created_at
                                                                 )}
@@ -515,7 +704,14 @@ const Topnavbar = () => {
 
                                                         </div>
 
-                                                        <p className="text-xs text-white/60 mt-1 leading-relaxed">
+                                                        <p
+                                                            className="
+                                                                text-xs
+                                                                text-white/60
+                                                                mt-1
+                                                                leading-relaxed
+                                                            "
+                                                        >
                                                             {
                                                                 notification.message
                                                             }
@@ -538,7 +734,12 @@ const Topnavbar = () => {
                                                                     gap-1
                                                                 "
                                                             >
-                                                                <Check className="w-3 h-3" />
+                                                                <Check
+                                                                    className="
+                                                                        w-3
+                                                                        h-3
+                                                                    "
+                                                                />
 
                                                                 Mark as read
                                                             </button>
@@ -551,12 +752,14 @@ const Topnavbar = () => {
                                             </div>
                                         )
                                     )
+
                                 )}
 
                             </div>
 
                         </div>
                     )}
+
                 </div>
 
 <button
@@ -589,7 +792,13 @@ const Topnavbar = () => {
                     DIVIDER
                 ===================================================== */}
 
-                <div className="h-5 w-[1px] bg-white/20" />
+                <div
+                    className="
+                        h-5
+                        w-[1px]
+                        bg-white/20
+                    "
+                />
 
 
                 {/* =====================================================
@@ -604,8 +813,9 @@ const Topnavbar = () => {
                     <button
                         onClick={() => {
                             setProfileOpen(
-                                prev => !prev
+                                (prev) => !prev
                             );
+
                             setNotificationOpen(false);
                         }}
                         className="
@@ -616,7 +826,7 @@ const Topnavbar = () => {
                         "
                     >
 
-                        {/* Initials */}
+                        {/* Profile avatar */}
 
                         <div
                             className="
@@ -636,10 +846,36 @@ const Topnavbar = () => {
                                 hover:ring-2
                                 hover:ring-brand-orange-500
                                 transition-all
+                                overflow-hidden
+                                shrink-0
                             "
                         >
-                            {initials}
+
+                            {profilePictureUrl ? (
+
+                                <img
+                                    src={profilePictureUrl}
+                                    alt={user.name}
+                                    className="
+                                        w-full
+                                        h-full
+                                        object-cover
+                                    "
+                                    onError={() => {
+                                        setProfilePictureUrl(
+                                            null
+                                        );
+                                    }}
+                                />
+
+                            ) : (
+
+                                initials
+
+                            )}
+
                         </div>
+
 
                         <ChevronDown
                             className={`
@@ -658,7 +894,9 @@ const Topnavbar = () => {
                     </button>
 
 
-                    {/* Profile dropdown */}
+                    {/* =================================================
+                        PROFILE DROPDOWN
+                    ================================================= */}
 
                     {profileOpen && (
                         <div
@@ -688,7 +926,15 @@ const Topnavbar = () => {
                                 "
                             >
 
-                                <div className="flex items-center gap-3">
+                                <div
+                                    className="
+                                        flex
+                                        items-center
+                                        gap-3
+                                    "
+                                >
+
+                                    {/* Dropdown profile picture */}
 
                                     <div
                                         className="
@@ -703,22 +949,69 @@ const Topnavbar = () => {
                                             justify-center
                                             text-white
                                             font-bold
+                                            overflow-hidden
+                                            shrink-0
                                         "
                                     >
-                                        {initials}
+
+                                        {profilePictureUrl ? (
+
+                                            <img
+                                                src={
+                                                    profilePictureUrl
+                                                }
+                                                alt={
+                                                    user.name
+                                                }
+                                                className="
+                                                    w-full
+                                                    h-full
+                                                    object-cover
+                                                "
+                                            />
+
+                                        ) : (
+
+                                            initials
+
+                                        )}
+
                                     </div>
 
-                                    <div className="min-w-0">
 
-                                        <p className="text-white font-semibold truncate">
+                                    <div
+                                        className="
+                                            min-w-0
+                                        "
+                                    >
+
+                                        <p
+                                            className="
+                                                text-white
+                                                font-semibold
+                                                truncate
+                                            "
+                                        >
                                             {user.name}
                                         </p>
 
-                                        <p className="text-white/50 text-xs truncate">
+                                        <p
+                                            className="
+                                                text-white/50
+                                                text-xs
+                                                truncate
+                                            "
+                                        >
                                             {user.email}
                                         </p>
 
-                                        <p className="text-white/40 text-xs mt-0.5">
+                                        <p
+                                            className="
+                                                text-white/40
+                                                text-xs
+                                                mt-0.5
+                                            "
+                                        >
                                             {user.role}
                                         </p>
 
@@ -729,40 +1022,46 @@ const Topnavbar = () => {
                             </div>
 
 
-                            
+                            {/* Settings */}
 
+                            <button
+                                onClick={() => {
+                                    setProfileOpen(false);
+                                    navigate('/settings');
+                                }}
+                                className="
+                                    w-full
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-sm
+                                    text-white/80
+                                    hover:bg-white/10
+                                    flex
+                                    items-center
+                                    gap-3
+                                    transition-colors
+                                "
+                            >
+                                <Settings className="w-4 h-4" />
 
-                           <button
-    onClick={() => {
-        setProfileOpen(false);
-        navigate('/settings');
-    }}
-    className="
-        w-full
-        px-4
-        py-3
-        text-left
-        text-sm
-        text-white/80
-        hover:bg-white/10
-        flex
-        items-center
-        gap-3
-        transition-colors
-    "
->
-    <Settings className="w-4 h-4" />
-
-    Settings
-</button>
+                                Settings
+                            </button>
 
 
                             {/* Logout */}
 
-                            <div className="border-t border-white/10">
+                            <div
+                                className="
+                                    border-t
+                                    border-white/10
+                                "
+                            >
 
                                 <button
-                                    onClick={handleLogout}
+                                    onClick={
+                                        handleLogout
+                                    }
                                     className="
                                         w-full
                                         px-4

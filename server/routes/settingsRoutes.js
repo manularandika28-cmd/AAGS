@@ -5,9 +5,11 @@ import {
     updateProfile,
     updatePreferences,
     changePassword,
+    updateProfilePicture,
 } from '../controllers/settingsController.js';
 
 import { verifyToken } from '../middleware/authMiddleware.js';
+import { uploadProfilePicture } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -33,6 +35,13 @@ router.patch(
     '/password',
     verifyToken,
     changePassword
+);
+
+router.patch(
+    '/profile-picture',
+    verifyToken,
+    uploadProfilePicture.single('profilePicture'),
+    updateProfilePicture
 );
 
 export default router;

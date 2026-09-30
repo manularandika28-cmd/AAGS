@@ -49,4 +49,36 @@ export async function api(path, options = {}) {
   return data;
 }
 
+// ============================================================
+// HOD API
+// ============================================================
+
+export const getHodDashboard = () =>
+    api('/hod/dashboard');
+
+export const getHodMedicalReviews = () =>
+    api('/hod/medical-review');
+
+export const updateHodMedicalReview = (submissionId, status) => {
+    const action = String(status).toLowerCase() === 'approved' ? 'approve' : 'reject';
+    return api(`/hod/medical-review/${submissionId}/${action}`, {
+        method: 'PUT'
+    });
+};
+
+export const getHodMeetings = (status = 'all') =>
+    api(`/hod/meetings?status=${encodeURIComponent(status)}`);
+
+export const createHodMeeting = (meeting) =>
+  api('/hod/meetings', {
+    method: 'POST',
+    body: JSON.stringify(meeting)
+  });
+
+export const updateHodMeeting = (requestId, status) =>
+    api(`/hod/meetings/${requestId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+    });
+
 export default API;
