@@ -891,7 +891,293 @@ return res.status(201).json({
         client.release();
     }
 };
+export const promoteLecturerToHOD = async (req, res) => {
+    const { lecturerId } = req.params;
+    const { department_id } = req.body;
 
+    if (!lecturerId) {
+        return res.status(400).json({
+            error: 'Lecturer ID is required'
+        });
+    }
+
+    if (!department_id) {
+        return res.status(400).json({
+            error: 'Department is required'
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // -----------------------------------------
+        // 1. Find the lecturer
+        // -----------------------------------------
+        const lecturerResult = await client.query(
+            `
+            SELECT
+                lecturer_id,
+                name,
+                email,
+                password_hash,
+                is_active,
+                department_id
+            FROM lecturers
+            WHERE lecturer_id = $1
+            FOR UPDATE
+            `,
+            [lecturerId]
+        );
+
+        if (lecturerResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+
+            return res.status(404).json({
+                error: 'Lecturer not found'
+            });
+        }
+
+        const lecturer = lecturerResult.rows[0];
+
+        if (!lecturer.is_active) {
+            await client.query('ROLLBACK');
+
+            return res.status(400).json({
+                error: 'Inactive lecturers cannot be promoted to HOD'
+            });
+        }
+
+        // -----------------------------------------
+        // 2. Check whether this lecturer
+        //    is already an HOD
+        // -----------------------------------------
+        const existingHODResult = await client.query(
+            `
+            SELECT
+                hod_id,
+                name,
+                email
+            FROM hods
+            WHERE lecturer_id = $1
+            `,
+            [lecturerId]
+        );
+
+        if (existingHODResult.rows.length > 0) {
+            await client.query('ROLLBACK');
+
+            return res.status(409).json({
+                error: 'This lecturer is already an HOD'
+            });
+        }
+
+        // -----------------------------------------
+        // 3. Get HOD role ID
+        // -----------------------------------------
+        const roleResult = await client.query(
+            `
+            SELECT role_id
+            FROM roles
+            WHERE role_name = 'HOD'
+            `
+        );
+
+        if (roleResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+
+            return res.status(500).json({
+                error: 'HOD role does not exist in the database'
+            });
+        }
+
+        const hodRoleId = roleResult.rows[0].role_id;
+
+        // -----------------------------------------
+        // 4. Find department
+        // -----------------------------------------
+        const departmentResult = await client.query(
+            `
+            SELECT
+                department_id,
+                dep_name,
+                dean_id,
+                hod_id
+            FROM departments
+            WHERE department_id = $1
+            FOR UPDATE
+            `,
+            [department_id]
+        );
+
+        if (departmentResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+
+            return res.status(404).json({
+                error: 'Department not found'
+            });
+        }
+
+        const department = departmentResult.rows[0];
+
+        // -----------------------------------------
+        // 5. Only one HOD per department
+        // -----------------------------------------
+        if (department.hod_id !== null) {
+            await client.query('ROLLBACK');
+
+            return res.status(409).json({
+                error: 'This department already has an HOD'
+            });
+        }
+
+        // -----------------------------------------
+        // 6. Create HOD record
+        // -----------------------------------------
+        const registeredBy =
+            req.user?.userId ||
+            req.user?.id ||
+            1;
+
+        const hodResult = await client.query(
+            `
+            INSERT INTO hods
+            (
+                name,
+                email,
+                password_hash,
+                lecturer_id,
+                dean_id,
+                role_id,
+                registered_by,
+                is_active
+            )
+            VALUES
+            (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                true
+            )
+            RETURNING
+                hod_id,
+                name,
+                email,
+                lecturer_id,
+                dean_id,
+                role_id,
+                created_at,
+                is_active
+            `,
+            [
+                lecturer.name,
+                lecturer.email,
+                lecturer.password_hash,
+                lecturer.lecturer_id,
+                department.dean_id,
+                hodRoleId,
+                registeredBy
+            ]
+        );
+
+        const hod = hodResult.rows[0];
+
+        // -----------------------------------------
+        // 7. Link HOD to department
+        // -----------------------------------------
+        await client.query(
+            `
+            UPDATE departments
+            SET hod_id = $1
+            WHERE department_id = $2
+            `,
+            [
+                hod.hod_id,
+                department.department_id
+            ]
+        );
+
+        // -----------------------------------------
+        // 8. Audit log
+        // -----------------------------------------
+        await client.query(
+            `
+            INSERT INTO audit_logs
+                (
+                    action,
+                    target,
+                    performed_by,
+                    ip_address,
+                    role,
+                    severity,
+                    module,
+                    details
+                )
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'Lecturer promoted to HOD',
+                lecturer.name,
+                registeredBy,
+                req.ip,
+                'Admin',
+                'Info',
+                'User Management',
+                `${lecturer.name} was promoted to HOD of ${department.dep_name}`
+            ]
+        );
+
+        await client.query('COMMIT');
+
+        return res.status(200).json({
+            message: `${lecturer.name} promoted to HOD successfully`,
+            user: {
+                id: hod.hod_id,
+                name: hod.name,
+                email: hod.email,
+                role: 'HOD',
+                lecturer_id: hod.lecturer_id,
+                department_id: department.department_id,
+                department_name: department.dep_name,
+                dean_id: department.dean_id,
+                is_active: hod.is_active
+            }
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+
+        console.error(
+            'Promote lecturer to HOD error:',
+            error
+        );
+
+        if (error.code === '23505') {
+            return res.status(409).json({
+                error: 'This lecturer may already be assigned as an HOD'
+            });
+        }
+
+        if (error.code === '23503') {
+            return res.status(400).json({
+                error: 'Invalid lecturer, department, dean or role reference'
+            });
+        }
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
+
+    } finally {
+        client.release();
+    }
+};
 export const getAuditLogs = async (req, res) => {
     try {
         const { startDate, endDate, role, severity, action } = req.query;
@@ -1148,69 +1434,101 @@ if (role === 'Admin') {
 export const deleteUser = async (req, res) => {
     const { role, id } = req.params;
 
-    if (!['Student', 'Lecturer', 'HOD', 'Dean', 'Admin'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role' });
-}
+    const allowedRoles = [
+        'Student',
+        'Lecturer',
+        'HOD',
+        'Dean',
+        'Admin'
+    ];
 
+    if (!allowedRoles.includes(role)) {
+        return res.status(400).json({
+            error: 'Invalid role'
+        });
+    }
+
+    const client = await pool.connect();
 
     try {
+        await client.query('BEGIN');
+
         const tableMap = {
-    Student: 'students',
-    Lecturer: 'lecturers',
-    HOD: 'hods',
-    Dean: 'deans',
-    Admin: 'admins',
-};
+            Student: 'students',
+            Lecturer: 'lecturers',
+            HOD: 'hods',
+            Dean: 'deans',
+            Admin: 'admins'
+        };
 
-const idColumnMap = {
-    Student: 'student_id',
-    Lecturer: 'lecturer_id',
-    HOD: 'hod_id',
-    Dean: 'dean_id',
-    Admin: 'admin_id',
-};
+        const idColumnMap = {
+            Student: 'student_id',
+            Lecturer: 'lecturer_id',
+            HOD: 'hod_id',
+            Dean: 'dean_id',
+            Admin: 'admin_id'
+        };
 
-const table = tableMap[role];
-const idColumn = idColumnMap[role];
+        const table = tableMap[role];
+        const idColumn = idColumnMap[role];
 
-if (role === 'Admin') {
-    const currentAdminId = req.user?.userId;
+        // -------------------------------------------------
+        // ADMIN PROTECTION
+        // -------------------------------------------------
+        if (role === 'Admin') {
+            const currentAdminId =
+                req.user?.userId ||
+                req.user?.id;
 
-    // Prevent an Admin from deleting their own account
-    if (String(id) === String(currentAdminId)) {
-        return res.status(403).json({
-            error: 'You cannot delete your own Admin account'
-        });
-    }
+            // Prevent Admin from deleting their own account
+            if (
+                currentAdminId &&
+                String(id) === String(currentAdminId)
+            ) {
+                await client.query('ROLLBACK');
 
-    // Prevent deletion of the last active Admin
-    const adminCountResult = await pool.query(
-        `
-        SELECT COUNT(*) AS count
-        FROM admins
-        WHERE is_active = TRUE
-        `
-    );
+                return res.status(403).json({
+                    error: 'You cannot delete your own Admin account'
+                });
+            }
 
-    const activeAdminCount = Number(adminCountResult.rows[0].count);
+            // Prevent deleting the last active Admin
+            const adminCountResult = await client.query(
+                `
+                SELECT COUNT(*) AS count
+                FROM admins
+                WHERE is_active = TRUE
+                `
+            );
 
-    if (activeAdminCount <= 1) {
-        return res.status(403).json({
-            error: 'The last active Admin cannot be deleted'
-        });
-    }
-}
+            const activeAdminCount =
+                Number(adminCountResult.rows[0].count);
 
-        const result = await pool.query(
+            if (activeAdminCount <= 1) {
+                await client.query('ROLLBACK');
+
+                return res.status(403).json({
+                    error: 'The last active Admin cannot be deleted'
+                });
+            }
+        }
+
+        // -------------------------------------------------
+        // FIND USER
+        // -------------------------------------------------
+        const result = await client.query(
             `
             SELECT *
             FROM ${table}
             WHERE ${idColumn} = $1
+            FOR UPDATE
             `,
             [id]
         );
 
         if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+
             return res.status(404).json({
                 error: 'User not found'
             });
@@ -1218,14 +1536,81 @@ if (role === 'Admin') {
 
         const deletedUser = result.rows[0];
 
-       const userName =
-    role === 'Student'
-        ? deletedUser.student_name
-        : role === 'Admin'
-            ? deletedUser.admin_name
-            : deletedUser.name;
+        const userName =
+            role === 'Student'
+                ? deletedUser.student_name
+                : role === 'Admin'
+                    ? deletedUser.admin_name
+                    : deletedUser.name;
 
-        await pool.query(
+        // -------------------------------------------------
+        // LECTURER
+        // -------------------------------------------------
+        if (role === 'Lecturer') {
+
+            /*
+             * A Lecturer can also be linked to an HOD record.
+             *
+             * We do NOT automatically delete the HOD record here.
+             * The HOD assignment must be removed first.
+             */
+            const hodResult = await client.query(
+                `
+                SELECT
+                    h.hod_id,
+                    h.name,
+                    d.department_id,
+                    d.dep_name
+                FROM hods h
+                LEFT JOIN departments d
+                    ON d.hod_id = h.hod_id
+                WHERE h.lecturer_id = $1
+                FOR UPDATE
+                `,
+                [id]
+            );
+
+            if (hodResult.rows.length > 0) {
+                const hod = hodResult.rows[0];
+
+                await client.query('ROLLBACK');
+
+                return res.status(409).json({
+                    error:
+                        hod.dep_name
+                            ? `This lecturer is currently the HOD of ${hod.dep_name}. Remove the HOD assignment before deleting the lecturer.`
+                            : 'This lecturer is currently assigned as an HOD. Remove the HOD assignment before deleting the lecturer.'
+                });
+            }
+        }
+
+        // -------------------------------------------------
+        // HOD
+        // -------------------------------------------------
+        if (role === 'HOD') {
+
+            /*
+             * Departments reference HODs through departments.hod_id.
+             *
+             * Clear those references first so PostgreSQL allows
+             * the HOD record to be deleted.
+             *
+             * The linked Lecturer is intentionally NOT deleted.
+             */
+            await client.query(
+                `
+                UPDATE departments
+                SET hod_id = NULL
+                WHERE hod_id = $1
+                `,
+                [id]
+            );
+        }
+
+        // -------------------------------------------------
+        // DELETE USER
+        // -------------------------------------------------
+        await client.query(
             `
             DELETE FROM ${table}
             WHERE ${idColumn} = $1
@@ -1233,17 +1618,35 @@ if (role === 'Admin') {
             [id]
         );
 
-        await pool.query(
+        // -------------------------------------------------
+        // AUDIT LOG
+        // -------------------------------------------------
+        const performedBy =
+            req.user?.userId ||
+            req.user?.id ||
+            req.body?.userId ||
+            null;
+
+        await client.query(
             `
             INSERT INTO audit_logs
-                (action, target, performed_by, ip_address, role, severity, module, details)
+                (
+                    action,
+                    target,
+                    performed_by,
+                    ip_address,
+                    role,
+                    severity,
+                    module,
+                    details
+                )
             VALUES
                 ($1, $2, $3, $4, $5, $6, $7, $8)
             `,
             [
                 'User deleted',
                 userName,
-                req.body?.userId || null,
+                performedBy,
                 req.ip,
                 role,
                 'Critical',
@@ -1252,16 +1655,46 @@ if (role === 'Admin') {
             ]
         );
 
+        await client.query('COMMIT');
+
         return res.status(200).json({
-            message: 'User deleted successfully'
+            message:
+                role === 'HOD'
+                    ? 'HOD deleted successfully. The linked Lecturer account remains active.'
+                    : 'User deleted successfully'
         });
 
     } catch (error) {
-        console.error('Delete user error:', error);
+
+        await client.query('ROLLBACK');
+
+        console.error(
+            'Delete user error:',
+            error
+        );
+
+        // PostgreSQL foreign-key violation
+        if (error.code === '23503') {
+            return res.status(409).json({
+                error:
+                    'This user cannot be deleted because other records still depend on this account.'
+            });
+        }
+
+        // PostgreSQL unique violation
+        if (error.code === '23505') {
+            return res.status(409).json({
+                error:
+                    'This user cannot be deleted because of a database constraint.'
+            });
+        }
 
         return res.status(500).json({
             error: 'Internal server error'
         });
+
+    } finally {
+        client.release();
     }
 };
 

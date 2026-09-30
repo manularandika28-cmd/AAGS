@@ -1,25 +1,24 @@
 import express from 'express';
 import { verifyToken, authorize } from '../middleware/authMiddleware.js';
-import { getPendingUsers, 
-     approveUser,
-     rejectUser, 
-     getDashboardStats, 
-     addUser, 
-     getRoles, 
-     addRole,
-     getAuditLogs,
-     getUsersByRole,
-     getRolePermissions,
-     updateRolePermissions,
-     updateUserStatus,
-     deleteUser,
-     deleteRole,
-     getSystemConfiguration,
-     updateSystemConfiguration
-    
-    
-      
-    } from '../controllers/adminController.js';
+import {
+    getPendingUsers,
+    approveUser,
+    rejectUser,
+    getDashboardStats,
+    addUser,
+    getRoles,
+    addRole,
+    getAuditLogs,
+    getUsersByRole,
+    getRolePermissions,
+    updateRolePermissions,
+    updateUserStatus,
+    deleteUser,
+    deleteRole,
+    getSystemConfiguration,
+    updateSystemConfiguration,
+    promoteLecturerToHOD
+} from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -60,6 +59,13 @@ router.put(
     verifyToken,
     authorize('Admin'),
     updateSystemConfiguration
+);
+
+router.post(
+    '/users/:lecturerId/promote-hod',
+    verifyToken,
+    authorize('Admin'),
+    promoteLecturerToHOD
 );
 
 router.delete('/roles/:roleId', deleteRole);

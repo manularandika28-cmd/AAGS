@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_access_secret_key_123';
-const REFRESH_SECRET = process.env.REFRESH_SECRET || 'your_jwt_refresh_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.REFRESH_SECRET;
 
 // Universal login searching actor tables
 export const login = async (req, res) => {
