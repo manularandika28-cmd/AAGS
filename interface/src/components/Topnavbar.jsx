@@ -1,15 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Bell,
-    HelpCircle,
-    Check,
-    CheckCheck,
-    LogOut,
-    User,
-    Settings,
-    ChevronDown,
+     Bell, HelpCircle, Check, CheckCheck, LogOut, Settings, ChevronDown, Sun, Moon
 } from 'lucide-react';
+
+import useTheme from '../hooks/useTheme';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +14,7 @@ const API_BASE = 'http://localhost:3000/api';
 
 const Topnavbar = () => {
    const navigate = useNavigate();
+   const { isLight, toggle } = useTheme();
     const {
         user,
         accessToken,
@@ -303,26 +299,7 @@ const Topnavbar = () => {
 
     return (
         <header
-            className="
-                h-16
-                mt-[9px]
-                ml-4
-                mr-4
-                shrink-0
-                bg-white/10
-                backdrop-blur-xl
-                border
-                border-white/20
-                px-8
-                pl-6
-                flex
-                items-center
-                justify-between
-                z-20
-                select-none
-                rounded-xl
-                shadow-lg
-            "
+            className="glass-card !rounded-2xl h-16 mt-[9px] mx-4 shrink-0 px-8 pl-6 flex items-center justify-between z-20 select-none"
         >
 
             {/* =========================================================
@@ -582,6 +559,13 @@ const Topnavbar = () => {
                     )}
                 </div>
 
+<button
+  onClick={toggle}
+  className="p-1 text-white hover:text-white/70 transition-colors focus:outline-none"
+  aria-label="Toggle theme"
+>
+  {isLight ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+</button>
 
                 {/* =====================================================
                     HELP
