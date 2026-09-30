@@ -41,7 +41,7 @@ export const getMyNotifications = async (req, res) => {
                 n.notification_id,
                 n.title,
                 n.message,
-                n.delivery_status,
+                
                 n.created_at,
                 r.received_at,
                 r.is_read
