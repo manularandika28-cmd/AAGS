@@ -22,7 +22,6 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.08),
     inset 0 0 24px rgba(255, 255, 255, 0.05);
   color: #fff;
-  overflow: hidden;
 }
 /* Specular highlight */
 .glass-card::before {
@@ -103,3 +102,22 @@
 
 .glass-card tbody tr { transition: background .2s ease; }
 .glass-card thead tr { border-color: rgba(255,255,255,0.2); }
+
+/* Auto-style every form field inside modals (no className edits needed) */
+.glass-modal input,
+.glass-modal select,
+.glass-modal textarea {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  color: #fff !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+}
+.glass-modal input::placeholder,
+.glass-modal textarea::placeholder { color: rgba(255,255,255,0.5); }
+.glass-modal input:focus,
+.glass-modal select:focus,
+.glass-modal textarea:focus {
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+}
+.glass-modal option { color: #0f172a; background: #fff; }
