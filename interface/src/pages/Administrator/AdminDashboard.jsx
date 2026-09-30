@@ -95,7 +95,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = 'Select', classN
   );
 };
 
-const ROLE_OPTIONS = ['Student', 'Lecturer', 'HOD', 'Dean', 'Admin'].map((r) => ({ value: r, label: r }));
+const ROLE_OPTIONS = ['Student', 'Lecturer',  'Dean', 'Admin'].map((r) => ({ value: r, label: r }));
 const FILTER_OPTIONS = [{ value: 'All', label: 'All Roles' }, ...ROLE_OPTIONS];
 const DEPT_OPTIONS = [
   { value: '', label: 'Select department' },
