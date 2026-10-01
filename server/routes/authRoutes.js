@@ -5,7 +5,7 @@ import { forgotPassword, resetPassword } from '../controllers/passwordResetContr
 const router = express.Router();
 
 router.post('/login', login);
-router.get('/refresh', refreshToken);
+router.post('/refresh', refreshToken);
 router.post('/register', register);
 router.post('/logout', logout);
 

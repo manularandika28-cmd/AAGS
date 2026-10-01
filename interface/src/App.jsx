@@ -11,6 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SettingsPage from './pages/settings';
 
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -78,7 +79,7 @@ function App() {
   loop
   muted
   playsInline
-  className="w-full h-full object-cover blur-sm"
+  className="w-full h-full object-cover blur-md"
 >
   <source
     src={backgroundVideo}
@@ -318,6 +319,27 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* =========================================
+    SETTINGS
+========================================= */}
+
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        'Student',
+        'Lecturer',
+        'HOD',
+        'Dean',
+        'Admin'
+      ]}
+    >
+      <SettingsPage />
+    </ProtectedRoute>
+  }
+/>
 
 
             {/* =========================================

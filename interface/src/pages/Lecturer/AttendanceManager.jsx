@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidenavbar from "../../components/Sidenavbar";
 import Topnavbar from "../../components/Topnavbar";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   Search,
   Fingerprint,
   Pause,
+  CirclePlay,
   CircleStop,
   CheckCircle2,
   Timer,
@@ -26,6 +28,96 @@ import {
 
 
 const AttendanceManager = () => {
+  const { accessToken, user } = useAuth();
+  const [sessions, setSessions] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [enrolledCount, setEnrolledCount] = useState(0);
+  const [sessionProgress, setSessionProgress] = useState(0);
+  const presentCount = attendanceRecords.filter(
+  (record) => record.status === "present"
+).length;
+  useEffect(() => {
+  const fetchLecturerSessions = async () => {
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/lecturer/sessions",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch sessions");
+      }
+
+      console.log("Lecturer sessions:", data);
+      setSessions(data.sessions);
+      if (data.sessions.length > 0) {
+  setEnrolledCount(Number(data.sessions[0].enrolled_count));
+}
+  const sessionId = data.sessions[0].session_id;
+
+  const attendanceResponse = await fetch(
+    `http://localhost:3000/api/lecturer/sessions/${sessionId}/attendance`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const attendanceData = await attendanceResponse.json();
+
+  if (!attendanceResponse.ok) {
+    throw new Error(
+      attendanceData.error || "Failed to fetch attendance"
+    );
+  }
+
+  console.log("Session attendance:", attendanceData);
+  setAttendanceRecords(attendanceData.attendance);
+  setEnrolledCount(attendanceData.enrolled_count);
+  const presentCount = attendanceData.attendance.filter(
+  (record) => record.status === "present"
+).length;
+
+const progress =
+  attendanceData.enrolled_count > 0
+    ? (presentCount / attendanceData.enrolled_count) * 100
+    : 0;
+
+setSessionProgress(progress);
+  console.log("Attendance records state data:", attendanceData.attendance);
+
+    } catch (error) {
+      console.error("Sessions error:", error);
+    }
+  };
+
+  fetchLecturerSessions();
+}, [accessToken]);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isSessionStarted, setIsSessionStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [studentRegistrationNumber, setStudentRegistrationNumber] = useState("");
+  const [manualReason, setManualReason] = useState("Fingerprint Not Recognized");
+  useEffect(() => {
+  if (!isSessionStarted || isPaused) {
+    return;
+  }
+
+  const timer = setInterval(() => {
+    setElapsedTime((previousTime) => previousTime + 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [isSessionStarted, isPaused]);
   return (
     <div className="min-h-screen flex text-[#071B38]">
 
@@ -68,43 +160,140 @@ const AttendanceManager = () => {
 
               {/* Module */}
               <h2 className="text-[36px] leading-tight font-bold text-white max-w-[650px]">
-                IT3045: Advanced Database
-                <br />
-                Systems
+                {sessions[0]?.course_code}: {sessions[0]?.course_name}
               </h2>
-
 
               {/* Session details */}
               <p className="mt-3 text-[15px] text-white/70">
-                Lecture • Week 7 • Dr. A. Perera
+                Lecture • {sessions[0]?.day_of_week} • {user?.name}
               </p>
-
             </div>
 
 
             {/* Session buttons */}
             <div className="flex items-center gap-4 pb-1">
 
+              {/* Start Session */}
+              <button
+                onClick={async () => {
+                    if (!sessions[0]?.session_id) {
+                      alert("No session found.");
+                      return;
+                    }
+
+                    try {
+                      const response = await fetch(
+                        `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/start`,
+                        {
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                          },
+                        }
+                      );
+
+                      const data = await response.json();
+
+                      if (!response.ok) {
+                        alert(data.error || "Failed to start session.");
+                        return;
+                      }
+
+                      setElapsedTime(0);
+                      setIsSessionStarted(true);
+                      setIsPaused(false);
+
+                      alert("Attendance session started.");
+                    } catch (error) {
+                      console.error("Start session error:", error);
+                      alert("Could not connect to the server.");
+                    }
+                  }}
+                
+                className="w-[158px] h-[58px] rounded-lg bg-[#12B76A] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#0FA563]"
+>
+              <CirclePlay size={21} fill="currentColor" />
+              <span className="text-[13px] font-semibold leading-tight">
+              Start
+                  <br />
+                  Session
+                </span>
+              </button>
+
               {/* Pause */}
-              <button className="w-[158px] h-[58px] rounded-lg bg-[#E8F0FD] border border-[#D8E2F2] text-[#071B38] flex items-center justify-center gap-3 shadow-sm hover:bg-[#DDE9FA]">
+                <button 
+                onClick={() => setIsPaused(!isPaused)}
+                className="w-[158px] h-[58px] rounded-lg bg-[#E8F0FD] border border-[#D8E2F2] text-[#071B38] flex items-center justify-center gap-3 shadow-sm hover:bg-[#DDE9FA]">
 
                 <Pause
                   size={19}
                   fill="currentColor"
                 />
-
                 <span className="text-[13px] font-semibold leading-tight">
-                  Pause
-                  <br />
-                  Scanner
+                  {isPaused ? (
+                    <>
+                      Resume
+                      <br />
+                      Scanner
+                    </>
+                  ) : (
+                    <>
+                      Pause
+                      <br />
+                      Scanner
+                    </>
+                  )}
                 </span>
+                
 
               </button>
 
 
               {/* End */}
-              <button className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]">
+              <button 
+              onClick={async () => {
+  const confirmed = window.confirm(
+    "Are you sure you want to end this attendance session?"
+  );
 
+  if (!confirmed) {
+    return;
+  }
+
+  if (!sessions[0]?.session_id) {
+    alert("No session found.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/end`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Failed to end session.");
+      return;
+    }
+
+    setIsSessionStarted(false);
+    setIsPaused(false);
+
+    alert("Attendance session ended.");
+  } catch (error) {
+    console.error("End session error:", error);
+    alert("Could not connect to the server.");
+  }
+}}
+                className="w-[146px] h-[58px] rounded-lg bg-[#F04444] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#DC3838]"
+              >             
                 <CircleStop size={21} />
 
                 <span className="text-[13px] font-semibold leading-tight">
@@ -123,13 +312,13 @@ const AttendanceManager = () => {
           {/* =================================================
               MAIN GRID
           ================================================== */}
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_303px] gap-6">
+          <div className="space-y-6">
 
 
             {/* =================================================
                 LEFT SIDE
             ================================================== */}
-            <div className="min-w-0">
+            
 
 
               {/* =============================================
@@ -157,11 +346,11 @@ const AttendanceManager = () => {
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      87
+                      {presentCount}
                     </div>
 
                     <p className="text-[13px] text-[#475467] mt-2">
-                      out of 120 enrolled
+                      out of {enrolledCount} enrolled
                     </p>
 
                   </div>
@@ -188,16 +377,15 @@ const AttendanceManager = () => {
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      72.5%
+                    {sessionProgress.toFixed(1)}%
                     </div>
-
 
                     {/* Progress bar */}
                     <div className="mt-3 w-full h-[9px] bg-[#D5E3F8] rounded-full overflow-hidden">
 
                       <div
                         className="h-full bg-[#12B76A] rounded-full"
-                        style={{ width: "72.5%" }}
+                        style={{ width: `${sessionProgress}%` }}
                       ></div>
 
                     </div>
@@ -226,7 +414,11 @@ const AttendanceManager = () => {
                   <div className="mt-4">
 
                     <div className="text-[36px] leading-none font-bold text-[#071B38]">
-                      45:12
+                      {`${Math.floor(elapsedTime / 60)
+                        .toString()
+                        .padStart(2, "0")}:${(elapsedTime % 60)
+                        .toString()
+                        .padStart(2, "0")}`}
                     </div>
 
                     <p className="text-[13px] text-[#475467] mt-2">
@@ -308,157 +500,50 @@ const AttendanceManager = () => {
                 </div>
 
 
-                {/* Row 1 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
+               {attendanceRecords.map((record) => (
+  <div
+    key={record.attendance_id}
+    className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]"
+  >
+    <span className="text-[13px] text-[#475467]">
+      {record.marked_at
+        ? new Date(record.marked_at).toLocaleTimeString()
+        : "-"}
+    </span>
 
-                  <span className="text-[13px] text-[#475467]">
-                    08:45:12
-                  </span>
+    <span className="text-[13px] font-semibold text-[#071B38]">
+      {record.student_id}
+    </span>
 
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/101
-                  </span>
+    <span className="text-[14px] text-[#071B38]">
+      {record.student_name}
+    </span>
 
-                  <span className="text-[14px] text-[#071B38]">
-                    Kamal Perera
-                  </span>
+    <span className="text-[13px] text-[#475467] flex items-center gap-2">
+      <Fingerprint size={15} />
+      {record.changed_reason ? "Manual Override" : "Scanner"}
+    
+    </span>
 
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 1
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
-
-                {/* Row 2 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:44:50
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/085
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38]">
-                    Nimali Silva
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 2
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
-
-                {/* Row 3 - Failed */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[80px] bg-[#FFF8F7]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:42:15
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/112
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38] leading-tight">
-                    Unknown /
-                    <br />
-                    Mismatch
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 1
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#FFD9D5] text-[#B42318] px-3 py-2 text-[12px] font-medium text-center leading-tight">
-                    ⓘ Failed
-                    <br />
-                    (Retry)
-                  </span>
-
-                </div>
-
-
-                {/* Row 4 - Manual */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 border-b border-[#D0D5DD] min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:40:05
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/042
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38] leading-tight">
-                    Ruwan
-                    <br />
-                    Bandara
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <UserRoundCheck size={15} />
-                    Manual
-                    <br />
-                    Override
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#FFFAEB] text-[#B54708] px-3 py-1 text-[12px] font-medium">
-                    ♢ Manual
-                  </span>
-
-                </div>
-
-
-                {/* Row 5 */}
-                <div className="grid grid-cols-[103px_125px_1fr_155px_72px] items-center px-4 py-4 min-h-[72px]">
-
-                  <span className="text-[13px] text-[#475467]">
-                    08:38:22
-                  </span>
-
-                  <span className="text-[13px] font-semibold text-[#071B38]">
-                    2020/CS/005
-                  </span>
-
-                  <span className="text-[14px] text-[#071B38]">
-                    Saman Kumara
-                  </span>
-
-                  <span className="text-[13px] text-[#475467] flex items-center gap-2">
-                    <Fingerprint size={15} />
-                    Scanner 2
-                  </span>
-
-                  <span className="justify-self-start rounded-full bg-[#ECFDF3] text-[#12B76A] px-3 py-1 text-[12px] font-medium">
-                    ✓ Verified
-                  </span>
-
-                </div>
-
+    <span
+      className={`justify-self-start rounded-full px-3 py-1 text-[12px] font-medium ${
+        record.status === "present"
+          ? "bg-[#ECFDF3] text-[#12B76A]"
+          : "bg-[#FEF3F2] text-[#F04438]"
+      }`}
+    >
+      {record.status === "present" ? "✓ Present" : "✕ Absent"}
+    </span>
+  </div>
+))} 
               </section>
 
-            </div>
-
+            
 
             {/* =================================================
                 RIGHT SIDE
             ================================================== */}
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
               {/* =============================================
@@ -475,7 +560,7 @@ const AttendanceManager = () => {
                   <div className="flex items-baseline gap-3">
 
                     <span className="text-[36px] font-bold text-[#071B38]">
-                      72.5%
+                      {sessionProgress.toFixed(1)}%
                     </span>
 
                     <span className="text-[13px] text-[#475467]">
@@ -493,7 +578,7 @@ const AttendanceManager = () => {
                     </span>
 
                     <span className="text-[13px] text-[#F79009]">
-                      2.5% short
+                      {Math.max(0, 75 - sessionProgress).toFixed(1)}% short
                     </span>
 
                   </div>
@@ -504,7 +589,7 @@ const AttendanceManager = () => {
 
                     <div
                       className="h-full bg-[#062746] rounded-full"
-                      style={{ width: "72.5%" }}
+                      style={{ width: `${sessionProgress}%` }}
                     ></div>
 
                     {/* Target marker */}
@@ -522,8 +607,14 @@ const AttendanceManager = () => {
                     />
 
                     <p className="text-[13px] leading-5 text-[#475467]">
-                      Need <strong>3 more students</strong> to reach
-                      the 75% module requirement threshold for this
+                      Need{" "}
+                      <strong>
+                        {Math.max(
+                          0,
+                          Math.ceil(enrolledCount * 0.75 - presentCount)
+                        )} more students
+                      </strong>{" "}
+                      to reach the 75% module requirement threshold for this
                       session.
                     </p>
 
@@ -550,12 +641,14 @@ const AttendanceManager = () => {
                   <div>
 
                     <label className="block text-[12px] font-semibold text-[#475467] mb-2">
-                      Student Registration Number
+                     Student ID
                     </label>
 
                     <input
                       type="text"
-                      placeholder="e.g. 2020/CS/001"
+                      placeholder="e.g. 2"
+                      value={studentRegistrationNumber}
+                      onChange={(e) => setStudentRegistrationNumber(e.target.value)}
                       className="w-full h-[41px] rounded-lg border border-[#D0D5DD] bg-[#F8FAFC] px-3 text-[14px] text-[#344054] outline-none focus:ring-2 focus:ring-[#00427C]/20"
                     />
 
@@ -572,7 +665,9 @@ const AttendanceManager = () => {
                     <div className="relative">
 
                       <select
-                        defaultValue="Fingerprint Not Recognized"
+                        
+                        value={manualReason}
+                        onChange={(e) => setManualReason(e.target.value)}
                         className="appearance-none w-full h-[41px] rounded-lg border border-[#D0D5DD] bg-[#F8FAFC] px-3 pr-9 text-[14px] text-[#344054] outline-none focus:ring-2 focus:ring-[#00427C]/20"
                       >
                         <option>
@@ -604,7 +699,80 @@ const AttendanceManager = () => {
 
 
                   {/* Button */}
-                  <button className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
+                  
+                  <button 
+                  onClick={async () => {
+                      if (!studentRegistrationNumber.trim()) {
+                        alert("Please enter the student ID.");
+                        return;
+                      }
+
+                      if (!sessions[0]?.session_id) {
+                        alert("No active session found.");
+                        return;
+                      }
+
+                      try {
+                        const response = await fetch(
+                          `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/attendance/manual`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${accessToken}`,
+                            },
+                            body: JSON.stringify({
+                              studentId: Number(studentRegistrationNumber),
+                              reason: manualReason,
+                            }),
+                          }
+                        );
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                          alert(data.error || "Failed to mark attendance.");
+                          return;
+                        }
+
+                        alert("Attendance marked successfully.");
+
+// Refresh attendance records
+const attendanceResponse = await fetch(
+  `http://localhost:3000/api/lecturer/sessions/${sessions[0].session_id}/attendance`,
+  {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }
+);
+
+const attendanceData = await attendanceResponse.json();
+
+if (attendanceResponse.ok) {
+  setAttendanceRecords(attendanceData.attendance);
+  setEnrolledCount(attendanceData.enrolled_count);
+
+  const presentCount = attendanceData.attendance.filter(
+    (record) => record.status === "present"
+  ).length;
+
+  const progress =
+    attendanceData.enrolled_count > 0
+      ? (presentCount / attendanceData.enrolled_count) * 100
+      : 0;
+
+  setSessionProgress(progress);
+}
+
+setStudentRegistrationNumber("");
+                      }   catch (error) {
+                            console.error("Manual attendance error:", error);
+                            alert("Could not connect to the server.");
+                        }
+                        }}
+                      
+                        className="w-full h-[37px] rounded-lg bg-[#00427C] text-white text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[#003560]">
 
                     <UserRoundCheck size={16} />
 

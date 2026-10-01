@@ -1,6 +1,7 @@
 // server/db.js
 import pg from 'pg';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const { Pool } = pg;
@@ -10,8 +11,9 @@ export const pool = new Pool({
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT) || 5432,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+
   ssl: {
-    rejectUnauthorized: false // Required for Supabase cloud connection
-  }
+    rejectUnauthorized: false,
+  },
 });
