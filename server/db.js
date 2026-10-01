@@ -1,9 +1,10 @@
-import pkg from 'pg';
+// server/db.js
+import pg from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const { Pool } = pkg;
+const { Pool } = pg;
 
 export const pool = new Pool({
   user: process.env.DB_USER,
