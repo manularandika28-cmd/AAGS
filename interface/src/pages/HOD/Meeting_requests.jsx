@@ -94,7 +94,7 @@ export default function MeetingRequests() {
           {/* Section Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Meeting Request Management</h1>
+              <h1 className="text-2xl font-bold text-slate-600">Meeting Request Management</h1>
               <p className="text-xs text-slate-500 mt-0.5">Coordinate departmental schedules and handle student meeting requests.</p>
             </div>
             <button 
