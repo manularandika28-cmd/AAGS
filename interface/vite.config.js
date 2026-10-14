@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   optimizeDeps: {
-    include: ['react/jsx-runtime', 'react/jsx-dev-runtime', 'framer-motion'],
+    include: ['react/jsx-runtime', 'react/jsx-dev-runtime'],
   },
   server: {
         proxy: {
