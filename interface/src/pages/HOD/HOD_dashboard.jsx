@@ -49,8 +49,8 @@ export default function HODDashboard() {
           {/* Header Bar */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-600">Department Overview</h1>
-              <p className="text-sm text-slate-500 mt-1">Information Technology Department - Fall Semester 2024</p>
+              <h1 className="text-3xl font-extrabold text-white">Department Overview</h1>
+              <p className="text-sm text-white mt-1">Information Technology Department - Fall Semester 2024</p>
             </div>
 
             <button className="flex items-center gap-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold shadow-xs transition-colors">

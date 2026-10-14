@@ -217,8 +217,8 @@ export default function MedicalReview() {
         <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
           <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-600 sm:text-3xl">HOD Medical Review</h1>
-              <p className="mt-1 max-w-xl text-xs leading-5 text-slate-600 sm:text-sm">
+              <h1 className="text-2xl font-extrabold text-white sm:text-3xl">HOD Medical Review</h1>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-white sm:text-sm">
                 Review and process student medical certificates from your department.
               </p>
             </div>
