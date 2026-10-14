@@ -13,6 +13,7 @@ import {
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { 
   getStudentMedicals, 
   createMedicalSubmission 
@@ -21,7 +22,7 @@ import {
 import { getAcademicRecords } from '../controllers/studentcontroller.js';
 
 // Setup file upload storage
-const uploadDir = 'uploads/medicals';
+const uploadDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads/medicals');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
