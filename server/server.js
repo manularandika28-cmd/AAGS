@@ -12,6 +12,7 @@ import lecturerRoutes from './routes/lecturerRoutes.js';
 import deanRoutes from './routes/deanRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import hodRoutes from './routes/hodRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -56,6 +57,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/auth', passwordResetRoutes);
 app.use('/api/lecturer', lecturerRoutes);
 app.use('/api/dean', deanRoutes);
+app.use('/api/hod', hodRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 
