@@ -1,4 +1,4 @@
-import path from 'path';
+﻿import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { pool } from '../db.js';
@@ -42,8 +42,8 @@ export const getHodMedicalQueue = async (req, res) => {
            m.reviewed_at
          FROM medical_submissions m
          JOIN students s ON s.student_id = m.student_id
-         LEFT JOIN departments d ON d.department_id = m.department_id
-         WHERE m.department_id = $1
+         LEFT JOIN departments d ON d.department_id = s.department_id
+         WHERE s.department_id = $1
          ORDER BY
            CASE WHEN m.status = 'pending' THEN 0 ELSE 1 END,
            m.submitted_at DESC`,
@@ -56,8 +56,9 @@ export const getHodMedicalQueue = async (req, res) => {
              WHERE status = 'approved'
                AND reviewed_at >= date_trunc('month', CURRENT_DATE)
            ) AS approved_this_month
-         FROM medical_submissions
-         WHERE department_id = $1`,
+         FROM medical_submissions m
+         JOIN students s ON s.student_id = m.student_id
+         WHERE s.department_id = $1`,
         [departmentId]
       )
     ]);
@@ -75,13 +76,13 @@ export const getHodMedicalQueue = async (req, res) => {
   }
 };
 
-export const updateHodMedicalStatus = async (req, res) => {
+const updateHodMedicalStatusForAction = async (req, res, submissionId, action) => {
   const statusByAction = {
     approve: 'approved',
     reject: 'rejected',
     forward: 'forwarded_to_dean'
   };
-  const status = statusByAction[req.params.action];
+  const status = statusByAction[action];
 
   if (!status) {
     return res.status(400).json({ error: 'Action must be approve, reject, or forward' });
@@ -94,13 +95,15 @@ export const updateHodMedicalStatus = async (req, res) => {
     }
 
     const result = await pool.query(
-      `UPDATE medical_submissions
+      `UPDATE medical_submissions m
        SET status = $1, reviewed_hod = $2, reviewed_at = NOW()
-       WHERE submission_id = $3
-         AND department_id = $4
-         AND status = 'pending'
-       RETURNING submission_id, status, reviewed_at`,
-      [status, req.user.userId, req.params.submissionId, departmentId]
+       FROM students s
+       WHERE m.submission_id = $3
+         AND m.student_id = s.student_id
+         AND s.department_id = $4
+         AND m.status = 'pending'
+       RETURNING m.submission_id, m.status, m.reviewed_at`,
+      [status, req.user.userId, submissionId, departmentId]
     );
 
     if (result.rows.length === 0) {
@@ -109,12 +112,38 @@ export const updateHodMedicalStatus = async (req, res) => {
       });
     }
 
-    return res.json({ message: 'Medical submission updated', submission: result.rows[0] });
+    const messageByAction = {
+      approve: 'Medical submission approved',
+      reject: 'Medical submission rejected',
+      forward: 'Medical submission forwarded to the Dean'
+    };
+
+    return res.json({
+      message: messageByAction[action],
+      submission: result.rows[0]
+    });
   } catch (error) {
     console.error('Error updating HOD medical submission:', error);
-    return res.status(500).json({ error: 'Failed to update medical submission' });
+    return res.status(500).json({
+      error: 'Failed to update medical submission',
+      details: error.message
+    });
   }
 };
+
+export const updateHodMedicalStatus = (req, res) =>
+  updateHodMedicalStatusForAction(
+    req,
+    res,
+    req.params.submissionId,
+    req.params.action
+  );
+
+export const approveMedicalSubmission = (req, res) =>
+  updateHodMedicalStatusForAction(req, res, req.params.id, 'approve');
+
+export const rejectMedicalSubmission = (req, res) =>
+  updateHodMedicalStatusForAction(req, res, req.params.id, 'reject');
 
 export const getHodMedicalDocument = async (req, res) => {
   try {
@@ -125,8 +154,9 @@ export const getHodMedicalDocument = async (req, res) => {
 
     const result = await pool.query(
       `SELECT file_path
-       FROM medical_submissions
-       WHERE submission_id = $1 AND department_id = $2`,
+       FROM medical_submissions m
+       JOIN students s ON s.student_id = m.student_id
+       WHERE m.submission_id = $1 AND s.department_id = $2`,
       [req.params.submissionId, departmentId]
     );
     const storedPath = result.rows[0]?.file_path;
@@ -153,197 +183,106 @@ export const getHodMedicalDocument = async (req, res) => {
     return res.status(500).json({ error: 'Failed to open certificate' });
   }
 };
-import { pool } from '../db.js';
 
 export const getHODDashboard = async (req, res) => {
   try {
-    // Get logged-in HOD ID from JWT
-    const hodId =
-      req.user?.userId ||
-      req.user?.id ||
-      req.user?.hod_id;
+    const hodId = req.user?.userId || req.user?.id || req.user?.hod_id;
 
     if (!hodId) {
-      return res.status(401).json({
-        error: 'HOD identity not found'
-      });
+      return res.status(401).json({ error: 'HOD identity not found' });
     }
 
-    // ---------------------------------------------------------
-    // 1. FIND HOD'S DEPARTMENT
-    // HOD -> lecturer -> department
-    // ---------------------------------------------------------
     const hodResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         h.hod_id,
         h.name AS hod_name,
         l.lecturer_id,
         l.department_id,
         d.dep_name
       FROM hods h
-      JOIN lecturers l
-        ON h.lecturer_id = l.lecturer_id
-      JOIN departments d
-        ON l.department_id = d.department_id
-      WHERE h.hod_id = $1
-        AND h.is_active = true
-      `,
+      JOIN lecturers l ON h.lecturer_id = l.lecturer_id
+      JOIN departments d ON l.department_id = d.department_id
+      WHERE h.hod_id = $1 AND h.is_active = true`,
       [hodId]
     );
 
     if (hodResult.rows.length === 0) {
-      return res.status(404).json({
-        error: 'HOD or department not found'
-      });
+      return res.status(404).json({ error: 'HOD or department not found' });
     }
 
     const hod = hodResult.rows[0];
     const departmentId = hod.department_id;
 
-    // ---------------------------------------------------------
-    // 2. DEPARTMENT ATTENDANCE AVERAGE
-    // ---------------------------------------------------------
     const attendanceResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         COALESCE(
           ROUND(
             100.0 *
-            SUM(
-              CASE
-                WHEN LOWER(ar.status::text) = 'present'
-                THEN 1
-                ELSE 0
-              END
-            )
-            /
-            NULLIF(COUNT(ar.attendance_id), 0),
+            SUM(CASE WHEN LOWER(ar.status::text) = 'present' THEN 1 ELSE 0 END)
+            / NULLIF(COUNT(ar.attendance_id), 0),
             1
           ),
           0
         ) AS average
       FROM attendance_records ar
-      JOIN sessions s
-        ON ar.session_id = s.session_id
-      JOIN courses c
-        ON s.course_id = c.course_id
-      WHERE c.department_id = $1
-      `,
+      JOIN sessions s ON ar.session_id = s.session_id
+      JOIN courses c ON s.course_id = c.course_id
+      WHERE c.department_id = $1`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 3. PENDING MEDICAL SUBMISSIONS
-    // ONLY STUDENTS FROM HOD'S DEPARTMENT
-    // ---------------------------------------------------------
     const medicalCountResult = await pool.query(
-      `
-      SELECT COUNT(*) AS total
+      `SELECT COUNT(*) AS total
       FROM medical_submissions ms
-      JOIN students st
-        ON ms.student_id = st.student_id
+      JOIN students st ON ms.student_id = st.student_id
       WHERE st.department_id = $1
-        AND LOWER(ms.status::text) = 'pending'
-      `,
+        AND LOWER(ms.status::text) = 'pending'`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 4. ACTIVE SESSIONS TODAY
-    // ---------------------------------------------------------
     const activeSessionsResult = await pool.query(
-      `
-      SELECT COUNT(*) AS total
+      `SELECT COUNT(*) AS total
       FROM sessions s
-      JOIN courses c
-        ON s.course_id = c.course_id
+      JOIN courses c ON s.course_id = c.course_id
       WHERE c.department_id = $1
         AND s.session_date::date = CURRENT_DATE
         AND (
           s.start_time IS NULL
           OR s.end_time IS NULL
-          OR (
-            CURRENT_TIME >= s.start_time
-            AND CURRENT_TIME <= s.end_time
-          )
-        )
-      `,
+          OR (CURRENT_TIME >= s.start_time AND CURRENT_TIME <= s.end_time)
+        )`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 5. MODULE ATTENDANCE
-    // ---------------------------------------------------------
     const modulesResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         c.course_id,
         c.course_code AS code,
-
-        COALESCE(
-          STRING_AGG(DISTINCT l.name, ', '),
-          'No Lecturer Assigned'
-        ) AS lecturer,
-
-        COUNT(
-          DISTINCT e.student_id
-        ) AS students,
-
+        COALESCE(STRING_AGG(DISTINCT l.name, ', '), 'No Lecturer Assigned') AS lecturer,
+        COUNT(DISTINCT e.student_id) AS students,
         COALESCE(
           ROUND(
             100.0 *
-            SUM(
-              CASE
-                WHEN LOWER(ar.status::text) = 'present'
-                THEN 1
-                ELSE 0
-              END
-            )
-            /
-            NULLIF(COUNT(ar.attendance_id), 0),
+            SUM(CASE WHEN LOWER(ar.status::text) = 'present' THEN 1 ELSE 0 END)
+            / NULLIF(COUNT(ar.attendance_id), 0),
             1
           ),
           0
         ) AS avg_attendance
-
       FROM courses c
-
-      LEFT JOIN course_lecturers cl
-        ON c.course_id = cl.course_id
-
-      LEFT JOIN lecturers l
-        ON cl.lecturer_id = l.lecturer_id
-
-      LEFT JOIN enrollments e
-        ON c.course_id = e.course_id
-
-      LEFT JOIN sessions s
-        ON c.course_id = s.course_id
-        AND s.session_date <= NOW()
-
-      LEFT JOIN attendance_records ar
-        ON s.session_id = ar.session_id
-        AND e.student_id = ar.student_id
-
+      LEFT JOIN course_lecturers cl ON c.course_id = cl.course_id
+      LEFT JOIN lecturers l ON cl.lecturer_id = l.lecturer_id
+      LEFT JOIN enrollments e ON c.course_id = e.course_id
+      LEFT JOIN sessions s ON c.course_id = s.course_id AND s.session_date <= NOW()
+      LEFT JOIN attendance_records ar ON s.session_id = ar.session_id AND e.student_id = ar.student_id
       WHERE c.department_id = $1
-
-      GROUP BY
-        c.course_id,
-        c.course_code
-
-      ORDER BY
-        c.course_code
-      `,
+      GROUP BY c.course_id, c.course_code
+      ORDER BY c.course_code`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 6. MEDICAL QUEUE
-    // ---------------------------------------------------------
     const medicalQueueResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         ms.submission_id,
         st.student_id,
         st.student_name,
@@ -353,78 +292,31 @@ export const getHODDashboard = async (req, res) => {
         ms.status,
         ms.submitted_at,
         l.name AS lecturer_name
-
       FROM medical_submissions ms
-
-      JOIN students st
-        ON ms.student_id = st.student_id
-
-      LEFT JOIN enrollments e
-        ON st.student_id = e.student_id
-
-      LEFT JOIN course_lecturers cl
-        ON e.course_id = cl.course_id
-
-      LEFT JOIN lecturers l
-        ON cl.lecturer_id = l.lecturer_id
-
-      LEFT JOIN courses c
-        ON e.course_id = c.course_id
-
+      JOIN students st ON ms.student_id = st.student_id
+      LEFT JOIN enrollments e ON st.student_id = e.student_id
+      LEFT JOIN course_lecturers cl ON e.course_id = cl.course_id
+      LEFT JOIN lecturers l ON cl.lecturer_id = l.lecturer_id
+      LEFT JOIN courses c ON e.course_id = c.course_id
       WHERE st.department_id = $1
-
-      GROUP BY
-        ms.submission_id,
-        st.student_id,
-        st.student_name,
-        ms.description,
-        ms.date_from,
-        ms.date_to,
-        ms.status,
-        ms.submitted_at,
-        l.name
-
+      GROUP BY ms.submission_id, st.student_id, st.student_name, ms.description,
+        ms.date_from, ms.date_to, ms.status, ms.submitted_at, l.name
       ORDER BY ms.submitted_at ASC
-
-      LIMIT 5
-      `,
+      LIMIT 5`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 7. SEND RESPONSE
-    // ---------------------------------------------------------
     res.json({
-      hod: {
-        id: hod.hod_id,
-        name: hod.hod_name
-      },
-
-      department: {
-        id: departmentId,
-        name: hod.dep_name
-      },
-
+      hod: { id: hod.hod_id, name: hod.hod_name },
+      department: { id: departmentId, name: hod.dep_name },
       metrics: {
-        attendanceAverage: Number(
-          attendanceResult.rows[0]?.average || 0
-        ),
-
-        pendingMedicals: Number(
-          medicalCountResult.rows[0]?.total || 0
-        ),
-
-        activeSessionsToday: Number(
-          activeSessionsResult.rows[0]?.total || 0
-        ),
-
-        // No staff-leave table exists; null means this metric is not tracked.
+        attendanceAverage: Number(attendanceResult.rows[0]?.average || 0),
+        pendingMedicals: Number(medicalCountResult.rows[0]?.total || 0),
+        activeSessionsToday: Number(activeSessionsResult.rows[0]?.total || 0),
         staffOnLeave: null
       },
-
       modules: modulesResult.rows.map((row) => {
         const attendance = Number(row.avg_attendance || 0);
-
         let trend = 'stable';
 
         if (attendance >= 80) {
@@ -442,7 +334,6 @@ export const getHODDashboard = async (req, res) => {
           status: trend
         };
       }),
-
       medicalQueue: medicalQueueResult.rows.map((row) => ({
         id: row.submission_id,
         studentId: row.student_id,
@@ -455,10 +346,8 @@ export const getHODDashboard = async (req, res) => {
         lecturer: row.lecturer_name
       }))
     });
-
   } catch (error) {
     console.error('HOD dashboard error:', error);
-
     res.status(500).json({
       error: 'Failed to load HOD dashboard',
       details: error.message
@@ -466,111 +355,63 @@ export const getHODDashboard = async (req, res) => {
   }
 };
 
-// ============================================================
-// HOD MEDICAL REVIEW - GET DATA
-// ============================================================
-
-// ============================================================
-// HOD MEDICAL REVIEW - GET DATA
-// ============================================================
-
 export const getHODMedicalReview = async (req, res) => {
   try {
-    const hodId =
-      req.user?.userId ||
-      req.user?.id ||
-      req.user?.hod_id;
+    const hodId = req.user?.userId || req.user?.id || req.user?.hod_id;
 
     if (!hodId) {
-      return res.status(401).json({
-        error: 'HOD identity not found'
-      });
+      return res.status(401).json({ error: 'HOD identity not found' });
     }
 
-    // ---------------------------------------------------------
-    // 1. FIND HOD'S DEPARTMENT
-    // ---------------------------------------------------------
     const hodResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         h.hod_id,
         h.name AS hod_name,
-        l.department_id,
+        COALESCE(h.department_id, l.department_id) AS department_id,
         d.dep_name
       FROM hods h
-      JOIN lecturers l
-        ON h.lecturer_id = l.lecturer_id
-      JOIN departments d
-        ON l.department_id = d.department_id
-      WHERE h.hod_id = $1
-        AND h.is_active = true
-      `,
+      LEFT JOIN lecturers l ON h.lecturer_id = l.lecturer_id
+      JOIN departments d ON d.department_id = COALESCE(h.department_id, l.department_id)
+      WHERE h.hod_id = $1 AND h.is_active = true`,
       [hodId]
     );
 
     if (hodResult.rows.length === 0) {
-      return res.status(404).json({
-        error: 'HOD or department not found'
-      });
+      return res.status(404).json({ error: 'HOD or department not found' });
     }
 
     const hod = hodResult.rows[0];
     const departmentId = hod.department_id;
 
-    // ---------------------------------------------------------
-    // 2. PENDING MEDICAL COUNT
-    // ---------------------------------------------------------
     const pendingResult = await pool.query(
-      `
-      SELECT COUNT(*) AS total
+      `SELECT COUNT(*) AS total
       FROM medical_submissions ms
-      JOIN students st
-        ON ms.student_id = st.student_id
-      WHERE st.department_id = $1
-        AND ms.status = 'pending'
-      `,
+      JOIN students st ON ms.student_id = st.student_id
+      WHERE st.department_id = $1 AND ms.status = 'pending'`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 3. APPROVED THIS MONTH
-    // ---------------------------------------------------------
     const approvedResult = await pool.query(
-      `
-      SELECT COUNT(*) AS total
+      `SELECT COUNT(*) AS total
       FROM medical_submissions ms
-      JOIN students st
-        ON ms.student_id = st.student_id
+      JOIN students st ON ms.student_id = st.student_id
       WHERE st.department_id = $1
         AND ms.status = 'approved'
         AND ms.reviewed_at >= DATE_TRUNC('month', CURRENT_DATE)
-        AND ms.reviewed_at < DATE_TRUNC('month', CURRENT_DATE)
-            + INTERVAL '1 month'
-      `,
+        AND ms.reviewed_at < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 4. MEDICAL REVIEW QUEUE
-    // ---------------------------------------------------------
-    //
-    // LATERAL is used here so one medical submission creates
-    // one card, even if the student is enrolled in multiple
-    // courses.
-    //
     const queueResult = await pool.query(
-      `
-      SELECT
+      `SELECT
         ms.submission_id,
         ms.student_id,
         st.student_name,
         st.email AS student_email,
-
         course_info.course_id,
         course_info.course_code,
         course_info.course_name,
         course_info.lecturer_name,
-
         ms.description,
         ms.date_from,
         ms.date_to,
@@ -578,289 +419,62 @@ export const getHODMedicalReview = async (req, res) => {
         ms.status,
         ms.submitted_at,
         ms.reviewed_at,
-
-        ms.reviewed_by,
+        ms.reviewed_hod,
         reviewer.name AS reviewer_name
-
       FROM medical_submissions ms
-
-      JOIN students st
-        ON ms.student_id = st.student_id
-
-      -- Get one course/lecturer for the student
+      JOIN students st ON ms.student_id = st.student_id
       LEFT JOIN LATERAL (
         SELECT
           c.course_id,
           c.course_code,
           c.course_name,
-          STRING_AGG(
-            DISTINCT l.name,
-            ', '
-            ORDER BY l.name
-          ) AS lecturer_name
-
+          STRING_AGG(DISTINCT l.name, ', ' ORDER BY l.name) AS lecturer_name
         FROM enrollments e
-
-        JOIN courses c
-          ON e.course_id = c.course_id
-
-        LEFT JOIN course_lecturers cl
-          ON c.course_id = cl.course_id
-
-        LEFT JOIN lecturers l
-          ON cl.lecturer_id = l.lecturer_id
-
-        WHERE e.student_id = st.student_id
-          AND c.department_id = $1
-
-        GROUP BY
-          c.course_id,
-          c.course_code,
-          c.course_name
-
+        JOIN courses c ON e.course_id = c.course_id
+        LEFT JOIN course_lecturers cl ON c.course_id = cl.course_id
+        LEFT JOIN lecturers l ON cl.lecturer_id = l.lecturer_id
+        WHERE e.student_id = st.student_id AND c.department_id = $1
+        GROUP BY c.course_id, c.course_code, c.course_name
         ORDER BY c.course_code
-
         LIMIT 1
-      ) course_info
-        ON true
-
-      LEFT JOIN lecturers reviewer
-        ON ms.reviewed_by = reviewer.lecturer_id
-
+      ) course_info ON true
+      LEFT JOIN hods reviewer ON ms.reviewed_hod = reviewer.hod_id
       WHERE st.department_id = $1
-
-      ORDER BY ms.submitted_at ASC
-      `,
+      ORDER BY ms.submitted_at ASC`,
       [departmentId]
     );
 
-    // ---------------------------------------------------------
-    // 5. SEND DATA TO FRONTEND
-    // ---------------------------------------------------------
     res.json({
-      hod: {
-        id: hod.hod_id,
-        name: hod.hod_name
-      },
-
-      department: {
-        id: departmentId,
-        name: hod.dep_name
-      },
-
+      hod: { id: hod.hod_id, name: hod.hod_name },
+      department: { id: departmentId, name: hod.dep_name },
       counts: {
-        pending: Number(
-          pendingResult.rows[0]?.total || 0
-        ),
-
-        approvedThisMonth: Number(
-          approvedResult.rows[0]?.total || 0
-        )
+        pending: Number(pendingResult.rows[0]?.total || 0),
+        approvedThisMonth: Number(approvedResult.rows[0]?.total || 0)
       },
-
       submissions: queueResult.rows.map((row) => ({
         id: row.submission_id,
-
         studentId: row.student_id,
         studentName: row.student_name,
         studentEmail: row.student_email,
-
         courseId: row.course_id,
         courseCode: row.course_code,
         courseName: row.course_name,
-
         lecturer: row.lecturer_name,
-
         description: row.description,
-
         dateFrom: row.date_from,
         dateTo: row.date_to,
-
         filePath: row.file_path,
-
         status: row.status,
-
         submittedAt: row.submitted_at,
         reviewedAt: row.reviewed_at,
-
-        reviewedBy: row.reviewed_by,
+        reviewedBy: row.reviewed_hod,
         reviewerName: row.reviewer_name
       }))
     });
-
   } catch (error) {
     console.error('HOD medical review error:', error);
-
     res.status(500).json({
       error: 'Failed to load medical review data',
-      details: error.message
-    });
-  }
-};
-
-
-// ============================================================
-// HOD MEDICAL REVIEW - APPROVE
-// ============================================================
-
-export const approveMedicalSubmission = async (req, res) => {
-  try {
-    const hodId =
-      req.user?.userId ||
-      req.user?.id ||
-      req.user?.hod_id;
-
-    const submissionId = req.params.id;
-
-    if (!hodId) {
-      return res.status(401).json({
-        error: 'HOD identity not found'
-      });
-    }
-
-    // Find HOD department
-    const hodResult = await pool.query(
-      `
-      SELECT l.department_id
-      FROM hods h
-      JOIN lecturers l
-        ON h.lecturer_id = l.lecturer_id
-      WHERE h.hod_id = $1
-        AND h.is_active = true
-      `,
-      [hodId]
-    );
-
-    if (hodResult.rows.length === 0) {
-      return res.status(404).json({
-        error: 'HOD not found'
-      });
-    }
-
-    const departmentId = hodResult.rows[0].department_id;
-
-    // Only allow approving a pending medical
-    // belonging to this HOD's department
-    const result = await pool.query(
-      `
-      UPDATE medical_submissions ms
-      SET
-        status = 'approved',
-        reviewed_at = CURRENT_TIMESTAMP
-      FROM students st
-      WHERE ms.submission_id = $1
-        AND ms.student_id = st.student_id
-        AND st.department_id = $2
-        AND ms.status = 'pending'
-      RETURNING
-        ms.submission_id,
-        ms.student_id,
-        ms.status,
-        ms.reviewed_at
-      `,
-      [submissionId, departmentId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Pending medical submission not found'
-      });
-    }
-
-    res.json({
-      message: 'Medical certificate approved successfully',
-      submission: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Approve medical error:', error);
-
-    res.status(500).json({
-      error: 'Failed to approve medical submission',
-      details: error.message
-    });
-  }
-};
-
-
-// ============================================================
-// HOD MEDICAL REVIEW - REJECT
-// ============================================================
-
-export const rejectMedicalSubmission = async (req, res) => {
-  try {
-    const hodId =
-      req.user?.userId ||
-      req.user?.id ||
-      req.user?.hod_id;
-
-    const submissionId = req.params.id;
-
-    if (!hodId) {
-      return res.status(401).json({
-        error: 'HOD identity not found'
-      });
-    }
-
-    // Find HOD department
-    const hodResult = await pool.query(
-      `
-      SELECT l.department_id
-      FROM hods h
-      JOIN lecturers l
-        ON h.lecturer_id = l.lecturer_id
-      WHERE h.hod_id = $1
-        AND h.is_active = true
-      `,
-      [hodId]
-    );
-
-    if (hodResult.rows.length === 0) {
-      return res.status(404).json({
-        error: 'HOD not found'
-      });
-    }
-
-    const departmentId = hodResult.rows[0].department_id;
-
-    // Only reject pending medical submissions
-    // from this HOD's department
-    const result = await pool.query(
-      `
-      UPDATE medical_submissions ms
-      SET
-        status = 'rejected',
-        reviewed_at = CURRENT_TIMESTAMP
-      FROM students st
-      WHERE ms.submission_id = $1
-        AND ms.student_id = st.student_id
-        AND st.department_id = $2
-        AND ms.status = 'pending'
-      RETURNING
-        ms.submission_id,
-        ms.student_id,
-        ms.status,
-        ms.reviewed_at
-      `,
-      [submissionId, departmentId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Pending medical submission not found'
-      });
-    }
-
-    res.json({
-      message: 'Medical certificate rejected successfully',
-      submission: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Reject medical error:', error);
-
-    res.status(500).json({
-      error: 'Failed to reject medical submission',
       details: error.message
     });
   }
