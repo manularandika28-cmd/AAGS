@@ -127,3 +127,12 @@
 .rounded-xl:hover {
   transform: scale(1.02);
 }
+
+.attendance-overview-section {
+  animation: none !important;
+  transition: transform 0.2s ease !important;
+}
+
+.attendance-overview-section:hover {
+  transform: scale(1.005) !important;
+}
