@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
-import API from '../../lib/api';
+import API, { updateHodMedicalReview } from '../../lib/api';
 
 const FILTERS = [
   ['pending', 'Pending'],
@@ -66,11 +66,12 @@ export default function MedicalReview() {
   const [medicals, setMedicals] = useState([]);
   const [stats, setStats] = useState({ pending: 0, approvedThisMonth: 0 });
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [documentPreview, setDocumentPreview] = useState(null);
 
   const loadMedicals = async () => {
@@ -121,7 +122,9 @@ export default function MedicalReview() {
 
   useEffect(() => {
     if (!expandedMedical?.file_path) {
-      setDocumentPreview(null);
+      setDocumentPreview(expandedMedical
+        ? { id: expandedMedical.submission_id, error: 'No certificate file was attached to this submission.' }
+        : null);
       return undefined;
     }
 
@@ -165,8 +168,19 @@ export default function MedicalReview() {
   const updateStatus = async (medical, action) => {
     setBusyId(medical.submission_id);
     setError('');
+    setSuccess('');
     try {
-      await API.patch(`/hod/medicals/${medical.submission_id}/${action}`);
+      const response = await updateHodMedicalReview(medical.submission_id, action);
+      setMedicals((currentMedicals) => currentMedicals.map((item) =>
+        item.submission_id === medical.submission_id
+          ? { ...item, ...response.data.submission }
+          : item
+      ));
+      setStats((currentStats) => ({
+        pending: Math.max(0, currentStats.pending - 1),
+        approvedThisMonth: currentStats.approvedThisMonth + (action === 'approve' ? 1 : 0)
+      }));
+      setSuccess(response.data.message || 'Medical submission updated.');
       await loadMedicals();
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update this submission.');
@@ -179,9 +193,15 @@ export default function MedicalReview() {
     if (documentPreview?.url) window.open(documentPreview.url, '_blank', 'noopener,noreferrer');
   };
 
-  const isImage = documentPreview?.type?.startsWith('image/');
-  const isPdf = documentPreview?.type === 'application/pdf'
-    || String(documentPreview?.filePath || '').toLowerCase().endsWith('.pdf');
+  const documentExtension = String(documentPreview?.filePath || expandedMedical?.file_path || '')
+    .split('?')[0]
+    .split('.')
+    .pop()
+    .toLowerCase();
+  const documentType = documentPreview?.type || '';
+  const isImage = documentType.startsWith('image/')
+    || ['jpg', 'jpeg', 'png'].includes(documentExtension);
+  const isPdf = documentType === 'application/pdf' || documentExtension === 'pdf';
 
   return (
     <div className="flex min-h-screen font-sans text-slate-800">
@@ -191,8 +211,8 @@ export default function MedicalReview() {
         <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
           <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">HOD Medical Review</h1>
-              <p className="mt-1 max-w-xl text-xs leading-5 text-slate-600 sm:text-sm">
+              <h1 className="text-2xl font-extrabold text-white sm:text-3xl">HOD Medical Review</h1>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-white sm:text-sm">
                 Review and process student medical certificates from your department.
               </p>
             </div>
@@ -209,6 +229,7 @@ export default function MedicalReview() {
           </header>
 
           {error && <div role="alert" className="flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-800 sm:text-sm"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
+          {success && <div role="status" className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800 sm:text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{success}</div>}
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
             <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
