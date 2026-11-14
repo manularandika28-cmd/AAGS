@@ -1,81 +1,31 @@
-import express from 'express';
-
+﻿import express from 'express';
+import { verifyToken, authorize } from '../middleware/authMiddleware.js';
 import {
-    getHODDashboard,
-    getHODMedicalReview,
-    approveMedicalSubmission,
-    rejectMedicalSubmission,
-    getHODMeetings,
-    createHODMeeting,
-    updateHODMeeting
+  getHodMedicalQueue,
+  updateHodMedicalStatus,
+  getHodMedicalDocument,
+  getHODDashboard,
+  getHODMedicalReview,
+  approveMedicalSubmission,
+  rejectMedicalSubmission,
+  getHODMeetings,
+  createHODMeeting,
+  updateHODMeeting
 } from '../controllers/hodController.js';
-
-import {
-    verifyToken,
-    authorize
-} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// ============================================================
-// HOD DASHBOARD
-// ============================================================
+router.use(verifyToken, authorize('HOD'));
 
-router.get(
-    '/dashboard',
-    verifyToken,
-    authorize('HOD'),
-    getHODDashboard
-);
-
-// ============================================================
-// HOD MEDICAL REVIEW
-// ============================================================
-
-router.get(
-    '/medical-review',
-    verifyToken,
-    authorize('HOD'),
-    getHODMedicalReview
-);
-
-router.put(
-    '/medical-review/:id/approve',
-    verifyToken,
-    authorize('HOD'),
-    approveMedicalSubmission
-);
-
-router.put(
-    '/medical-review/:id/reject',
-    verifyToken,
-    authorize('HOD'),
-    rejectMedicalSubmission
-);
-
-// ============================================================
-// HOD MEETINGS
-// ============================================================
-
-router.get(
-    '/meetings',
-    verifyToken,
-    authorize('HOD'),
-    getHODMeetings
-);
-
-router.post(
-    '/meetings',
-    verifyToken,
-    authorize('HOD'),
-    createHODMeeting
-);
-
-router.patch(
-    '/meetings/:requestId',
-    verifyToken,
-    authorize('HOD'),
-    updateHODMeeting
-);
+router.get('/dashboard', getHODDashboard);
+router.get('/medicals', getHodMedicalQueue);
+router.patch('/medicals/:submissionId/:action', updateHodMedicalStatus);
+router.get('/medicals/:submissionId/document', getHodMedicalDocument);
+router.get('/medical-review', getHODMedicalReview);
+router.put('/medical-review/:id/approve', approveMedicalSubmission);
+router.put('/medical-review/:id/reject', rejectMedicalSubmission);
+router.get('/meetings', getHODMeetings);
+router.post('/meetings', createHODMeeting);
+router.patch('/meetings/:requestId', updateHODMeeting);
 
 export default router;

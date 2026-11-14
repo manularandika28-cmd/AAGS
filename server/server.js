@@ -56,9 +56,9 @@ app.use('/api/student', studentRoutes);
 app.use('/api/auth', passwordResetRoutes);
 app.use('/api/lecturer', lecturerRoutes);
 app.use('/api/dean', deanRoutes);
+app.use('/api/hod', hodRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/hod', hodRoutes);
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {

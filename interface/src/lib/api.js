@@ -57,14 +57,10 @@ export const getHodDashboard = () =>
     api('/hod/dashboard');
 
 export const getHodMedicalReviews = () =>
-    api('/hod/medical-review');
+    api('/hod/medicals');
 
-export const updateHodMedicalReview = (submissionId, status) => {
-    const action = String(status).toLowerCase() === 'approved' ? 'approve' : 'reject';
-    return api(`/hod/medical-review/${submissionId}/${action}`, {
-        method: 'PUT'
-    });
-};
+export const updateHodMedicalReview = (submissionId, action) =>
+    API.patch(`/hod/medicals/${submissionId}/${action}`);
 
 export const getHodMeetings = (status = 'all') =>
     api(`/hod/meetings?status=${encodeURIComponent(status)}`);
