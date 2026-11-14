@@ -4,6 +4,7 @@ import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
 import { useAuth } from '../../context/AuthContext';
 import { getHodDashboard } from '../../lib/api';
+import * as XLSX from 'xlsx';
 
 import {
   PlusSquare,
@@ -70,15 +71,16 @@ export default function HODDashboard() {
         `${module.avgAttendance}%`
       ])
     ];
-    const csv = rows.map((row) => row.map((value) =>
-      `"${String(value ?? '').replace(/"/g, '""')}"`
-    ).join(',')).join('\r\n');
-    const fileUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = 'hod-department-report.csv';
-    link.click();
-    URL.revokeObjectURL(fileUrl);
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 24 },
+      { wch: 28 },
+      { wch: 16 },
+      { wch: 24 }
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'HOD Department Report');
+    XLSX.writeFile(workbook, 'hod-department-report.xlsx');
   };
 
   // Loading state
@@ -155,8 +157,8 @@ export default function HODDashboard() {
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900">Department Overview</h1>
-              <p className="text-sm text-slate-500 mt-1">Information Technology Department - Fall Semester 2024</p>
+              <h1 className="text-3xl font-extrabold text-white">Department Overview</h1>
+              <p className="text-sm text-white mt-1">Information Technology Department - Fall Semester 2024</p>
             </div>
 
             <button
@@ -297,11 +299,11 @@ export default function HODDashboard() {
           <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
 
             {/* Attendance Overview */}
-            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs xl:col-span-8">
+            <section aria-labelledby="attendance-overview-heading" className="attendance-overview-section min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs xl:col-span-8">
 
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
 
-                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <h3 id="attendance-overview-heading" className="font-bold text-slate-800 text-sm flex items-center gap-2">
                   <Activity className="w-4 h-4 text-indigo-600" />
                   Attendance Overview by Module
                 </h3>
@@ -456,7 +458,7 @@ export default function HODDashboard() {
 
               </div>
 
-            </div>
+            </section>
 
 
             {/* Medical Queue */}
