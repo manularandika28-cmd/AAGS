@@ -84,10 +84,10 @@ export default function HODDashboard() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      <div className="flex h-screen overflow-hidden text-slate-800 font-sans antialiased">
         <Sidenavbar />
 
-        <div className="flex-1 flex flex-col min-h-screen">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <Topnavbar />
 
           <main className="p-8 flex-1 flex items-center justify-center">
@@ -103,10 +103,10 @@ export default function HODDashboard() {
   // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+      <div className="flex h-screen overflow-hidden text-slate-800 font-sans antialiased">
         <Sidenavbar />
 
-        <div className="flex-1 flex flex-col min-h-screen">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <Topnavbar />
 
           <main className="p-8 flex-1 flex items-center justify-center">
@@ -137,22 +137,22 @@ export default function HODDashboard() {
   const medicalQueue = dashboard?.medicalQueue || [];
 
   return (
-    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+    <div className="flex h-screen overflow-hidden text-slate-800 font-sans antialiased">
 
       {/* Sidebar */}
       <Sidenavbar />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
 
         {/* Top Header */}
         <Topnavbar />
 
         {/* Dashboard Body */}
-        <main className="p-8 space-y-6 flex-1">
+        <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
 
           {/* Header Bar */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900">Department Overview</h1>
@@ -172,7 +172,7 @@ export default function HODDashboard() {
 
 
           {/* Metric Cards Row */}
-          <div className="grid grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
 
             {/* Dept Attendance Avg */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
@@ -294,10 +294,10 @@ export default function HODDashboard() {
 
 
           {/* Attendance Table + Medical Queue */}
-          <div className="grid grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
 
             {/* Attendance Overview */}
-            <div className="col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs xl:col-span-8">
 
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
 
@@ -309,9 +309,9 @@ export default function HODDashboard() {
               </div>
 
 
-              <div className="p-4">
+              <div className="overflow-x-auto p-4">
 
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[620px] text-left text-xs">
 
                   <thead className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
 
@@ -460,7 +460,7 @@ export default function HODDashboard() {
 
 
             {/* Medical Queue */}
-            <div className="col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between min-h-[400px]">
+            <div className="flex min-h-[400px] min-w-0 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-xs xl:col-span-4">
 
               <div>
 
