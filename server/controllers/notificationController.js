@@ -22,6 +22,11 @@ const recipientConfig = {
         table: 'notification_admins',
         idColumn: 'admin_id',
     },
+
+    'Medical Officer': {
+        table: 'notification_medical_officers',
+        idColumn: 'medical_officer_id',
+    },
 };
 
 export const getMyNotifications = async (req, res) => {

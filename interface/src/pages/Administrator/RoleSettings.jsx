@@ -236,13 +236,13 @@ const RoleSettings = () => {
 
           {/* PAGE HEADER */}
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              Role Settings
-            </h1>
+           <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
+  Role Settings
+</h1>
 
-            <p className="text-sm text-white mt-1 font-medium">
-              Manage role-based permissions and access control.
-            </p>
+<p className="text-sm text-[var(--text-secondary)] mt-1 font-medium">
+  Manage role-based permissions and access control.
+</p>
           </div>
 
 

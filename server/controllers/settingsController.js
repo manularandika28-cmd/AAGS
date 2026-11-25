@@ -42,6 +42,13 @@ const getUserTable = (role) => {
                 nameColumn: 'admin_name',
             };
 
+        case 'Medical Officer':
+    return {
+        table: 'medical_officers',
+        idColumn: 'medical_officer_id',
+        nameColumn: 'name',
+    };
+
         default:
             return null;
     }
@@ -107,6 +114,24 @@ export const getProfile = async (req, res) => {
                 WHERE l.${idColumn} = $1
             `;
         }
+
+
+        /*
+ * Medical Officer profile.
+ */
+else if (req.user.role === 'Medical Officer') {
+    query = `
+        SELECT
+            medical_officer_id AS user_id,
+            name,
+            email,
+            NULL::text AS profile_picture_url,
+            is_active,
+            created_at
+        FROM medical_officers
+        WHERE medical_officer_id = $1
+    `;
+}
 
         /*
          * HOD / Dean / Admin.

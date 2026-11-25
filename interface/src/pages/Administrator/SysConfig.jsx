@@ -759,19 +759,21 @@ const SystemConfiguration = () => {
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
+          
+  <Topnavbar />
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
 
           {/* Page Header */}
           <div className="flex items-center justify-between">
 
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 text-white tracking-tight">
-                System Configuration
-              </h1>
+              <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
+  System Configuration
+</h1>
 
-              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
-                Configure global system settings, policies, and operational rules.
-              </p>
+<p className="text-sm text-[var(--text-secondary)] mt-1 font-medium">
+  Configure global system settings, policies, and operational rules.
+</p>
             </div>
 
             <div className="flex items-center gap-2">
