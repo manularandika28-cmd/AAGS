@@ -153,13 +153,17 @@ const currentLogs = auditLogs.slice(
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
        
 
+  <Topnavbar />
+
         <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1" style={{ transform: 'scale(1.005)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 text-white tracking-tight">Audit Trail</h1>
-              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
-                Chronological record of system events and user actions.
-              </p>
+              <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
+  Audit Trail
+</h1>
+<p className="text-sm text-[var(--text-secondary)] mt-1 font-medium">
+  Chronological record of system events and user actions.
+</p>
             </div>
 
             <button 

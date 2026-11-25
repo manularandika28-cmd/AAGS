@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidenavbar from '../../components/Sidenavbar';
@@ -17,9 +18,41 @@ import {
   Trash2,
   Crown,
   ChevronDown,
+  UserPlus,
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:3000/api/admin';
+
+/* =========================================================
+   THEME STYLES
+========================================================= */
+
+const panelClass = 'panel';
+
+const primaryText = 'text-[var(--text-primary)]';
+const secondaryText = 'text-[var(--text-secondary)]';
+
+const inputClass =
+  'form-input w-full';
+
+const labelClass =
+  'form-label';
+
+const secondaryButton =
+  'app-button app-button-secondary';
+
+const primaryButton =
+  'app-button app-button-primary';
+
+const modalClass =
+  'modal-container';
+
+const closeButton =
+  'modal-close';
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 const RolesAndPermissions = () => {
   const { accessToken } = useAuth();
@@ -38,6 +71,20 @@ const RolesAndPermissions = () => {
 
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+
+  /* ADD USER */
+  const [showAddUser, setShowAddUser] = useState(false);
+
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'Student',
+    department_id: '',
+  });
+
+  const [addingUser, setAddingUser] = useState(false);
+  const [addUserError, setAddUserError] = useState('');
 
   const [isDuplicatedRole, setIsDuplicatedRole] = useState(false);
   const [originalRoleId, setOriginalRoleId] = useState(null);
@@ -65,12 +112,36 @@ const RolesAndPermissions = () => {
   const [userActionLoading, setUserActionLoading] = useState(false);
   const [userNotification, setUserNotification] = useState(null);
 
-  /* Promote Lecturer to HOD */
+  /* PROMOTE LECTURER TO HOD */
   const [showPromoteHOD, setShowPromoteHOD] = useState(false);
   const [selectedLecturer, setSelectedLecturer] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [promotingHOD, setPromotingHOD] = useState(false);
   const [promoteHODError, setPromoteHODError] = useState('');
+
+  const USER_ROLE_OPTIONS = [
+    { value: 'Student', label: 'Student' },
+    { value: 'Lecturer', label: 'Lecturer' },
+    { value: 'Dean', label: 'Dean' },
+    { value: 'Medical Officer', label: 'Medical Officer' },
+    { value: 'Admin', label: 'Admin' },
+  ];
+
+  const USER_DEPARTMENT_OPTIONS = [
+    { value: '', label: 'Select department' },
+    {
+      value: '1',
+      label: 'Information and Communication Technology',
+    },
+    {
+      value: '2',
+      label: 'Biosystems Technology',
+    },
+    {
+      value: '3',
+      label: 'Instrumentation & Automation',
+    },
+  ];
 
   const DEPARTMENTS = [
     {
@@ -94,6 +165,10 @@ const RolesAndPermissions = () => {
     'User Management': Users,
   };
 
+  /* =========================================================
+     FETCH DATA
+  ========================================================= */
+
   const fetchRoleUsers = async (roleName) => {
     if (!roleName) return;
 
@@ -102,16 +177,19 @@ const RolesAndPermissions = () => {
     try {
       const response = await fetch(
         `${API_BASE}/users/role/${encodeURIComponent(roleName)}`,
-        {
-          credentials: 'include',
-        }
+        { credentials: 'include' }
       );
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+
+      const data = contentType?.includes('application/json')
+        ? await response.json()
+        : [];
+
       setRoleUsers(data);
     } catch (error) {
       console.error('Fetch role users error:', error);
@@ -146,18 +224,14 @@ const RolesAndPermissions = () => {
     try {
       const res = await fetch(
         `${API_BASE}/roles/${roleId}/permissions`,
-        {
-          credentials: 'include',
-        }
+        { credentials: 'include' }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(
-          data.error ||
-            data.message ||
-            'Failed to fetch permissions'
+          data.error || data.message || 'Failed to fetch permissions'
         );
       }
 
@@ -166,8 +240,7 @@ const RolesAndPermissions = () => {
         module: p.module_name,
         desc: p.description,
         icon: moduleIcons[p.module_name] || Shield,
-        isRestricted:
-          p.module_name === 'User Management',
+        isRestricted: p.module_name === 'User Management',
       }));
 
       setPermissions(formattedPermissions);
@@ -187,39 +260,43 @@ const RolesAndPermissions = () => {
   useEffect(() => {
     if (!selectedRole && dbRoles.length > 0) {
       setSelectedRole(dbRoles[0].role_name);
-
       fetchRolePermissions(dbRoles[0].role_id);
       fetchRoleUsers(dbRoles[0].role_name);
     }
   }, [dbRoles, selectedRole]);
 
+  /* =========================================================
+     ROLE BADGES
+  ========================================================= */
+
   const badgeMap = {
     Admin: {
       badge: 'Full Access',
-      badgeColor:
-        'bg-rose-50 text-rose-600 border-rose-100',
+      badgeColor: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
     },
     Dean: {
       badge: 'High',
-      badgeColor:
-        'bg-indigo-50 text-indigo-600 border-indigo-100',
+      badgeColor: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
     },
     HOD: {
       badge: 'Elevated',
-      badgeColor:
-        'bg-blue-50 text-blue-600 border-blue-100',
+      badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
     },
     Lecturer: {
       badge: 'Standard',
       badgeColor:
-        'bg-slate-100 text-slate-600 border-slate-200',
+        'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border-[var(--border-color)]',
     },
     Student: {
       badge: 'Basic',
       badgeColor:
-        'bg-slate-100 text-slate-600 border-slate-200',
+        'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border-[var(--border-color)]',
     },
   };
+
+  /* =========================================================
+     ROLE ACTIONS
+  ========================================================= */
 
   const handleAddRole = async (e) => {
     e.preventDefault();
@@ -230,9 +307,7 @@ const RolesAndPermissions = () => {
     try {
       const res = await fetch(`${API_BASE}/roles`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(roleForm),
       });
@@ -240,19 +315,13 @@ const RolesAndPermissions = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(
-          data.error || 'Failed to create role'
-        );
+        throw new Error(data.error || 'Failed to create role');
       }
 
-      setRoleForm({
-        role_name: '',
-        description: '',
-      });
-
+      setRoleForm({ role_name: '', description: '' });
       setShowAddRole(false);
 
-      fetchRoles();
+      await fetchRoles();
     } catch (error) {
       console.error('Add role error:', error);
       setAddRoleError(error.message);
@@ -262,9 +331,7 @@ const RolesAndPermissions = () => {
   };
 
   const handleDeleteRole = async () => {
-    const role = dbRoles.find(
-      (r) => r.role_name === selectedRole
-    );
+    const role = dbRoles.find((r) => r.role_name === selectedRole);
 
     if (!role) return;
 
@@ -284,9 +351,7 @@ const RolesAndPermissions = () => {
 
       if (!res.ok) {
         throw new Error(
-          data.error ||
-            data.message ||
-            'Failed to delete role'
+          data.error || data.message || 'Failed to delete role'
         );
       }
 
@@ -314,10 +379,8 @@ const RolesAndPermissions = () => {
 
     try {
       const res = await fetch(
-        `${API_BASE}/users/role/${roleName}`,
-        {
-          credentials: 'include',
-        }
+        `${API_BASE}/users/role/${encodeURIComponent(roleName)}`,
+        { credentials: 'include' }
       );
 
       const data = await res.json();
@@ -333,9 +396,7 @@ const RolesAndPermissions = () => {
   };
 
   const handleSavePermissions = async () => {
-    const role = dbRoles.find(
-      (r) => r.role_name === selectedRole
-    );
+    const role = dbRoles.find((r) => r.role_name === selectedRole);
 
     setSavingPermissions(true);
     setPermissionMessage('');
@@ -346,16 +407,13 @@ const RolesAndPermissions = () => {
       if (isDuplicatedRole) {
         const createRes = await fetch(`${API_BASE}/roles`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             role_name: selectedRole,
             description: `Duplicated from ${
-              dbRoles.find(
-                (r) => r.role_id === originalRoleId
-              )?.role_name || 'role'
+              dbRoles.find((r) => r.role_id === originalRoleId)
+                ?.role_name || 'role'
             }`,
           }),
         });
@@ -373,9 +431,7 @@ const RolesAndPermissions = () => {
         roleId = createData.role?.role_id;
 
         if (!roleId) {
-          throw new Error(
-            'New role ID was not returned by the server.'
-          );
+          throw new Error('New role ID was not returned by the server.');
         }
       }
 
@@ -387,9 +443,7 @@ const RolesAndPermissions = () => {
         `${API_BASE}/roles/${roleId}/permissions`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             permissions: permissions.map((p) => ({
@@ -407,9 +461,7 @@ const RolesAndPermissions = () => {
 
       if (!res.ok) {
         throw new Error(
-          data.error ||
-            data.message ||
-            'Failed to save permissions'
+          data.error || data.message || 'Failed to save permissions'
         );
       }
 
@@ -428,9 +480,7 @@ const RolesAndPermissions = () => {
   };
 
   const handleDuplicateRole = async () => {
-    const role = dbRoles.find(
-      (r) => r.role_name === selectedRole
-    );
+    const role = dbRoles.find((r) => r.role_name === selectedRole);
 
     if (!role) return;
 
@@ -440,18 +490,14 @@ const RolesAndPermissions = () => {
     try {
       const res = await fetch(
         `${API_BASE}/roles/${role.role_id}/permissions`,
-        {
-          credentials: 'include',
-        }
+        { credentials: 'include' }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(
-          data.error ||
-            data.message ||
-            'Failed to duplicate role'
+          data.error || data.message || 'Failed to duplicate role'
         );
       }
 
@@ -479,11 +525,7 @@ const RolesAndPermissions = () => {
         originalRoleId: role.role_id,
       };
 
-      setTemporaryRoles((current) => [
-        ...current,
-        temporaryRole,
-      ]);
-
+      setTemporaryRoles((current) => [...current, temporaryRole]);
       setSelectedRole(copyName);
       setOriginalRoleId(role.role_id);
       setIsDuplicatedRole(true);
@@ -494,8 +536,7 @@ const RolesAndPermissions = () => {
           module: p.module_name,
           desc: p.description,
           icon: moduleIcons[p.module_name] || Shield,
-          isRestricted:
-            p.module_name === 'User Management',
+          isRestricted: p.module_name === 'User Management',
         }))
       );
 
@@ -514,10 +555,7 @@ const RolesAndPermissions = () => {
     setPermissions((current) =>
       current.map((p) =>
         p.module_id === moduleId
-          ? {
-              ...p,
-              [permission]: !p[permission],
-            }
+          ? { ...p, [permission]: !p[permission] }
           : p
       )
     );
@@ -525,22 +563,90 @@ const RolesAndPermissions = () => {
     setPermissionMessage('');
   };
 
+  /* =========================================================
+     USER NOTIFICATIONS
+  ========================================================= */
+
   const showUserNotification = (type, message) => {
-    setUserNotification({
-      type,
-      message,
-    });
+    setUserNotification({ type, message });
 
     setTimeout(() => {
       setUserNotification(null);
     }, 3500);
   };
 
+  /* =========================================================
+     ADD USER
+  ========================================================= */
+
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+
+    setAddingUser(true);
+    setAddUserError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify(userForm),
+      });
+
+      const contentType = response.headers.get('content-type');
+
+      const data = contentType?.includes('application/json')
+        ? await response.json()
+        : {};
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || 'Failed to create user.'
+        );
+      }
+
+      const createdRole = userForm.role;
+      const createdName = userForm.name;
+
+      setShowAddUser(false);
+
+      setUserForm({
+        name: '',
+        email: '',
+        password: '',
+        role: 'Student',
+        department_id: '',
+      });
+
+      await fetchRoles();
+
+      if (selectedRole === createdRole) {
+        await fetchRoleUsers(selectedRole);
+      }
+
+      showUserNotification(
+        'success',
+        `${createdName} has been created successfully.`
+      );
+    } catch (error) {
+      console.error('Add user error:', error);
+      setAddUserError(error.message);
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
+  /* =========================================================
+     USER ACCOUNT ACTIONS
+  ========================================================= */
+
   const askUserActionConfirmation = (user, action) => {
-    setUserActionConfirm({
-      user,
-      action,
-    });
+    setUserActionConfirm({ user, action });
   };
 
   const executeUserAction = async () => {
@@ -553,14 +659,9 @@ const RolesAndPermissions = () => {
     try {
       let response;
 
-      if (
-        action === 'activate' ||
-        action === 'deactivate'
-      ) {
+      if (action === 'activate' || action === 'deactivate') {
         response = await fetch(
-          `${API_BASE}/users/${encodeURIComponent(
-            selectedRole
-          )}/${user.id}/status`,
+          `${API_BASE}/users/${encodeURIComponent(selectedRole)}/${user.id}/status`,
           {
             method: 'PATCH',
             headers: {
@@ -577,9 +678,7 @@ const RolesAndPermissions = () => {
 
       if (action === 'delete') {
         response = await fetch(
-          `${API_BASE}/users/${encodeURIComponent(
-            selectedRole
-          )}/${user.id}`,
+          `${API_BASE}/users/${encodeURIComponent(selectedRole)}/${user.id}`,
           {
             method: 'DELETE',
             headers: {
@@ -591,13 +690,15 @@ const RolesAndPermissions = () => {
         );
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+
+      const data = contentType?.includes('application/json')
+        ? await response.json()
+        : {};
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            data.message ||
-            `Failed to ${action} user`
+          data.error || data.message || `Failed to ${action} user`
         );
       }
 
@@ -617,21 +718,16 @@ const RolesAndPermissions = () => {
       );
     } catch (error) {
       console.error(`User ${action} error:`, error);
-
       setUserActionConfirm(null);
-
-      showUserNotification(
-        'warning',
-        error.message
-      );
+      showUserNotification('warning', error.message);
     } finally {
       setUserActionLoading(false);
     }
   };
 
-  /* ==========================================
+  /* =========================================================
      PROMOTE LECTURER TO HOD
-     ========================================== */
+  ========================================================= */
 
   const openPromoteHODModal = (user) => {
     setSelectedLecturer(user);
@@ -676,7 +772,11 @@ const RolesAndPermissions = () => {
         }
       );
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+
+      const data = contentType?.includes('application/json')
+        ? await response.json()
+        : {};
 
       if (!response.ok) {
         throw new Error(
@@ -698,316 +798,292 @@ const RolesAndPermissions = () => {
           `${selectedLecturer.name} has been promoted to HOD.`
       );
     } catch (error) {
-      console.error(
-        'Promote lecturer to HOD error:',
-        error
-      );
-
+      console.error('Promote lecturer to HOD error:', error);
       setPromoteHODError(error.message);
     } finally {
       setPromotingHOD(false);
     }
   };
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
-    <div className="flex min-h-screen text-slate-800 font-sans antialiased">
+    <div className="app-layout">
       <Sidenavbar />
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="app-main">
         <Topnavbar />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+        <main className="page-container admin-page">
 
           {/* PAGE HEADER */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 text-white tracking-tight">
-                Roles & Permissions
-              </h1>
+<div className="page-header">
+  <div className="page-header-content">
+    <h1 className="page-title">
+      Roles & Permissions
+    </h1>
 
-              <p className="text-sm text-slate-500 text-white mt-1 font-medium">
-                Manage role-based access control (RBAC) across faculty modules.
-              </p>
-            </div>
+    <p className="page-description">
+      Manage role-based access control (RBAC) across faculty modules.
+    </p>
+  </div>
 
-            <button
-              onClick={() => {
-                setAddRoleError('');
-                setRoleForm({
-                  role_name: '',
-                  description: '',
-                });
-                setShowAddRole(true);
-              }}
-              className="flex items-center gap-2 bg-white hover:bg-[#9fb6d4] text-black px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Create New Role
-            </button>
-          </div>
+  <div className="page-header-actions">
+    <button
+      type="button"
+      onClick={() => {
+        setAddRoleError('');
+        setRoleForm({ role_name: '', description: '' });
+        setShowAddRole(true);
+      }}
+      className="app-button app-button-secondary"
+    >
+      <Plus size={16} />
+      Create New Role
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        setAddUserError('');
+        setUserForm({
+          name: '',
+          email: '',
+          password: '',
+          role: 'Student',
+          department_id: '',
+        });
+        setShowAddUser(true);
+      }}
+      className="app-button app-button-primary"
+    >
+      <UserPlus size={16} />
+      Add User
+    </button>
+  </div>
+</div>
 
           {/* MAIN GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             {/* ACTIVE ROLES */}
-            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="font-bold text-slate-900 text-sm">
-                  Active Roles
-                </span>
-
-                <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  {loadingRoles
-                    ? '...'
-                    : `${dbRoles.length} Total`}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-
-                {loadingRoles ? (
-                  <p className="text-xs text-slate-400 text-center py-6">
-                    Loading roles...
-                  </p>
-                ) : (
-                  (showAllRoles
-                    ? dbRoles
-                    : dbRoles.slice(0, 4)
-                  ).map((r) => {
-                    const isSelected =
-                      selectedRole === r.role_name;
-
-                    const meta =
-                      badgeMap[r.role_name] || {
-                        badge: 'Standard',
-                        badgeColor:
-                          'bg-slate-100 text-slate-600 border-slate-200',
-                      };
-
-                    return (
-                      <div
-                        key={r.role_id}
-                        onClick={() => {
-                          setSelectedRole(r.role_name);
-                          fetchRolePermissions(r.role_id);
-                          fetchRoleUsers(r.role_name);
-                        }}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-50/30 ring-1 ring-blue-500'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-900 text-sm">
-                            {r.role_name}
-                          </span>
-
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded border ${meta.badgeColor}`}
-                          >
-                            {meta.badge}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-slate-500">
-                          {r.description}
-                        </p>
-
-                        <div className="flex items-center pt-1 text-[11px] text-slate-400">
-
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">
-                            {r.user_count} Users
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewRoleUsers(
-                                r.role_name
-                              );
-                            }}
-                            className="ml-auto bg-slate-100 text-slate-600 hover:bg-slate-200 px-2 py-0.5 rounded font-medium text-[11px] border-0 focus:outline-none transition-colors"
-                            title={`View ${r.role_name} users`}
-                          >
-                            View
-                          </button>
-
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-
-              </div>
-
-              {dbRoles.length > 3 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowAllRoles(
-                      (current) => !current
-                    )
-                  }
-                  className="w-full text-xs font-bold text-slate-700 hover:text-slate-900 pt-1"
-                >
-                  {showAllRoles
-                    ? 'Show Less'
-                    : `View All Roles (${dbRoles.length})`}
-                </button>
-              )}
-
-            </div>
-
-            {/* RIGHT COLUMN */}
-            <div className="lg:col-span-7 space-y-6">
-
-              {/* ROLE HEADER */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between min-h-40">
-
-                <div>
-                  <div className="flex items-center gap-2">
-
-                    <h3 className="font-bold text-slate-900 text-base">
-                      {selectedRole}
-                    </h3>
-
-                    <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      Root Active
-                    </span>
-
+            <section className="lg:col-span-5">
+              <div className={`${panelClass} p-5 space-y-4`}>
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+                  <div>
+                    <h2 className={`font-bold ${primaryText} text-sm`}>
+                      Active Roles
+                    </h2>
+                    <p className={`text-xs ${secondaryText} mt-1`}>
+                      Manage system access levels
+                    </p>
                   </div>
 
-                  <p className="text-xs text-slate-500 mt-1 max-w-md">
-                    This role grants comprehensive read, write,
-                    execution, and administrative privileges across
-                    all system components. Handle with extreme care.
-                  </p>
+                  <span className="bg-[var(--surface-secondary)] text-[var(--text-secondary)] text-[10px] font-bold px-3 py-1 rounded-full">
+  {loadingRoles ? '...' : `${dbRoles.length} Total`}
+</span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="space-y-3">
+                  {loadingRoles ? (
+                    <p className={`text-xs ${secondaryText} text-center py-6`}>
+                      Loading roles...
+                    </p>
+                  ) : (
+                    (showAllRoles ? dbRoles : dbRoles.slice(0, 4)).map((r) => {
+                      const isSelected = selectedRole === r.role_name;
 
+                      const meta = badgeMap[r.role_name] || {
+                        badge: 'Standard',
+                        badgeColor:
+                          'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border-[var(--border-color)]',
+                      };
+
+                      return (
+                        <div
+                          key={r.role_id}
+                          onClick={() => {
+                            setSelectedRole(r.role_name);
+                            fetchRolePermissions(r.role_id);
+                            fetchRoleUsers(r.role_name);
+                          }}
+                         className={`p-4 rounded-xl transition-colors cursor-pointer space-y-2 ${
+  isSelected
+    ? 'bg-blue-500/10'
+    : 'bg-[var(--surface-secondary)] hover:bg-[var(--surface-hover)]'
+}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`font-bold ${primaryText} text-sm`}>
+                              {r.role_name}
+                            </span>
+
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${meta.badgeColor}`}
+                            >
+                              {meta.badge}
+                            </span>
+                          </div>
+
+                          <p className={`text-xs ${secondaryText}`}>
+                            {r.description}
+                          </p>
+
+                          <div className="flex items-center pt-1 text-[11px]">
+                           <span className="bg-[var(--surface-secondary)] text-[var(--text-secondary)] px-2 py-1 rounded-lg font-medium">
+  {r.user_count} Users
+</span>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewRoleUsers(r.role_name);
+                              }}
+                              className="ml-auto text-[var(--text-primary)] hover:bg-[var(--surface-hover)] px-3 py-1 rounded-lg font-semibold text-[11px] transition-colors"
+                              title={`View ${r.role_name} users`}
+                            >
+                              View Users
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {dbRoles.length > 3 && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowDeleteRoleConfirm(true)
-                    }
-                    disabled={
-                      deletingRole ||
-                      !selectedRole ||
-                      selectedRole === 'Admin'
-                    }
-                    className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                    onClick={() => setShowAllRoles((current) => !current)}
+                    className={`w-full text-xs font-bold ${secondaryText} hover:text-[var(--text-primary)] pt-1 transition-colors`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete Role
+                    {showAllRoles
+                      ? 'Show Less'
+                      : `View All Roles (${dbRoles.length})`}
                   </button>
+                )}
+              </div>
+            </section>
 
-                  <button
-                    type="button"
-                    onClick={handleDuplicateRole}
-                    disabled={
-                      duplicatingRole ||
-                      !selectedRole
-                    }
-                    className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    {duplicatingRole
-                      ? 'Duplicating...'
-                      : 'Duplicate'}
-                  </button>
+            {/* RIGHT COLUMN */}
+            <section className="lg:col-span-7 space-y-6">
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowSaveConfirm(true)
-                    }
-                    disabled={
-                      savingPermissions ||
-                      loadingPermissions ||
-                      !selectedRole
-                    }
-                    className="flex items-center gap-1.5 bg-[#0A192F] hover:bg-[#1E3A8A] text-white px-3 py-1 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Save Changes
-                  </button>
+              {/* ROLE HEADER */}
+              <div className={`${panelClass} p-5`}>
+                <div className="flex flex-wrap items-center justify-between gap-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className={`font-bold ${primaryText} text-base`}>
+                        {selectedRole || 'Select a Role'}
+                      </h3>
 
+                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        Root Active
+                      </span>
+                    </div>
+
+                    <p className={`text-xs ${secondaryText} mt-2 max-w-md leading-relaxed`}>
+                      This role grants comprehensive read, write,
+                      execution, and administrative privileges across
+                      all system components. Handle with extreme care.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteRoleConfirm(true)}
+                      disabled={
+                        deletingRole ||
+                        !selectedRole ||
+                        selectedRole === 'Admin'
+                      }
+                      className="inline-flex items-center gap-1.5 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 px-3 py-2 rounded-[14px] text-xs font-bold transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete Role
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDuplicateRole}
+                      disabled={duplicatingRole || !selectedRole}
+                     className={`${secondaryButton} !h-10 !px-6`}
+                    >
+                      <Copy className="w-4.5 h-3.5" />
+                      {duplicatingRole ? 'Duplicating...' : 'Duplicate'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowSaveConfirm(true)}
+                      disabled={
+                        savingPermissions ||
+                        loadingPermissions ||
+                        !selectedRole
+                      }
+                      className={primaryButton}
+                    >
+                      <Save className="w-3 h-3.5" />
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
               </div>
 
+              {/* PERMISSION MESSAGE */}
+              {permissionMessage && (
+                <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-xs font-medium text-[var(--text-primary)]">
+                  {permissionMessage}
+                </div>
+              )}
+
               {/* USER ACCOUNT MANAGEMENT */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-
+              <div className={`${panelClass} p-5 space-y-4`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--border-color)]">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">
+                    <h3 className={`font-bold ${primaryText} text-base`}>
                       User Account Management
                     </h3>
 
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className={`text-xs ${secondaryText} mt-1`}>
                       {selectedRole === 'Lecturer'
                         ? 'Activate, deactivate, remove, or promote lecturer accounts'
                         : 'Activate, deactivate, or permanently remove user accounts'}
                     </p>
                   </div>
 
-                  <div className="text-xs font-medium text-slate-500">
+                  <div className={`text-xs font-semibold ${secondaryText}`}>
                     {roleUsers.length} user
                     {roleUsers.length !== 1 ? 's' : ''}
                   </div>
-
                 </div>
 
                 <div className="overflow-x-auto">
-
                   <table className="w-full text-left text-xs border-collapse">
-
                     <thead>
-                      <tr className="text-slate-400 font-semibold border-b border-slate-100 uppercase tracking-wider text-[10px]">
-
-                        <th className="py-3 px-3">
-                          USER
-                        </th>
-
-                        <th className="py-3 px-3">
-                          EMAIL
-                        </th>
-
-                        <th className="py-3 px-3 text-center">
-                          STATUS
-                        </th>
-
-                        <th className="py-3 px-3 text-right">
-                          ACTIONS
-                        </th>
-
+                      <tr className={`font-semibold ${secondaryText} border-b border-[var(--border-color)] uppercase tracking-wider text-[10px]`}>
+                        <th className="py-3 px-3">USER</th>
+                        <th className="py-3 px-3">EMAIL</th>
+                        <th className="py-3 px-3 text-center">STATUS</th>
+                        <th className="py-3 px-3 text-right">ACTIONS</th>
                       </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-
+                    <tbody className={`divide-y divide-[var(--border-color)] ${primaryText}`}>
                       {loadingUsers ? (
                         <tr>
-                          <td
-                            colSpan={4}
-                            className="py-8 text-center text-xs text-slate-400"
-                          >
+                          <td colSpan={4} className={`py-8 text-center text-xs ${secondaryText}`}>
                             Loading users...
                           </td>
                         </tr>
                       ) : roleUsers.length === 0 ? (
                         <tr>
-                          <td
-                            colSpan={4}
-                            className="py-8 text-center text-xs text-slate-400"
-                          >
+                          <td colSpan={4} className={`py-8 text-center text-xs ${secondaryText}`}>
                             No users found.
                           </td>
                         </tr>
@@ -1015,113 +1091,81 @@ const RolesAndPermissions = () => {
                         roleUsers.map((user) => (
                           <tr
                             key={user.id}
-                            className="hover:bg-slate-50/50 transition-colors"
+                            className="hover:bg-[var(--surface-secondary)] transition-colors"
                           >
-
                             {/* USER */}
                             <td className="py-3 px-3">
-
                               <div className="flex items-center gap-2.5">
-
-                                <div className="w-8 h-8 rounded-full bg-[#0A192F] text-white flex items-center justify-center text-[10px] font-bold">
+                                <div className="w-8 h-8 rounded-full bg-[#0A192F] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                                   {user.name
                                     ?.split(' ')
-                                    .map(
-                                      (n) => n[0]
-                                    )
+                                    .map((n) => n[0])
                                     .slice(0, 2)
                                     .join('')
                                     .toUpperCase()}
                                 </div>
 
-                                <div>
-                                  <p className="font-bold text-slate-900">
-                                    {user.name}
-                                  </p>
-                                </div>
-
+                                <p className={`font-bold ${primaryText}`}>
+                                  {user.name}
+                                </p>
                               </div>
-
                             </td>
 
                             {/* EMAIL */}
-                            <td className="py-3 px-3 text-slate-500">
+                            <td className={`py-3 px-3 ${secondaryText}`}>
                               {user.email}
                             </td>
 
                             {/* STATUS */}
                             <td className="py-3 px-3 text-center">
-
                               {user.is_active ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-semibold">
-
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-semibold">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-
                                   Active
-
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-semibold">
-
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-500/10 text-[var(--text-secondary)] border border-[var(--border-color)] text-[10px] font-semibold">
                                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-
                                   Inactive
-
                                 </span>
                               )}
-
                             </td>
 
                             {/* ACTIONS */}
                             <td className="py-3 px-3">
-
-                              <div className="flex items-center justify-end gap-2">
-
-                                {/* ACTIVATE */}
+                              <div className="flex flex-wrap items-center justify-end gap-2">
                                 {!user.is_active && (
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      askUserActionConfirmation(
-                                        user,
-                                        'activate'
-                                      )
+                                      askUserActionConfirmation(user, 'activate')
                                     }
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors text-[10px] font-semibold"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors text-[10px] font-semibold"
                                   >
                                     <UserCheck className="w-3.5 h-3.5" />
                                     Activate
                                   </button>
                                 )}
 
-                                {/* DEACTIVATE */}
                                 {user.is_active && (
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      askUserActionConfirmation(
-                                        user,
-                                        'deactivate'
-                                      )
+                                      askUserActionConfirmation(user, 'deactivate')
                                     }
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-colors text-[10px] font-semibold"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-colors text-[10px] font-semibold"
                                   >
                                     <UserX className="w-3.5 h-3.5" />
                                     Deactivate
                                   </button>
                                 )}
 
-                                {/* PROMOTE TO HOD - LECTURERS ONLY */}
                                 {selectedRole === 'Lecturer' &&
                                   user.is_active && (
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        openPromoteHODModal(
-                                          user
-                                        )
-                                      }
-                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors text-[10px] font-semibold"
+                                      onClick={() => openPromoteHODModal(user)}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-[10px] font-semibold"
                                       title="Promote lecturer to HOD"
                                     >
                                       <Crown className="w-3.5 h-3.5" />
@@ -1129,81 +1173,239 @@ const RolesAndPermissions = () => {
                                     </button>
                                   )}
 
-                                {/* DELETE */}
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    askUserActionConfirmation(
-                                      user,
-                                      'delete'
-                                    )
+                                    askUserActionConfirmation(user, 'delete')
                                   }
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-colors text-[10px] font-semibold"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-colors text-[10px] font-semibold"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   Delete
                                 </button>
-
                               </div>
-
                             </td>
-
                           </tr>
                         ))
                       )}
-
                     </tbody>
                   </table>
-
                 </div>
               </div>
-
-            </div>
+            </section>
           </div>
-
         </main>
       </div>
 
-      {/* CREATE ROLE MODAL */}
-      {showAddRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6">
-
+      {/* =====================================================
+          ADD USER MODAL
+      ===================================================== */}
+      {showAddUser && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`${modalClass} max-w-lg max-h-[90vh] overflow-y-auto`}>
             <div className="flex items-center justify-between mb-6">
-
               <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Create New Role
+                <h2 className={`text-xl font-bold ${primaryText}`}>
+                  Create New User
                 </h2>
-
-                <p className="text-xs text-slate-500 mt-1">
-                  Add a new role to the AAGS system
+                <p className={`text-xs ${secondaryText} mt-1`}>
+                  Add a new account to the AAGS system.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowAddRole(false)
-                }
-                className="text-slate-400 hover:text-slate-700 text-xl"
+                onClick={() => {
+                  if (!addingUser) setShowAddUser(false);
+                }}
+                disabled={addingUser}
+                className={closeButton}
               >
                 ×
               </button>
-
             </div>
 
-            <form
-              onSubmit={handleAddRole}
-              className="space-y-4"
-            >
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div>
+                <label className={labelClass}>Full Name</label>
+                <input
+                  type="text"
+                  value={userForm.name}
+                  onChange={(e) =>
+                    setUserForm((current) => ({
+                      ...current,
+                      name: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter full name"
+                  required
+                  disabled={addingUser}
+                  className={inputClass}
+                />
+              </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Role Name
-                </label>
+                <label className={labelClass}>Email Address</label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) =>
+                    setUserForm((current) => ({
+                      ...current,
+                      email: e.target.value,
+                    }))
+                  }
+                  placeholder="user@uoc.lk"
+                  required
+                  disabled={addingUser}
+                  className={inputClass}
+                />
+              </div>
 
+              <div>
+                <label className={labelClass}>Temporary Password</label>
+                <input
+                  type="password"
+                  value={userForm.password}
+                  onChange={(e) =>
+                    setUserForm((current) => ({
+                      ...current,
+                      password: e.target.value,
+                    }))
+                  }
+                  placeholder="Minimum 6 characters"
+                  minLength={6}
+                  required
+                  disabled={addingUser}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>User Role</label>
+                <div className="relative">
+                  <select
+                    value={userForm.role}
+                    onChange={(e) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        role: e.target.value,
+                        department_id: '',
+                      }))
+                    }
+                    required
+                    disabled={addingUser}
+                    className={`${inputClass} appearance-none pr-10`}
+                  >
+                    {USER_ROLE_OPTIONS.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${secondaryText} pointer-events-none`} />
+                </div>
+              </div>
+
+              {['Student', 'Lecturer'].includes(userForm.role) && (
+                <div>
+                  <label className={labelClass}>Department</label>
+                  <div className="relative">
+                    <select
+                      value={userForm.department_id}
+                      onChange={(e) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          department_id: e.target.value,
+                        }))
+                      }
+                      required
+                      disabled={addingUser}
+                      className={`${inputClass} appearance-none pr-10`}
+                    >
+                      {USER_DEPARTMENT_OPTIONS.map((department) => (
+                        <option
+                          key={department.value}
+                          value={department.value}
+                        >
+                          {department.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${secondaryText} pointer-events-none`} />
+                  </div>
+                </div>
+              )}
+
+              {addUserError && (
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-px1 px-3 py-2.5 text-xs font-medium">
+                  {addUserError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2 rounded-[22px]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUser(false)}
+                  disabled={addingUser}
+                  className={`flex-1 ${secondaryButton}`}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={addingUser}
+                  className={`flex-1 ${primaryButton}`}
+                >
+                  {addingUser ? (
+                    <>
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Create User
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          CREATE ROLE MODAL
+      ===================================================== */}
+      {showAddRole && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`${modalClass} max-w-lg`}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className={`text-xl font-bold ${primaryText}`}>
+                  Create New Role
+                </h2>
+                <p className={`text-xs ${secondaryText} mt-1`}>
+                  Add a new role to the AAGS system.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddRole(false)}
+                className={closeButton}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddRole} className="space-y-4">
+              <div>
+                <label className={labelClass}>Role Name</label>
                 <input
                   type="text"
                   value={roleForm.role_name}
@@ -1214,16 +1416,13 @@ const RolesAndPermissions = () => {
                     })
                   }
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                  className={inputClass}
                   placeholder="e.g. Registrar"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Description
-                </label>
-
+                <label className={labelClass}>Description</label>
                 <textarea
                   value={roleForm.description}
                   onChange={(e) =>
@@ -1234,25 +1433,22 @@ const RolesAndPermissions = () => {
                   }
                   required
                   rows={4}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 resize-none"
+                  className={`${inputClass} resize-none`}
                   placeholder="Describe what this role is responsible for"
                 />
               </div>
 
               {addRoleError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-3 py-2.5 text-xs font-medium">
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-xl px-3 py-2.5 text-xs font-medium">
                   {addRoleError}
                 </div>
               )}
 
               <div className="flex gap-3 pt-2">
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowAddRole(false)
-                  }
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  onClick={() => setShowAddRole(false)}
+                  className={`flex-1 ${secondaryButton}`}
                 >
                   Cancel
                 </button>
@@ -1260,35 +1456,28 @@ const RolesAndPermissions = () => {
                 <button
                   type="submit"
                   disabled={addingRole}
-                  className="flex-1 py-2.5 rounded-xl bg-[#051E3D] text-white text-sm font-bold hover:bg-[#0A2B54] disabled:opacity-50"
+                  className={`flex-1 ${primaryButton}`}
                 >
-                  {addingRole
-                    ? 'Creating...'
-                    : 'Create Role'}
+                  {addingRole ? 'Creating...' : 'Create Role'}
                 </button>
-
               </div>
-
             </form>
-
           </div>
         </div>
       )}
 
-      {/* VIEW USERS MODAL */}
+      {/* =====================================================
+          VIEW USERS MODAL
+      ===================================================== */}
       {showUsersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 max-h-[80vh] flex flex-col">
-
+          <div className={`${modalClass} max-w-lg max-h-[80vh] flex flex-col`}>
             <div className="flex items-center justify-between mb-4">
-
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className={`text-lg font-bold ${primaryText}`}>
                   {modalRoleName} Users
                 </h2>
-
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className={`text-xs ${secondaryText} mt-0.5`}>
                   {loadingRoleUsers
                     ? 'Loading...'
                     : `${roleUsers.length} user(s) found`}
@@ -1297,142 +1486,111 @@ const RolesAndPermissions = () => {
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowUsersModal(false)
-                }
-                className="text-slate-400 hover:text-slate-700 text-xl"
+                onClick={() => setShowUsersModal(false)}
+                className={closeButton}
               >
                 ×
               </button>
-
             </div>
 
             <div className="overflow-y-auto space-y-2 flex-1">
-
               {loadingRoleUsers ? (
-                <p className="text-xs text-slate-400 text-center py-8">
+                <p className={`text-xs ${secondaryText} text-center py-8`}>
                   Loading users...
                 </p>
               ) : roleUsers.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-8">
+                <p className={`text-xs ${secondaryText} text-center py-8`}>
                   No users found for this role.
                 </p>
               ) : (
                 roleUsers.map((u) => (
                   <div
                     key={u.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50"
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]"
                   >
-
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold ${primaryText}`}>
                         {u.name}
                       </p>
-
-                      <p className="text-[11px] text-slate-400">
+                      <p className={`text-[11px] ${secondaryText}`}>
                         {u.email}
                       </p>
                     </div>
 
                     {u.is_active !== undefined && (
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded ${
                           u.is_active
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                            : 'bg-amber-50 text-amber-600 border border-amber-100'
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                         }`}
                       >
-                        {u.is_active
-                          ? 'Active'
-                          : 'Pending'}
+                        {u.is_active ? 'Active' : 'Pending'}
                       </span>
                     )}
-
                   </div>
                 ))
               )}
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* PROMOTE TO HOD MODAL */}
+      {/* =====================================================
+          PROMOTE TO HOD MODAL
+      ===================================================== */}
       {showPromoteHOD && selectedLecturer && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-
+          <div className={`${modalClass} max-w-md`}>
             <div className="flex items-start justify-between mb-6">
-
               <div className="flex items-start gap-3">
-
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
                   <Crown className="w-5 h-5" />
                 </div>
 
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">
+                  <h2 className={`text-lg font-bold ${primaryText}`}>
                     Promote to HOD
                   </h2>
-
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className={`text-xs ${secondaryText} mt-1`}>
                     Assign this lecturer as a Head of Department.
                   </p>
                 </div>
-
               </div>
 
               <button
                 type="button"
                 onClick={closePromoteHODModal}
                 disabled={promotingHOD}
-                className="text-slate-400 hover:text-slate-700 text-xl disabled:opacity-40"
+                className={closeButton}
               >
                 ×
               </button>
-
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5">
-
-              <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+            <div className="bg-[var(--surface-secondary)] border border-[var(--border-color)] rounded-xl p-3 mb-5">
+              <p className={`text-[10px] uppercase tracking-wider font-bold ${secondaryText}`}>
                 Lecturer
               </p>
-
-              <p className="text-sm font-bold text-slate-900 mt-1">
+              <p className={`text-sm font-bold ${primaryText} mt-1`}>
                 {selectedLecturer.name}
               </p>
-
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className={`text-xs ${secondaryText} mt-0.5`}>
                 {selectedLecturer.email}
               </p>
-
             </div>
 
             <div className="space-y-2">
-
-              <label className="block text-xs font-bold text-slate-700">
-                Department
-              </label>
+              <label className={labelClass}>Department</label>
 
               <div className="relative">
-
                 <select
                   value={selectedDepartment}
-                  onChange={(e) =>
-                    setSelectedDepartment(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
                   disabled={promotingHOD}
-                  className="w-full appearance-none px-3 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                  className={`${inputClass} appearance-none pr-10`}
                 >
-
-                  <option value="">
-                    Select department
-                  </option>
+                  <option value="">Select department</option>
 
                   {DEPARTMENTS.map((department) => (
                     <option
@@ -1442,28 +1600,24 @@ const RolesAndPermissions = () => {
                       {department.label}
                     </option>
                   ))}
-
                 </select>
 
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${secondaryText} pointer-events-none`} />
               </div>
-
             </div>
 
             {promoteHODError && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-600 rounded-xl px-3 py-2.5 text-xs font-medium">
+              <div className="mt-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-xl px-3 py-2.5 text-xs font-medium">
                 {promoteHODError}
               </div>
             )}
 
             <div className="flex gap-3 mt-6">
-
               <button
                 type="button"
                 onClick={closePromoteHODModal}
                 disabled={promotingHOD}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold transition-colors disabled:opacity-50"
+                className={`flex-1 ${secondaryButton}`}
               >
                 Cancel
               </button>
@@ -1471,62 +1625,47 @@ const RolesAndPermissions = () => {
               <button
                 type="button"
                 onClick={handlePromoteToHOD}
-                disabled={
-                  promotingHOD ||
-                  !selectedDepartment
-                }
-                className="flex-1 py-2.5 rounded-xl bg-[#0A192F] hover:bg-[#1E3A8A] text-white text-sm font-bold transition-colors disabled:opacity-50"
+                disabled={promotingHOD || !selectedDepartment}
+                className={`flex-1 ${primaryButton}`}
               >
-                {promotingHOD
-                  ? 'Promoting...'
-                  : 'Promote to HOD'}
+                {promotingHOD ? 'Promoting...' : 'Promote to HOD'}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* SAVE CONFIRMATION */}
+      {/* =====================================================
+          SAVE CONFIRMATION
+      ===================================================== */}
       {showSaveConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-
-          <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className={`${modalClass} max-w-md`}>
             <div className="flex items-start gap-3">
-
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-50 text-amber-600">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
                 <Save className="w-5 h-5" />
               </div>
 
               <div>
-
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className={`text-base font-bold ${primaryText}`}>
                   Save Permission Changes?
                 </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Are you sure you want to save the permission
-                  changes for{' '}
-                  <span className="font-semibold text-slate-700">
+                <p className={`mt-1 text-sm ${secondaryText}`}>
+                  Are you sure you want to save the permission changes for{' '}
+                  <span className={`font-semibold ${primaryText}`}>
                     {selectedRole}
                   </span>
                   ? These changes will be saved to the database.
                 </p>
-
               </div>
-
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowSaveConfirm(false)
-                }
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors"
+                onClick={() => setShowSaveConfirm(false)}
+                className={secondaryButton}
               >
                 Cancel
               </button>
@@ -1538,59 +1677,47 @@ const RolesAndPermissions = () => {
                   await handleSavePermissions();
                 }}
                 disabled={savingPermissions}
-                className="px-4 py-2 rounded-xl bg-[#0A192F] hover:bg-[#1E3A8A] text-white text-xs font-bold transition-colors disabled:opacity-50"
+                className={primaryButton}
               >
-                {savingPermissions
-                  ? 'Saving...'
-                  : 'Confirm Save'}
+                {savingPermissions ? 'Saving...' : 'Confirm Save'}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* DELETE ROLE CONFIRMATION */}
+      {/* =====================================================
+          DELETE ROLE CONFIRMATION
+      ===================================================== */}
       {showDeleteRoleConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-
-          <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className={`${modalClass} max-w-md`}>
             <div className="flex items-start gap-3">
-
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-rose-50 text-rose-600">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 shrink-0">
                 <Trash2 className="w-5 h-5" />
               </div>
 
               <div>
-
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className={`text-base font-bold ${primaryText}`}>
                   Delete Role?
                 </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Are you sure you want to permanently delete
-                  the role{' '}
-                  <span className="font-semibold text-slate-700">
+                <p className={`mt-1 text-sm ${secondaryText}`}>
+                  Are you sure you want to permanently delete the role{' '}
+                  <span className={`font-semibold ${primaryText}`}>
                     {selectedRole}
                   </span>
                   ? This action cannot be undone.
                 </p>
-
               </div>
-
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowDeleteRoleConfirm(false)
-                }
+                onClick={() => setShowDeleteRoleConfirm(false)}
                 disabled={deletingRole}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors disabled:opacity-50"
+               className={`${secondaryButton} !rounded-[18px]`}
               >
                 Cancel
               </button>
@@ -1599,88 +1726,65 @@ const RolesAndPermissions = () => {
                 type="button"
                 onClick={handleDeleteRole}
                 disabled={deletingRole}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[18px] bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
               >
-                {deletingRole
-                  ? 'Deleting...'
-                  : 'Delete Role'}
+                {deletingRole ? 'Deleting...' : 'Delete Role'}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* USER ACTION CONFIRMATION */}
+      {/* =====================================================
+          USER ACTION CONFIRMATION
+      ===================================================== */}
       {userActionConfirm && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-[min(430px,calc(100%-32px))]">
-
           <div className="bg-[#071B38]/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl overflow-hidden">
-
             <div className="p-5">
-
               <div className="flex items-start gap-3">
-
                 <div
                   className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${
-                    userActionConfirm.action ===
-                    'delete'
+                    userActionConfirm.action === 'delete'
                       ? 'bg-rose-500/15 text-rose-300'
-                      : userActionConfirm.action ===
-                        'deactivate'
-                      ? 'bg-amber-500/15 text-amber-300'
-                      : 'bg-emerald-500/15 text-emerald-300'
+                      : userActionConfirm.action === 'deactivate'
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-emerald-500/15 text-emerald-300'
                   }`}
                 >
-
-                  {userActionConfirm.action ===
-                  'delete' ? (
+                  {userActionConfirm.action === 'delete' ? (
                     <Trash2 className="w-5 h-5" />
-                  ) : userActionConfirm.action ===
-                    'deactivate' ? (
+                  ) : userActionConfirm.action === 'deactivate' ? (
                     <UserX className="w-5 h-5" />
                   ) : (
                     <UserCheck className="w-5 h-5" />
                   )}
-
                 </div>
 
                 <div className="min-w-0">
-
                   <h3 className="text-white font-semibold text-sm">
-                    {userActionConfirm.action ===
-                    'delete'
+                    {userActionConfirm.action === 'delete'
                       ? 'Delete User?'
-                      : userActionConfirm.action ===
-                        'deactivate'
-                      ? 'Deactivate User?'
-                      : 'Activate User?'}
+                      : userActionConfirm.action === 'deactivate'
+                        ? 'Deactivate User?'
+                        : 'Activate User?'}
                   </h3>
 
                   <p className="text-white/60 text-xs mt-1 leading-relaxed">
-                    {userActionConfirm.action ===
-                    'delete'
+                    {userActionConfirm.action === 'delete'
                       ? `Are you sure you want to permanently delete ${userActionConfirm.user.name}? This action cannot be undone.`
-                      : userActionConfirm.action ===
-                        'deactivate'
-                      ? `Are you sure you want to deactivate ${userActionConfirm.user.name}?`
-                      : `Are you sure you want to activate ${userActionConfirm.user.name}?`}
+                      : userActionConfirm.action === 'deactivate'
+                        ? `Are you sure you want to deactivate ${userActionConfirm.user.name}?`
+                        : `Are you sure you want to activate ${userActionConfirm.user.name}?`}
                   </p>
-
                 </div>
-
               </div>
-
             </div>
 
             <div className="flex border-t border-white/10">
-
               <button
                 type="button"
-                onClick={() =>
-                  setUserActionConfirm(null)
-                }
+                onClick={() => setUserActionConfirm(null)}
                 disabled={userActionLoading}
                 className="flex-1 py-3 text-xs font-semibold text-white/60 hover:bg-white/5 transition-colors disabled:opacity-40"
               >
@@ -1692,84 +1796,64 @@ const RolesAndPermissions = () => {
                 onClick={executeUserAction}
                 disabled={userActionLoading}
                 className={`flex-1 py-3 text-xs font-semibold border-l border-white/10 transition-colors disabled:opacity-50 ${
-                  userActionConfirm.action ===
-                  'delete'
+                  userActionConfirm.action === 'delete'
                     ? 'text-rose-300 hover:bg-rose-500/10'
-                    : userActionConfirm.action ===
-                      'deactivate'
-                    ? 'text-amber-300 hover:bg-amber-500/10'
-                    : 'text-emerald-300 hover:bg-emerald-500/10'
+                    : userActionConfirm.action === 'deactivate'
+                      ? 'text-amber-300 hover:bg-amber-500/10'
+                      : 'text-emerald-300 hover:bg-emerald-500/10'
                 }`}
               >
                 {userActionLoading
                   ? 'Processing...'
-                  : userActionConfirm.action ===
-                    'delete'
-                  ? 'Delete'
-                  : userActionConfirm.action ===
-                    'deactivate'
-                  ? 'Deactivate'
-                  : 'Activate'}
+                  : userActionConfirm.action === 'delete'
+                    ? 'Delete'
+                    : userActionConfirm.action === 'deactivate'
+                      ? 'Deactivate'
+                      : 'Activate'}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* USER NOTIFICATION */}
+      {/* =====================================================
+          USER NOTIFICATION
+      ===================================================== */}
       {userNotification && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[110] w-[min(430px,calc(100%-32px))]">
-
           <div
             className={`backdrop-blur-2xl rounded-2xl border shadow-2xl px-4 py-3 flex items-center gap-3 ${
-              userNotification.type ===
-              'warning'
+              userNotification.type === 'warning'
                 ? 'bg-amber-500/15 border-amber-400/25'
                 : 'bg-emerald-500/15 border-emerald-400/25'
             }`}
           >
-
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                userNotification.type ===
-                'warning'
+                userNotification.type === 'warning'
                   ? 'bg-amber-400/15 text-amber-300'
                   : 'bg-emerald-400/15 text-emerald-300'
               }`}
             >
-
-              {userNotification.type ===
-              'warning' ? (
-                <span className="font-bold">
-                  !
-                </span>
+              {userNotification.type === 'warning' ? (
+                <span className="font-bold">!</span>
               ) : (
                 <Check className="w-4 h-4" />
               )}
-
             </div>
 
             <div className="min-w-0">
-
               <p className="text-white text-xs font-semibold">
-                {userNotification.type ===
-                'warning'
-                  ? 'Warning'
-                  : 'Success'}
+                {userNotification.type === 'warning' ? 'Warning' : 'Success'}
               </p>
 
-              <p className="text-white/60 text-[11px] mt-0.5">
+              <p className="text-white/70 text-[11px] mt-0.5">
                 {userNotification.message}
               </p>
-
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };

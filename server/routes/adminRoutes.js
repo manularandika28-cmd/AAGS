@@ -26,7 +26,7 @@ router.get('/users/pending', getPendingUsers);
 router.patch('/users/:role/:id/approve', approveUser);
 router.delete('/users/:role/:id/reject', rejectUser);
 router.get('/dashboard-stats', getDashboardStats);
-router.post('/users', addUser);
+router.post('/users', verifyToken, authorize('Admin'), addUser);
 router.get('/roles', getRoles);
 router.post('/roles', addRole);
 router.get('/roles/:roleId/permissions', getRolePermissions);

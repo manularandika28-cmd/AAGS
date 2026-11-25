@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   BrowserRouter,
@@ -6,9 +7,9 @@ import {
   Navigate
 } from 'react-router-dom';
 
-import backgroundVideo from './Assets/BackgroundVideo.mp4';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+
 import Login from './pages/Login';
 import Register from './pages/Register';
 import SettingsPage from './pages/settings';
@@ -16,14 +17,7 @@ import SettingsPage from './pages/settings';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
-// =========================================
-// AUTH
-// =========================================
-
-
-// =========================================
 // HOD
-// =========================================
 import HODDashboard from './pages/HOD/HOD_dashboard';
 import MeetingRequests from './pages/HOD/Meeting_requests';
 import MedicalReview from './pages/HOD/Medical_review';
@@ -34,15 +28,12 @@ import AttendanceManager from './pages/Lecturer/AttendanceManager';
 import MeetingManagement from './pages/Lecturer/MeetingManagement';
 
 // Student
-// =========================================
 import StudentDashboard from './pages/Student/StudentDashboard';
 import MeetingScheduler from './pages/Student/MeetingScheduler';
 import MedicalHub from './pages/Student/MedicalHub';
 import AcademicRecords from './pages/Student/AcademicRecords';
 
-// =========================================
 // Administrator
-// =========================================
 import AdminDashboard from './pages/Administrator/AdminDashboard';
 import UserManagement from './pages/Administrator/UserManagement';
 import PendingApprovals from './pages/Administrator/PendingApprovals';
@@ -51,89 +42,78 @@ import SystemConfiguration from './pages/Administrator/SysConfig';
 import RolesAndPermissions from './pages/Administrator/RoleSettings';
 
 // Dean
-// =========================================
 import DeanDashboard from './pages/Dean/DeanDashboard';
 import DeanMeetingRequests from './pages/Dean/MeetingRequests';
 
-
-
-
-// =========================================
-// Login
-// =========================================
+// Medical Officer
+import MoDashboard from './pages/MedicalOfficer/MoDashboard';
 
 
 function App() {
   return (
     <AuthProvider>
-
       <BrowserRouter>
 
         {/* =========================================
-            GLOBAL BACKGROUND VIDEO
+            GLOBAL ACADEMIC AMBIENT BACKGROUND
+            Animated Glows + Dotted Grid
         ========================================= */}
-        <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
 
-          <video
-  autoPlay
-  loop
-  muted
-  playsInline
-  className="w-full h-full object-cover blur-md"
->
-  <source
-    src={backgroundVideo}
-    type="video/mp4"
-  />
-</video>
+        <div
+          className="academic-backdrop"
+          aria-hidden="true"
+        >
+          {/* Primary animated glow */}
+          <div className="glow-layer"></div>
 
-          {/* Video Overlay */}
-          <div className="absolute inset-0 bg-black/40" />
+          {/* Secondary animated glow */}
+          <div className="glow-layer-secondary"></div>
 
+          {/* Moving dotted grid */}
+          <div className="grid-layer"></div>
         </div>
 
 
         {/* =========================================
             APPLICATION CONTENT
         ========================================= */}
+
         <div className="relative z-10 min-h-screen">
 
           <Routes>
 
-            {/* =========================================
-                ROOT
-                / → /Login
-            ========================================= */}
+            {/* ROOT */}
             <Route
               path="/"
-              element={
-                <Navigate
-                  to="/Login"
-                  replace
-                />
-              }
+              element={<Navigate to="/Login" replace />}
             />
-          <Route path="/Register" element={<Register />} />
 
-            {/* =========================================
-                LOGIN
-                NOT PROTECTED
-            ========================================= */}
+
+            {/* AUTH */}
+            <Route
+              path="/Register"
+              element={<Register />}
+            />
+
             <Route
               path="/Login"
               element={<Login />}
             />
 
-            {/* =========================================
-                fogot pw/reset pw
-            ========================================= */}
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route
+              path="/forgot-password"
+              element={<ForgotPassword />}
+            />
+
+            <Route
+              path="/reset-password"
+              element={<ResetPassword />}
+            />
 
 
-            {/* =========================================
-                HOD ROUTES
-            ========================================= */}
+            {/* =====================================
+                HOD
+            ===================================== */}
 
             <Route
               path="/hod/dashboard"
@@ -163,9 +143,9 @@ function App() {
             />
 
 
-            {/* =========================================
-                STUDENT ROUTES
-            ========================================= */}
+            {/* =====================================
+                STUDENT
+            ===================================== */}
 
             <Route
               path="/Student/dashboard"
@@ -204,9 +184,9 @@ function App() {
             />
 
 
-            {/* =========================================
-                ADMIN ROUTES
-            ========================================= */}
+            {/* =====================================
+                ADMINISTRATOR
+            ===================================== */}
 
             <Route
               path="/admin/dashboard"
@@ -218,13 +198,13 @@ function App() {
             />
 
             <Route
-            path="/admin/pending-approvals"
-            element={
-              <ProtectedRoute allowedRoles={['Admin']}>
-                <PendingApprovals />
-              </ProtectedRoute>
-            }
-          />
+              path="/admin/pending-approvals"
+              element={
+                <ProtectedRoute allowedRoles={['Admin']}>
+                  <PendingApprovals />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/admin/users"
@@ -263,11 +243,9 @@ function App() {
             />
 
 
-           
-
-             {/* =========================================
-                DEAN ROUTES
-            ========================================= */}
+            {/* =====================================
+                DEAN
+            ===================================== */}
 
             <Route
               path="/dean/dashboard"
@@ -288,10 +266,23 @@ function App() {
             />
 
 
+            {/* =====================================
+                MEDICAL OFFICER
+            ===================================== */}
 
-            {/* =========================================
+            <Route
+              path="/medical-officer/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['Medical Officer']}>
+                  <MoDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+
+            {/* =====================================
                 LECTURER
-            ========================================= */}
+            ===================================== */}
 
             <Route
               path="/lecturer/dashboard"
@@ -320,40 +311,37 @@ function App() {
               }
             />
 
-            {/* =========================================
-    SETTINGS
-========================================= */}
 
-<Route
-  path="/settings"
-  element={
-    <ProtectedRoute
-      allowedRoles={[
-        'Student',
-        'Lecturer',
-        'HOD',
-        'Dean',
-        'Admin'
-      ]}
-    >
-      <SettingsPage />
-    </ProtectedRoute>
-  }
-/>
+            {/* =====================================
+                SETTINGS
+            ===================================== */}
+
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute
+                  allowedRoles={[
+                    'Student',
+                    'Lecturer',
+                    'HOD',
+                    'Dean',
+                    'Admin',
+                    'Medical Officer'
+                  ]}
+                >
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
 
 
-            {/* =========================================
+            {/* =====================================
                 UNKNOWN ROUTES
-                → LOGIN
-            ========================================= */}
+            ===================================== */}
+
             <Route
               path="*"
-              element={
-                <Navigate
-                  to="/Login"
-                  replace
-                />
-              }
+              element={<Navigate to="/Login" replace />}
             />
 
           </Routes>
@@ -361,7 +349,6 @@ function App() {
         </div>
 
       </BrowserRouter>
-
     </AuthProvider>
   );
 }

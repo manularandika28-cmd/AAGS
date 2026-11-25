@@ -1,0 +1,175 @@
+
+/* =========================================================
+   AAGS — GLOBAL DESIGN TOKENS
+========================================================= */
+
+:root {
+  /* Brand */
+  --aags-navy-50: #F1F6F9;
+  --aags-navy-100: #DFEAF1;
+  --aags-navy-200: #C0D5E2;
+  --aags-navy-300: #99BCD1;
+  --aags-navy-400: #6C9DBC;
+  --aags-navy-500: #4980A1;
+  --aags-navy-600: #39647E;
+  --aags-navy-700: #2E5166;
+  --aags-navy-800: #233D4D;
+  --aags-navy-900: #182A35;
+
+  --aags-orange-500: #FE7F2D;
+  --aags-orange-600: #F46001;
+
+  /* Backgrounds */
+  --app-background: #0B1423;
+  --surface-primary: rgba(23, 37, 57, 0.82);
+  --surface-secondary: rgba(30, 46, 68, 0.72);
+  --surface-tertiary: rgba(255, 255, 255, 0.055);
+
+  /* Academic Ambient Background — Dark */
+  --bg-base: #0B1120;
+  --bg-glow-1: rgba(56, 189, 248, 0.20);
+  --bg-glow-2: rgba(45, 212, 191, 0.15);
+  --bg-glow-3: rgba(129, 140, 248, 0.14);
+  --grid-dot: rgba(226, 232, 240, 0.12);
+
+  /* Text */
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-accent: rgba(254, 127, 45, 0.5);
+
+  /* Status */
+  --status-success: #12B76A;
+  --status-warning: #F79009;
+  --status-error: #F04438;
+  --status-info: #4980A1;
+
+  /* Typography */
+  --font-primary: "Plus Jakarta Sans", sans-serif;
+
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.28);
+
+  /* Motion */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+}
+
+/* =========================================================
+   LIGHT THEME TOKENS
+========================================================= */
+
+:is(.light, [data-theme="light"]) {
+  /* Backgrounds */
+  --app-background: #F3F6FA;
+  --surface-primary: rgba(255, 255, 255, 0.92);
+  --surface-secondary: #FFFFFF;
+  --surface-tertiary: #F1F5F9;
+
+  /* Academic Ambient Background — Light */
+  --bg-base: #F8FAFC;
+  --bg-glow-1: rgba(37, 99, 235, 0.16);
+  --bg-glow-2: rgba(13, 148, 136, 0.14);
+  --bg-glow-3: rgba(79, 70, 229, 0.11);
+  --grid-dot: rgba(15, 23, 42, 0.14);
+
+  /* Text */
+  --text-primary: #182A35;
+  --text-secondary: #475467;
+  --text-muted: #667085;
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border-default: #D0D5DD;
+  --border-subtle: #EAECF0;
+  --border-accent: rgba(244, 96, 1, 0.4);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(23, 41, 53, 0.06);
+  --shadow-md: 0 8px 24px rgba(23, 41, 53, 0.09);
+  --shadow-lg: 0 18px 48px rgba(23, 41, 53, 0.13);
+}
+
+/* =========================================================
+   DARK THEME TOKENS
+========================================================= */
+
+:is(.dark, [data-theme="dark"]) {
+  --bg-base: #0B1120;
+  --bg-glow-1: rgba(56, 189, 248, 0.20);
+  --bg-glow-2: rgba(45, 212, 191, 0.15);
+  --bg-glow-3: rgba(129, 140, 248, 0.14);
+  --grid-dot: rgba(226, 232, 240, 0.12);
+}
+
+/* =========================================================
+   GLOBAL BASE STYLES
+========================================================= */
+
+html {
+  font-family: var(--font-primary);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-primary);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* =========================================================
+   ACCESSIBILITY — REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

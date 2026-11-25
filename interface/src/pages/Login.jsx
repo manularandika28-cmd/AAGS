@@ -17,6 +17,7 @@ const staffRoleOptions = [
     { key: 'Admin', label: 'Administrator', path: '/admin/dashboard' },
     { key: 'Dean', label: 'Dean', path: '/dean/dashboard' },
     { key: 'Lecturer', label: 'Lecturer', path: '/lecturer/dashboard' },
+     { key: 'Medical Officer', label: 'Medical Officer', path: '/medical-officer/dashboard' },
 ];
 
 const Login = () => {

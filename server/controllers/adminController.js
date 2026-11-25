@@ -137,57 +137,52 @@ export const rejectUser = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 export const getDashboardStats = async (req, res) => {
     try {
         const studentCount = await pool.query(`
-            SELECT COUNT(*)
-            FROM students
-            WHERE is_active = true
+            SELECT COUNT(*) FROM students WHERE is_active = true
         `);
 
         const lecturerCount = await pool.query(`
-            SELECT COUNT(*)
-            FROM lecturers
-            WHERE is_active = true
+            SELECT COUNT(*) FROM lecturers WHERE is_active = true
         `);
 
         const hodCount = await pool.query(`
-            SELECT COUNT(*)
-            FROM hods
+            SELECT COUNT(*) FROM hods
         `);
 
         const deanCount = await pool.query(`
-            SELECT COUNT(*)
-            FROM deans
+            SELECT COUNT(*) FROM deans
         `);
 
         const adminCount = await pool.query(`
-            SELECT COUNT(*)
-            FROM admins
+            SELECT COUNT(*) FROM admins
+        `);
+
+        const medicalOfficerCount = await pool.query(`
+            SELECT COUNT(*) FROM medical_officers WHERE is_active = true
         `);
 
         const pendingStudents = await pool.query(`
-            SELECT COUNT(*)
-            FROM students
-            WHERE is_active = false
+            SELECT COUNT(*) FROM students WHERE is_active = false
         `);
 
         const pendingLecturers = await pool.query(`
-            SELECT COUNT(*)
-            FROM lecturers
-            WHERE is_active = false
+            SELECT COUNT(*) FROM lecturers WHERE is_active = false
         `);
 
         const totalActiveUsers =
-            parseInt(studentCount.rows[0].count) +
-            parseInt(lecturerCount.rows[0].count) +
-            parseInt(hodCount.rows[0].count) +
-            parseInt(deanCount.rows[0].count) +
-            parseInt(adminCount.rows[0].count);
+            Number(studentCount.rows[0].count) +
+            Number(lecturerCount.rows[0].count) +
+            Number(hodCount.rows[0].count) +
+            Number(deanCount.rows[0].count) +
+            Number(adminCount.rows[0].count) +
+            Number(medicalOfficerCount.rows[0].count);
 
         const pendingUsers =
-            parseInt(pendingStudents.rows[0].count) +
-            parseInt(pendingLecturers.rows[0].count);
+            Number(pendingStudents.rows[0].count) +
+            Number(pendingLecturers.rows[0].count);
 
         const userListResult = await pool.query(`
             SELECT
@@ -243,25 +238,34 @@ export const getDashboardStats = async (req, res) => {
                 created_at
             FROM admins
 
+            UNION ALL
+
+            SELECT
+                medical_officer_id AS id,
+                name,
+                email,
+                'Medical Officer' AS role,
+                is_active,
+                created_at
+            FROM medical_officers
+
             ORDER BY created_at DESC
-            
         `);
 
         return res.status(200).json({
             totalActiveUsers,
 
-            systemAdminsCount: parseInt(
-                adminCount.rows[0].count
-            ),
+            systemAdminsCount: Number(adminCount.rows[0].count),
 
             pendingUsers,
 
             roleCounts: {
-                Student: parseInt(studentCount.rows[0].count),
-                Lecturer: parseInt(lecturerCount.rows[0].count),
-                HOD: parseInt(hodCount.rows[0].count),
-                Dean: parseInt(deanCount.rows[0].count),
-                Admin: parseInt(adminCount.rows[0].count)
+                Student: Number(studentCount.rows[0].count),
+                Lecturer: Number(lecturerCount.rows[0].count),
+                HOD: Number(hodCount.rows[0].count),
+                Dean: Number(deanCount.rows[0].count),
+                Admin: Number(adminCount.rows[0].count),
+                'Medical Officer': Number(medicalOfficerCount.rows[0].count)
             },
 
             userList: userListResult.rows
@@ -275,6 +279,7 @@ export const getDashboardStats = async (req, res) => {
         });
     }
 };
+
 export const getRoles = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -289,6 +294,7 @@ export const getRoles = async (req, res) => {
                     WHEN 'HOD' THEN (SELECT COUNT(*) FROM hods)
                     WHEN 'Dean' THEN (SELECT COUNT(*) FROM deans)
                     WHEN 'Admin' THEN (SELECT COUNT(*) FROM admins)
+                    WHEN 'Medical Officer' THEN (SELECT COUNT(*) FROM medical_officers)
                     ELSE 0 
                 END AS user_count 
             FROM roles r 
@@ -558,6 +564,7 @@ export const addRole = async (req, res) => {
         });
     }
 };
+
 export const addUser = async (req, res) => {
     const client = await pool.connect();
 
@@ -572,6 +579,13 @@ export const addUser = async (req, res) => {
             lecturer_id
         } = req.body;
 
+        // Only authenticated Admins can create accounts
+        if (!req.user || req.user.role !== 'Admin') {
+            return res.status(403).json({
+                error: 'Only Admins can create user accounts'
+            });
+        }
+
         // Basic validation
         if (!name || !email || !password || !role) {
             return res.status(400).json({
@@ -584,7 +598,8 @@ export const addUser = async (req, res) => {
             'Dean',
             'HOD',
             'Lecturer',
-            'Student'
+            'Student',
+            'Medical Officer'
         ];
 
         if (!allowedRoles.includes(role)) {
@@ -611,6 +626,8 @@ export const addUser = async (req, res) => {
             SELECT email FROM lecturers WHERE LOWER(email) = LOWER($1)
             UNION
             SELECT email FROM students WHERE LOWER(email) = LOWER($1)
+            UNION
+            SELECT email FROM medical_officers WHERE LOWER(email) = LOWER($1)
             `,
             [email.trim()]
         );
@@ -641,15 +658,8 @@ export const addUser = async (req, res) => {
 
         const roleId = roleResult.rows[0].role_id;
 
-        /*
-         * The currently logged-in admin should ideally come
-         * from authentication middleware.
-         *
-         * For now, use the admin ID supplied by the frontend
-         * only if your current authentication system does not
-         * yet expose req.user.
-         */
-        const registeredBy = req.user?.id || 1;
+        // Get the logged-in Admin's ID from the JWT
+        const registeredBy = req.user.userId;
 
         let result;
 
@@ -755,6 +765,42 @@ export const addUser = async (req, res) => {
         }
 
         // -------------------------
+        // MEDICAL OFFICER
+        // -------------------------
+        else if (role === 'Medical Officer') {
+
+            result = await client.query(
+                `
+                INSERT INTO medical_officers
+                    (
+                        name,
+                        email,
+                        password_hash,
+                        role_id,
+                        is_active,
+                        registered_by
+                    )
+                VALUES
+                    ($1, $2, $3, $4, true, $5)
+                RETURNING
+                    medical_officer_id AS id,
+                    name,
+                    email,
+                    role_id,
+                    is_active,
+                    created_at
+                `,
+                [
+                    name.trim(),
+                    email.trim(),
+                    passwordHash,
+                    roleId,
+                    registeredBy
+                ]
+            );
+        }
+
+        // -------------------------
         // LECTURER
         // -------------------------
         else if (role === 'Lecturer') {
@@ -832,36 +878,37 @@ export const addUser = async (req, res) => {
             );
         }
 
-       const createdUser = result.rows[0];
+        const createdUser = result.rows[0];
 
-await client.query(
-    `
-    INSERT INTO audit_logs
-        (action, target, performed_by, ip_address, role, severity, module, details)
-    VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8)
-    `,
-    [
-        'User created',
-        createdUser.name,
-        registeredBy,
-        req.ip,
-        role,
-        'Info',
-        'User Management',
-        `${role} account created by Admin`
-    ]
-);
+        // Create audit log
+        await client.query(
+            `
+            INSERT INTO audit_logs
+                (action, target, performed_by, ip_address, role, severity, module, details)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [
+                'User created',
+                createdUser.name,
+                registeredBy,
+                req.ip,
+                role,
+                'Info',
+                'User Management',
+                `${role} account created by Admin`
+            ]
+        );
 
-await client.query('COMMIT');
+        await client.query('COMMIT');
 
-return res.status(201).json({
-    message: `${role} created successfully`,
-    user: {
-        ...createdUser,
-        role
-    }
-});
+        return res.status(201).json({
+            message: `${role} created successfully`,
+            user: {
+                ...createdUser,
+                role
+            }
+        });
 
     } catch (error) {
 
@@ -869,14 +916,12 @@ return res.status(201).json({
 
         console.error('Add user error:', error);
 
-        // PostgreSQL unique constraint
         if (error.code === '23505') {
             return res.status(409).json({
                 error: 'A user with this email already exists'
             });
         }
 
-        // PostgreSQL foreign-key error
         if (error.code === '23503') {
             return res.status(400).json({
                 error: 'Invalid department, dean, lecturer or administrator reference'
@@ -891,6 +936,7 @@ return res.status(201).json({
         client.release();
     }
 };
+
 export const promoteLecturerToHOD = async (req, res) => {
     const { lecturerId } = req.params;
     const { department_id } = req.body;
@@ -1262,36 +1308,82 @@ export const getAuditLogs = async (req, res) => {
     }
 };
 
+
 export const getUsersByRole = async (req, res) => {
     const { roleName } = req.params;
 
     const queries = {
-    Student: `SELECT student_id AS id, student_name AS name, email, is_active FROM students`,
-    Lecturer: `SELECT lecturer_id AS id, name, email, is_active FROM lecturers`,
-    HOD: `SELECT hod_id AS id, name, email, is_active FROM hods`,
-    Dean: `SELECT dean_id AS id, name, email, is_active FROM deans`,
-    Admin: `SELECT admin_id AS id, admin_name AS name, email, is_active FROM admins`,
-};
+        Student: `
+            SELECT student_id AS id, student_name AS name, email, is_active
+            FROM students
+        `,
+
+        Lecturer: `
+            SELECT lecturer_id AS id, name, email, is_active
+            FROM lecturers
+        `,
+
+        HOD: `
+            SELECT hod_id AS id, name, email, is_active
+            FROM hods
+        `,
+
+        Dean: `
+            SELECT dean_id AS id, name, email, is_active
+            FROM deans
+        `,
+
+        Admin: `
+            SELECT admin_id AS id, admin_name AS name, email, is_active
+            FROM admins
+        `,
+
+        'Medical Officer': `
+            SELECT medical_officer_id AS id, name, email, is_active
+            FROM medical_officers
+        `
+    };
 
     const query = queries[roleName];
+
     if (!query) {
-        return res.status(400).json({ error: 'Invalid role name' });
+        return res.status(400).json({
+            error: 'Invalid role name'
+        });
     }
 
     try {
         const result = await pool.query(query);
+
         return res.status(200).json(result.rows);
+
     } catch (error) {
         console.error('Get users by role error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+
+        return res.status(500).json({
+            error: 'Internal server error'
+        });
     }
 };
+
+
 export const updateUserStatus = async (req, res) => {
     const { role, id } = req.params;
     const { is_active } = req.body;
 
-    if (!['Student', 'Lecturer', 'HOD', 'Dean', 'Admin'].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role' });
+    const allowedRoles = [
+        'Student',
+        'Lecturer',
+        'HOD',
+        'Dean',
+        'Admin',
+        'Medical Officer'
+    ];
+
+    if (!allowedRoles.includes(role)) {
+        return res.status(400).json({
+            error: 'Invalid role'
+        });
     }
 
     if (typeof is_active !== 'boolean') {
@@ -1300,71 +1392,57 @@ export const updateUserStatus = async (req, res) => {
         });
     }
 
+    const tableMap = {
+        Student: 'students',
+        Lecturer: 'lecturers',
+        HOD: 'hods',
+        Dean: 'deans',
+        Admin: 'admins',
+        'Medical Officer': 'medical_officers'
+    };
+
+    const idColumnMap = {
+        Student: 'student_id',
+        Lecturer: 'lecturer_id',
+        HOD: 'hod_id',
+        Dean: 'dean_id',
+        Admin: 'admin_id',
+        'Medical Officer': 'medical_officer_id'
+    };
+
     try {
-        const tableMap = {
-    Student: 'students',
-    Lecturer: 'lecturers',
-    HOD: 'hods',
-    Dean: 'deans',
-    Admin: 'admins',
-};
+        const table = tableMap[role];
+        const idColumn = idColumnMap[role];
 
-const idColumnMap = {
-    Student: 'student_id',
-    Lecturer: 'lecturer_id',
-    HOD: 'hod_id',
-    Dean: 'dean_id',
-    Admin: 'admin_id',
-};
+        // Admin protection
+        if (role === 'Admin') {
+            const currentAdminId = req.user?.userId;
 
-const table = tableMap[role];
-const idColumn = idColumnMap[role];
+            if (String(id) === String(currentAdminId)) {
+                return res.status(403).json({
+                    error: 'You cannot deactivate your own Admin account'
+                });
+            }
 
-if (role === 'Admin') {
-    const currentAdminId = req.user?.userId;
+            if (is_active === false) {
+                const adminCountResult = await pool.query(
+                    `
+                    SELECT COUNT(*) AS count
+                    FROM admins
+                    WHERE is_active = TRUE
+                    `
+                );
 
-    // Prevent an Admin from deactivating their own account
-    if (String(id) === String(currentAdminId)) {
-        return res.status(403).json({
-            error: 'You cannot deactivate your own Admin account'
-        });
-    }
+                const activeAdminCount =
+                    Number(adminCountResult.rows[0].count);
 
-    // Prevent the last active Admin from being deactivated
-    if (is_active === false) {
-        const adminCountResult = await pool.query(
-            `
-            SELECT COUNT(*) AS count
-            FROM admins
-            WHERE is_active = TRUE
-            `
-        );
-
-        const activeAdminCount = Number(adminCountResult.rows[0].count);
-
-        if (activeAdminCount <= 1) {
-            return res.status(403).json({
-                error: 'The last active Admin cannot be deactivated'
-            });
+                if (activeAdminCount <= 1) {
+                    return res.status(403).json({
+                        error: 'The last active Admin cannot be deactivated'
+                    });
+                }
+            }
         }
-    }
-}if (role === 'Admin' && is_active === false) {
-    const adminCountResult = await pool.query(
-        `
-        SELECT COUNT(*) AS count
-        FROM admins
-        WHERE is_active = TRUE
-        `
-    );
-
-    const activeAdminCount = Number(adminCountResult.rows[0].count);
-
-    if (activeAdminCount <= 1) {
-        return res.status(403).json({
-            error: 'The last active Admin cannot be deactivated'
-        });
-    }
-}
 
         const result = await pool.query(
             `
@@ -1387,7 +1465,9 @@ if (role === 'Admin') {
         const userName =
             role === 'Student'
                 ? updatedUser.student_name
-                : updatedUser.name;
+                : role === 'Admin'
+                    ? updatedUser.admin_name
+                    : updatedUser.name;
 
         const action = is_active
             ? 'User activated'
@@ -1407,7 +1487,7 @@ if (role === 'Admin') {
             [
                 action,
                 userName,
-                req.body?.userId || null,
+                req.user?.userId || null,
                 req.ip,
                 role,
                 is_active ? 'Info' : 'Warning',
@@ -1429,6 +1509,8 @@ if (role === 'Admin') {
         });
     }
 };
+;
+
 
 
 export const deleteUser = async (req, res) => {
@@ -1439,7 +1521,8 @@ export const deleteUser = async (req, res) => {
         'Lecturer',
         'HOD',
         'Dean',
-        'Admin'
+        'Admin',
+        'Medical Officer'
     ];
 
     if (!allowedRoles.includes(role)) {
@@ -1458,7 +1541,8 @@ export const deleteUser = async (req, res) => {
             Lecturer: 'lecturers',
             HOD: 'hods',
             Dean: 'deans',
-            Admin: 'admins'
+            Admin: 'admins',
+            'Medical Officer': 'medical_officers'
         };
 
         const idColumnMap = {
@@ -1466,21 +1550,17 @@ export const deleteUser = async (req, res) => {
             Lecturer: 'lecturer_id',
             HOD: 'hod_id',
             Dean: 'dean_id',
-            Admin: 'admin_id'
+            Admin: 'admin_id',
+            'Medical Officer': 'medical_officer_id'
         };
 
         const table = tableMap[role];
         const idColumn = idColumnMap[role];
 
-        // -------------------------------------------------
-        // ADMIN PROTECTION
-        // -------------------------------------------------
+        // Admin protection
         if (role === 'Admin') {
-            const currentAdminId =
-                req.user?.userId ||
-                req.user?.id;
+            const currentAdminId = req.user?.userId;
 
-            // Prevent Admin from deleting their own account
             if (
                 currentAdminId &&
                 String(id) === String(currentAdminId)
@@ -1492,7 +1572,6 @@ export const deleteUser = async (req, res) => {
                 });
             }
 
-            // Prevent deleting the last active Admin
             const adminCountResult = await client.query(
                 `
                 SELECT COUNT(*) AS count
@@ -1513,9 +1592,7 @@ export const deleteUser = async (req, res) => {
             }
         }
 
-        // -------------------------------------------------
-        // FIND USER
-        // -------------------------------------------------
+        // Find user
         const result = await client.query(
             `
             SELECT *
@@ -1543,17 +1620,8 @@ export const deleteUser = async (req, res) => {
                     ? deletedUser.admin_name
                     : deletedUser.name;
 
-        // -------------------------------------------------
-        // LECTURER
-        // -------------------------------------------------
+        // Lecturer protection
         if (role === 'Lecturer') {
-
-            /*
-             * A Lecturer can also be linked to an HOD record.
-             *
-             * We do NOT automatically delete the HOD record here.
-             * The HOD assignment must be removed first.
-             */
             const hodResult = await client.query(
                 `
                 SELECT
@@ -1576,27 +1644,15 @@ export const deleteUser = async (req, res) => {
                 await client.query('ROLLBACK');
 
                 return res.status(409).json({
-                    error:
-                        hod.dep_name
-                            ? `This lecturer is currently the HOD of ${hod.dep_name}. Remove the HOD assignment before deleting the lecturer.`
-                            : 'This lecturer is currently assigned as an HOD. Remove the HOD assignment before deleting the lecturer.'
+                    error: hod.dep_name
+                        ? `This lecturer is currently the HOD of ${hod.dep_name}. Remove the HOD assignment before deleting the lecturer.`
+                        : 'This lecturer is currently assigned as an HOD. Remove the HOD assignment before deleting the lecturer.'
                 });
             }
         }
 
-        // -------------------------------------------------
-        // HOD
-        // -------------------------------------------------
+        // HOD: clear department references before deletion
         if (role === 'HOD') {
-
-            /*
-             * Departments reference HODs through departments.hod_id.
-             *
-             * Clear those references first so PostgreSQL allows
-             * the HOD record to be deleted.
-             *
-             * The linked Lecturer is intentionally NOT deleted.
-             */
             await client.query(
                 `
                 UPDATE departments
@@ -1607,9 +1663,7 @@ export const deleteUser = async (req, res) => {
             );
         }
 
-        // -------------------------------------------------
-        // DELETE USER
-        // -------------------------------------------------
+        // Delete user
         await client.query(
             `
             DELETE FROM ${table}
@@ -1618,15 +1672,7 @@ export const deleteUser = async (req, res) => {
             [id]
         );
 
-        // -------------------------------------------------
-        // AUDIT LOG
-        // -------------------------------------------------
-        const performedBy =
-            req.user?.userId ||
-            req.user?.id ||
-            req.body?.userId ||
-            null;
-
+        // Audit log
         await client.query(
             `
             INSERT INTO audit_logs
@@ -1646,7 +1692,7 @@ export const deleteUser = async (req, res) => {
             [
                 'User deleted',
                 userName,
-                performedBy,
+                req.user?.userId || null,
                 req.ip,
                 role,
                 'Critical',
@@ -1665,27 +1711,19 @@ export const deleteUser = async (req, res) => {
         });
 
     } catch (error) {
-
         await client.query('ROLLBACK');
 
-        console.error(
-            'Delete user error:',
-            error
-        );
+        console.error('Delete user error:', error);
 
-        // PostgreSQL foreign-key violation
         if (error.code === '23503') {
             return res.status(409).json({
-                error:
-                    'This user cannot be deleted because other records still depend on this account.'
+                error: 'This user cannot be deleted because other records still depend on this account.'
             });
         }
 
-        // PostgreSQL unique violation
         if (error.code === '23505') {
             return res.status(409).json({
-                error:
-                    'This user cannot be deleted because of a database constraint.'
+                error: 'This user cannot be deleted because of a database constraint.'
             });
         }
 
@@ -1697,6 +1735,7 @@ export const deleteUser = async (req, res) => {
         client.release();
     }
 };
+
 
 export const deleteRole = async (req, res) => {
     const { roleId } = req.params;

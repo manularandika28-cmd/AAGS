@@ -1,92 +1,311 @@
-import React, { useState, useEffect, useRef } from 'react';
-import '../../glass.css';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import '../../styles/theme.css';
+import '../../styles/components.css';
+import '../../styles/layout.css';
+
 import Sidenavbar from '../../components/Sidenavbar';
 import Topnavbar from '../../components/Topnavbar';
+
 import * as XLSX from 'xlsx';
+
 import {
-  Users, Shield, ShieldAlert, CheckCircle2, Download, UserPlus,
-  Settings, Edit, Ban, ShieldCheck, ExternalLink, Plus, ChevronDown, Check
+  Users,
+  ShieldCheck,
+  Activity,
+  Download,
+  UserPlus,
+  Settings,
+  Plus,
+  ChevronDown,
+  Check,
+  X,
+  RefreshCw,
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  FileSpreadsheet,
+  LoaderCircle,
+  UserCheck
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:3000/api/admin';
 
-const labelCls = 'block text-xs font-bold text-white/90 mb-1.5';
-const inputCls = 'glass-input w-full px-3 py-2.5 rounded-xl text-sm outline-none';
-const iconBtn =
-  'p-1.5 rounded-lg bg-white/10 border border-white/20 hover:bg-white/25 transition-colors';
+/* =========================================
+   CONSTANTS
+========================================= */
 
-/* Reusable glass modal shell */
-const Modal = ({ title, subtitle, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4">
-    <div className="glass-modal w-full max-w-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-white">{title}</h2>
-          <p className="text-xs text-white/60 mt-1">{subtitle}</p>
-        </div>
-        <button type="button" onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none">
-          ×
-        </button>
-      </div>
+const ROLE_OPTIONS = [
+  { value: 'Student', label: 'Student' },
+  { value: 'Lecturer', label: 'Lecturer' },
+  { value: 'Dean', label: 'Dean' },
+  { value: 'Medical Officer', label: 'Medical Officer' },
+  { value: 'Admin', label: 'Admin' }
+];
+
+const DEPT_OPTIONS = [
+  { value: '', label: 'Select department' },
+  { value: '1', label: 'Information and Communication Technology' },
+  { value: '2', label: 'Biosystems Technology' },
+  { value: '3', label: 'Instrumentation & Automation' }
+];
+
+const INITIAL_USER_FORM = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'Student',
+  department_id: ''
+};
+
+const INITIAL_ROLE_FORM = {
+  role_name: '',
+  description: ''
+};
+
+/* =========================================
+   API HELPERS
+========================================= */
+
+
+const apiRequest = async (endpoint, options = {}) => {
+  // Get the current access token from the saved session
+  let accessToken = null;
+
+  try {
+    const storedSession = sessionStorage.getItem('authSession');
+
+    if (storedSession) {
+      accessToken = JSON.parse(storedSession).accessToken;
+    }
+  } catch (error) {
+    console.error('Failed to read authentication session:', error);
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
+      ...(accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : {}),
+    },
+  });
+
+  const contentType = response.headers.get('content-type');
+
+  const data = contentType?.includes('application/json')
+    ? await response.json()
+    : null;
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error || data?.message || `Request failed (${response.status})`
+    );
+  }
+
+  return data;
+};
+
+
+const formatDate = (date) => {
+  if (!date) return 'Unknown date';
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) return 'Unknown date';
+
+  return parsed.toLocaleString('en-GB', {
+    timeZone: 'Asia/Colombo',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
+const getInitials = (name = '') => {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '?';
+};
+
+/* =========================================
+   REUSABLE COMPONENTS
+========================================= */
+
+/* Page header */
+
+const PageHeader = ({ title, description, children }) => (
+  <div className="page-header">
+    <div className="page-header-content">
+      <h1 className="page-title">{title}</h1>
+      <p className="page-description">{description}</p>
+    </div>
+
+    <div className="page-header-actions">
       {children}
     </div>
   </div>
 );
 
-const Field = ({ label, children }) => (
-  <div>
-    <label className={labelCls}>{label}</label>
+/* Buttons */
+
+const Button = ({
+  children,
+  variant = 'secondary',
+  type = 'button',
+  disabled = false,
+  onClick,
+  className = ''
+}) => (
+  <button
+    type={type}
+    disabled={disabled}
+    onClick={onClick}
+    className={`app-button app-button-${variant} ${className}`}
+  >
     {children}
+  </button>
+);
+
+/* Summary card */
+
+const StatCard = ({
+  title,
+  value,
+  description,
+  icon: Icon,
+  variant = 'default'
+}) => (
+  <div className="stat-card">
+    <div className="stat-card-header">
+      <span className="stat-card-title">{title}</span>
+
+      <div className={`stat-card-icon stat-icon-${variant}`}>
+        <Icon size={19} strokeWidth={1.8} />
+      </div>
+    </div>
+
+    <div className="stat-card-value">{value}</div>
+
+    <p className="stat-card-description">{description}</p>
   </div>
 );
 
-/* Custom rounded navy dropdown (replaces native <select>) */
-const CustomSelect = ({ value, onChange, options, placeholder = 'Select', className = '', small = false }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+/* Status badge */
 
-  useEffect(() => {
-    const close = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, []);
+const StatusBadge = ({ active }) => (
+  <span className={`status-badge ${active ? 'status-active' : 'status-pending'}`}>
+    <span className="status-dot" />
+    {active ? 'Active' : 'Pending'}
+  </span>
+);
 
-  const selected = options.find((o) => o.value === value);
+/* Error / success message */
+
+const FeedbackMessage = ({ message, type = 'error' }) => {
+  if (!message) return null;
+
+  const Icon = type === 'success' ? CheckCircle2 : AlertCircle;
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div className={`feedback-message feedback-${type}`} role="alert">
+      <Icon size={16} />
+      <span>{message}</span>
+    </div>
+  );
+};
+
+/* Custom dropdown */
+
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select an option',
+  className = ''
+}) => {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selected = options.find(
+    (option) => String(option.value) === String(value)
+  );
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  return (
+    <div className={`custom-select w-full ${className}`} ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`glass-input w-full flex items-center justify-between gap-2 text-left outline-none ${
-          small ? 'text-xs font-semibold px-3 py-1.5 rounded-lg' : 'text-sm px-3 py-2.5 rounded-xl'
-        }`}
+        className="select-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
       >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
-        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span>{selected?.label || placeholder}</span>
+
+        <ChevronDown
+          size={16}
+          className={open ? 'select-chevron-open' : ''}
+        />
       </button>
 
       {open && (
-        <div
-          className="absolute z-50 mt-2 w-full max-h-60 overflow-auto rounded-2xl border border-white/25 bg-[#0A2447]/95 shadow-2xl p-1.5"
-          style={{ backdropFilter: 'blur(20px)' }}
-        >
-          {options.map((o) => (
+        <div className="select-options" role="listbox">
+          {options.map((option) => (
             <button
-              key={o.value}
               type="button"
+              key={option.value}
+              role="option"
+              aria-selected={String(option.value) === String(value)}
+              className={`select-option ${
+                String(option.value) === String(value)
+                  ? 'select-option-selected'
+                  : ''
+              }`}
               onClick={() => {
-                onChange(o.value);
+                onChange(option.value);
                 setOpen(false);
               }}
-              className={`w-full flex items-center justify-between gap-2 text-left text-xs px-3 py-2 rounded-xl transition-colors ${
-                o.value === value ? 'bg-white/20 text-white font-bold' : 'text-white/85 hover:bg-white/15'
-              }`}
             >
-              <span>{o.label}</span>
-              {o.value === value && <Check className="w-3.5 h-3.5 shrink-0" />}
+              <span>{option.label}</span>
+
+              {String(option.value) === String(value) && (
+                <Check size={15} />
+              )}
             </button>
           ))}
         </div>
@@ -95,617 +314,1009 @@ const CustomSelect = ({ value, onChange, options, placeholder = 'Select', classN
   );
 };
 
-const ROLE_OPTIONS = ['Student', 'Lecturer',  'Dean', 'Admin'].map((r) => ({ value: r, label: r }));
-const FILTER_OPTIONS = [{ value: 'All', label: 'All Roles' }, ...ROLE_OPTIONS];
-const DEPT_OPTIONS = [
-  { value: '', label: 'Select department' },
-  { value: '1', label: 'Information and Communication Technology' },
-  { value: '2', label: 'Biosystems Technology' },
-  { value: '3', label: 'Instrumentation & Automation' }
-];
+/* Form field */
 
-const ErrorBox = ({ message }) =>
-  message ? (
-    <div className="bg-red-500/20 border border-red-300/40 text-red-100 rounded-xl px-3 py-2.5 text-xs font-medium">
-      {message}
+const FormField = ({ label, required, children }) => (
+  <div className="form-field">
+    <label className="form-label">
+      {label}
+      {required && <span className="required-mark"> *</span>}
+    </label>
+
+    {children}
+  </div>
+);
+
+/* Modal */
+
+const Modal = ({
+  title,
+  subtitle,
+  onClose,
+  children,
+  size = 'medium'
+}) => {
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      className="modal-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={`modal-container modal-${size}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div className="modal-header">
+          <div>
+            <h2 id="modal-title" className="modal-title">
+              {title}
+            </h2>
+
+            <p className="modal-subtitle">{subtitle}</p>
+          </div>
+
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        <div className="modal-content">
+          {children}
+        </div>
+      </div>
     </div>
-  ) : null;
+  );
+};
+
+/* Loading state */
+
+const LoadingState = () => (
+  <div className="loading-state">
+    <LoaderCircle className="loading-spinner" size={28} />
+    <p>Loading dashboard information...</p>
+  </div>
+);
+
+/* Empty state */
+
+const EmptyState = ({ message }) => (
+  <div className="empty-state">
+    <Users size={30} strokeWidth={1.5} />
+    <p>{message}</p>
+  </div>
+);
+
+/* =========================================
+   MAIN ADMIN DASHBOARD
+========================================= */
 
 const AdminDashboard = () => {
+  /* Dashboard data */
+
   const [stats, setStats] = useState(null);
-  const [auditLogs, setAuditLogs] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  /* UI states */
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dashboardError, setDashboardError] = useState('');
+
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddRole, setShowAddRole] = useState(false);
-  const [roleFilter, setRoleFilter] = useState('All');
+
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [showAllRoles, setShowAllRoles] = useState(false);
 
-  const [roleForm, setRoleForm] = useState({ role_name: '', description: '' });
+  /* Filters */
+
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  /* Forms */
+
+  const [userForm, setUserForm] = useState(INITIAL_USER_FORM);
+  const [roleForm, setRoleForm] = useState(INITIAL_ROLE_FORM);
+
+  const [addingUser, setAddingUser] = useState(false);
   const [addingRole, setAddingRole] = useState(false);
+
+  const [addUserError, setAddUserError] = useState('');
   const [addRoleError, setAddRoleError] = useState('');
 
-  const [userForm, setUserForm] = useState({
-    name: '', email: '', password: '', role: 'Student', department_id: ''
-  });
-  const [addingUser, setAddingUser] = useState(false);
-  const [addUserError, setAddUserError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const fetchAuditLogs = async () => {
+  /* =========================================
+     FETCH DASHBOARD DATA
+  ========================================= */
+
+  const fetchDashboardData = useCallback(async (showLoader = false) => {
+    if (showLoader) setRefreshing(true);
+
+    setDashboardError('');
+
     try {
-      const res = await fetch(`${API_BASE}/audit-logs`, { credentials: 'include' });
-      const data = await res.json();
-      if (res.ok) setAuditLogs(data);
-    } catch (error) {
-      console.error('Fetch audit logs error:', error);
-    }
-  };
+      const [statsData, rolesData, logsData] = await Promise.all([
+        apiRequest('/dashboard-stats'),
+        apiRequest('/roles'),
+        apiRequest('/audit-logs')
+      ]);
 
-  const fetchRoles = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/roles`, { credentials: 'include' });
-      const data = await res.json();
-      if (res.ok) setRoles(data);
-    } catch (error) {
-      console.error('Fetch roles error:', error);
-    }
-  };
+      setStats(statsData);
 
-  const handleAddRole = async (e) => {
-    e.preventDefault();
-    setAddingRole(true);
-    setAddRoleError('');
-    try {
-      const res = await fetch(`${API_BASE}/roles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(roleForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create role');
+      setRoles(Array.isArray(rolesData) ? rolesData : []);
 
-      setRoles((currentRoles) => [...currentRoles, data.role]);
-      setRoleForm({ role_name: '', description: '' });
-      setShowAddRole(false);
+      setAuditLogs(Array.isArray(logsData) ? logsData : []);
+
     } catch (error) {
-      console.error('Add role error:', error);
-      setAddRoleError(error.message);
+      console.error('Dashboard fetch error:', error);
+      setDashboardError(error.message || 'Unable to load dashboard data.');
     } finally {
-      setAddingRole(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const handleAddUser = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    fetchDashboardData();
+
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
+
+  /* =========================================
+     NORMALIZE USERS
+  ========================================= */
+
+ const users = (stats?.userList || []).map((user, index) => ({
+  id: user.user_id ?? user.id ?? user.email ?? `user-${index}`,
+  rowKey: `${user.user_id ?? user.id ?? user.email ?? 'user'}-${index}`,
+  name: user.name || 'Unnamed User',
+  email: user.email || '',
+  role: user.role || 'Unknown',
+  isActive: Boolean(user.is_active),
+  initials: getInitials(user.name)
+}));
+
+  /* =========================================
+     FILTER USERS
+  ========================================= */
+
+  const filteredUsers = users.filter((user) => {
+    const matchesRole =
+      roleFilter === 'All' || user.role === roleFilter;
+
+    const search = searchTerm.toLowerCase().trim();
+
+    const matchesSearch =
+      !search ||
+      user.name.toLowerCase().includes(search) ||
+      user.email.toLowerCase().includes(search);
+
+    return matchesRole && matchesSearch;
+  });
+
+  const displayedUsers = showAllUsers
+    ? filteredUsers
+    : filteredUsers.slice(0, 5);
+
+  const filterOptions = [
+    { value: 'All', label: 'All Roles' },
+    ...Array.from(new Set(users.map((user) => user.role)))
+      .filter(Boolean)
+      .map((role) => ({ value: role, label: role }))
+  ];
+
+  /* =========================================
+   SUMMARY VALUES
+========================================= */
+
+const activeUsers =
+  stats?.totalActiveUsers ??
+  users.filter((user) => user.isActive).length;
+
+const adminCount =
+  stats?.systemAdminsCount ??
+  users.filter((user) => user.role === 'Admin').length;
+
+const pendingUsers = Number(stats?.pendingUsers ?? 0);
+
+  /* =========================================
+     ADD USER
+  ========================================= */
+
+  const handleAddUser = async (event) => {
+    event.preventDefault();
+
     setAddingUser(true);
     setAddUserError('');
+    setSuccessMessage('');
+
     try {
-      const res = await fetch(`${API_BASE}/users`, {
+      await apiRequest('/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(userForm)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create user');
 
-      // Refresh dashboard data so the new user appears immediately
-      const statsRes = await fetch(`${API_BASE}/dashboard-stats`, { credentials: 'include' });
-      const statsData = await statsRes.json();
-      if (statsRes.ok) setStats(statsData);
-
-      setUserForm({ name: '', email: '', password: '', role: 'Student', department_id: '' });
+      setUserForm(INITIAL_USER_FORM);
       setShowAddUser(false);
+
+      setSuccessMessage('User account created successfully.');
+
+      await fetchDashboardData();
+
     } catch (error) {
       console.error('Add user error:', error);
-      setAddUserError(error.message);
+      setAddUserError(error.message || 'Failed to create user.');
     } finally {
       setAddingUser(false);
     }
   };
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/dashboard-stats`, { credentials: 'include' });
-        const data = await res.json();
-        if (res.ok) setStats(data);
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
+  /* =========================================
+     ADD ROLE
+  ========================================= */
+
+  const handleAddRole = async (event) => {
+    event.preventDefault();
+
+    setAddingRole(true);
+    setAddRoleError('');
+    setSuccessMessage('');
+
+    try {
+      const data = await apiRequest('/roles', {
+        method: 'POST',
+        body: JSON.stringify(roleForm)
+      });
+
+      if (data?.role) {
+        setRoles((current) => [...current, data.role]);
+      } else {
+        await fetchDashboardData();
       }
-    };
 
-    fetchStats();
-    fetchRoles();
-    fetchAuditLogs();
+      setRoleForm(INITIAL_ROLE_FORM);
+      setShowAddRole(false);
 
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, []);
+      setSuccessMessage('New role created successfully.');
 
-  const avatarColors = ['bg-blue-900', 'bg-rose-500', 'bg-indigo-400', 'bg-emerald-600', 'bg-amber-500'];
-
-  const users = (stats?.userList ?? []).map((u, idx) => ({
-    initials: u.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    status: u.is_active ? 'Active' : 'Pending',
-    statusBg: u.is_active
-      ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-300/30'
-      : 'bg-amber-400/20 text-amber-200 border border-amber-300/30',
-    mfa: u.is_active, // no real MFA data exists — using is_active as a stand-in visual only
-    avatarBg: avatarColors[idx % avatarColors.length]
-  }));
-
-  const filteredUsers =
-    roleFilter === 'All' ? users : users.filter((user) => user.role === roleFilter);
-
-  const handleExportReport = () => {
-    const userData = users.map((user) => ({
-      Name: user.name,
-      Email: user.email,
-      Role: user.role,
-      Status: user.status,
-      MFA: user.mfa ? 'Enabled' : 'Disabled'
-    }));
-
-    const roleData = roles.map((role) => ({
-      'Role Name': role.role_name,
-      Description: role.description,
-      'User Count': role.user_count
-    }));
-
-    const auditData = auditLogs.map((log) => ({
-      Action: log.action,
-      Target: log.target || '',
-      'IP Address': log.ip_address || '',
-      'Date & Time': new Date(log.created_at).toLocaleString('en-GB', {
-        timeZone: 'Asia/Colombo',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      })
-    }));
-
-    const summaryData = [
-      {
-        'Total Active Users': stats?.totalActiveUsers ?? 0,
-        'System Admins': stats?.systemAdminsCount ?? 0,
-        'MFA Adoption Rate': '68%',
-        'System Status': 'All Systems Operational'
-      }
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summaryData), 'Summary');
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(userData), 'Users');
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(roleData), 'Roles');
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(auditData), 'Audit Logs');
-    XLSX.writeFile(workbook, 'AAGS_Admin_Report.xlsx');
+    } catch (error) {
+      console.error('Add role error:', error);
+      setAddRoleError(error.message || 'Failed to create role.');
+    } finally {
+      setAddingRole(false);
+    }
   };
 
+  /* =========================================
+     EXPORT REPORT
+  ========================================= */
+
+  const handleExportReport = () => {
+    try {
+      const userData = users.map((user) => ({
+        Name: user.name,
+        Email: user.email,
+        Role: user.role,
+        Status: user.isActive ? 'Active' : 'Pending'
+      }));
+
+      const roleData = roles.map((role) => ({
+        'Role Name': role.role_name,
+        Description: role.description || '',
+        'User Count': role.user_count ?? ''
+      }));
+
+      const auditData = auditLogs.map((log) => ({
+        Action: log.action || '',
+        Target: log.target || '',
+        'IP Address': log.ip_address || '',
+        'Date & Time': formatDate(log.created_at)
+      }));
+
+      const summaryData = [{
+        'Total Users': users.length,
+        'Active Users': activeUsers,
+        'System Administrators': adminCount,
+        'Total Roles': roles.length,
+        'Audit Events': auditLogs.length,
+        'Report Generated': formatDate(new Date())
+      }];
+
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(summaryData),
+        'Summary'
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(userData),
+        'Users'
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(roleData),
+        'Roles'
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(auditData),
+        'Audit Logs'
+      );
+
+      XLSX.writeFile(workbook, 'AAGS_Admin_Report.xlsx');
+
+    } catch (error) {
+      console.error('Report export error:', error);
+      setDashboardError('Unable to generate the Excel report.');
+    }
+  };
+
+  /* =========================================
+     RENDER
+  ========================================= */
+
   return (
-    <div className="flex min-h-screen text-white font-sans antialiased">
-      {/* Admin Sidebar */}
-      <Sidenavbar />
+    <div className="app-layout">
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Top Navbar */}
-        <Topnavbar />
+  {/* Sidebar */}
+  <Sidenavbar />
 
-        <main className="p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
-          {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight drop-shadow">
-                System Administration
-              </h1>
-              <p className="text-sm text-white/80 mt-1 font-medium">
-                Manage users, roles, and monitor system health.
-              </p>
-            </div>
+  <div className="app-main">
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleExportReport}
-                className="glass-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold"
-              >
-                <Download className="w-4 h-4" />
-                Export Report
-              </button>
+    {/* Top navbar */}
+    <Topnavbar />
 
-              <button
-                type="button"
-                onClick={() => {
-                  setAddUserError('');
-                  setShowAddUser(true);
-                }}
-                className="glass-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add User
-              </button>
-            </div>
-          </div>
+    <main className="page-container admin-page">
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Total Active Users */}
-            <div className="glass-card p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-white/90 font-bold text-xs tracking-wider">
-                  <Users className="w-4 h-4 text-indigo-300" />
-                  <span>TOTAL ACTIVE USERS</span>
-                </div>
-                <span className="bg-emerald-400/20 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-300/30">
-                  +12%
-                </span>
-              </div>
-              <div className="text-3xl font-black text-white mt-4">
-                {stats?.totalActiveUsers ?? '1,248'}
-              </div>
-            </div>
+      {/* Page header */}
+      <PageHeader
+        title="System Administration"
+        description="Manage users, roles and monitor administrative activity."
+      >
+        {/* Refresh Button */}
+        <Button
+          variant="secondary"
+          onClick={() => fetchDashboardData(true)}
+          disabled={refreshing}
+          className="transition-all duration-200 hover:!bg-emerald-600 hover:!text-white"
+        >
+          <RefreshCw
+            size={16}
+            className={refreshing ? 'loading-spinner' : ''}
+          />
+          Refresh
+        </Button>
 
-            {/* MFA Adoption */}
-            <div className="glass-card p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-white/90 font-bold text-xs tracking-wider">
-                  <Shield className="w-4 h-4 text-indigo-300" />
-                  <span>MFA ADOPTION RATE</span>
-                </div>
-                <span className="bg-amber-400/20 text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-300/30">
-                  Needs Action
-                </span>
-              </div>
-              <div className="text-3xl font-black text-white mt-4">68%</div>
-            </div>
+        {/* Export Report Button */}
+        <Button
+          variant="secondary"
+          onClick={handleExportReport}
+          disabled={!stats}
+          className="transition-all duration-200 hover:!bg-blue-600 hover:!text-white"
+        >
+          <Download size={16} />
+          Export Report
+        </Button>
 
-            {/* System Admins */}
-            <div className="glass-card p-5 flex flex-col justify-between">
-              <div className="flex items-center space-x-1.5 text-white/90 font-bold text-xs tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-indigo-300" />
-                <span>SYSTEM ADMINS</span>
-              </div>
-              <div className="text-3xl font-black text-white mt-4">
-                {stats?.systemAdminsCount ?? 12}
-              </div>
-            </div>
+            
+          </PageHeader>
 
-            {/* System Status */}
-            <div className="glass-card p-5 flex flex-col justify-between relative overflow-hidden">
-              <div className="absolute right-4 top-4 pointer-events-none">
-                <CheckCircle2 className="w-16 h-16 opacity-25 text-emerald-300" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5 text-emerald-300 font-bold text-xs tracking-wider">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>SYSTEM STATUS</span>
-                </div>
-                <div className="text-xl font-black text-emerald-200 mt-2">
-                  All Systems Operational
-                </div>
-              </div>
-              <span className="text-[10px] text-white/50 mt-3 block">Last checked: 2 mins ago</span>
-            </div>
-          </div>
+          {/* Feedback */}
 
-          {/* Lower Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* User Management */}
-            <div className="lg:col-span-2 glass-card p-5 flex flex-col justify-between min-h-[500px]">
-              <div>
-                <div className="flex items-center justify-between pb-4 border-b border-white/15">
-                  <h3 className="font-bold text-base text-white">User Management</h3>
+          <FeedbackMessage
+            message={dashboardError}
+            type="error"
+          />
 
-                  <CustomSelect small className="w-36" value={roleFilter} onChange={setRoleFilter} options={FILTER_OPTIONS} />
-                </div>
+          <FeedbackMessage
+            message={successMessage}
+            type="success"
+          />
 
-                <div className="overflow-x-auto pt-2">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="text-white/50 font-semibold border-b border-white/15 uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-3">USER</th>
-                        <th className="py-3 px-3">ROLE</th>
-                        <th className="py-3 px-3">STATUS</th>
-                        <th className="py-3 px-3">MFA</th>
-                        <th className="py-3 px-3 text-right">ACTIONS</th>
-                      </tr>
-                    </thead>
+          {loading ? (
+            <LoadingState />
+          ) : (
+            <>
 
-                    <tbody className="divide-y divide-white/10 text-white/90">
-                      {(showAllUsers ? filteredUsers : filteredUsers.slice(0, 5)).map((user, index) => (
-                        <tr key={index} className="hover:bg-white/10 transition-colors">
-                          <td className="py-4 px-3">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-8 h-8 rounded-full ${user.avatarBg} text-white font-bold flex items-center justify-center text-xs shrink-0 ring-2 ring-white/30`}
-                              >
-                                {user.initials}
-                              </div>
-                              <div>
-                                <p className="font-bold text-white">{user.name}</p>
-                                <p className="text-[11px] text-white/55">{user.email}</p>
-                              </div>
-                            </div>
-                          </td>
+              {/* =================================
+                  SUMMARY CARDS
+              ================================= */}
 
-                          <td className="py-4 px-3 font-medium text-white/80">{user.role}</td>
+              {/* =================================
+    SUMMARY CARDS
+================================= */}
 
-                          <td className="py-4 px-3">
-                            <span
-                              className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold ${user.statusBg}`}
-                            >
-                              {user.status}
-                            </span>
-                          </td>
+<section className="stats-grid">
 
-                          <td className="py-4 px-3">
-                            {user.mfa ? (
-                              <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                            ) : (
-                              <ShieldAlert className="w-4 h-4 text-amber-300" />
-                            )}
-                          </td>
+  <StatCard
+    title="Total Users"
+    value={users.length.toLocaleString()}
+    description="Registered system accounts"
+    icon={Users}
+    variant="blue"
+  />
 
-                          <td className="py-4 px-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button className={`${iconBtn} text-white/80 hover:text-white`}>
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button className={`${iconBtn} text-rose-300 hover:text-rose-200`}>
-                                <Ban className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+  <StatCard
+    title="Active Users"
+    value={Number(activeUsers).toLocaleString()}
+    description="Currently active accounts"
+    icon={ShieldCheck}
+    variant="green"
+  />
 
-              <div className="pt-4 border-t border-white/15 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowAllUsers((current) => !current)}
-                  className="text-xs font-bold text-white/80 hover:text-white"
-                >
-                  {showAllUsers ? 'Show Less' : 'View All Users'}
-                </button>
-              </div>
-            </div>
+  <StatCard
+    title="Pending Approvals"
+    value={pendingUsers.toLocaleString()}
+    description="Awaiting account authorization"
+    icon={UserCheck}
+    variant="amber"
+  />
 
-            {/* Right Column */}
-            <div className="space-y-6">
-              {/* Role Settings */}
-              <div className="glass-card p-5 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15">
-                  <h3 className="font-bold text-white text-base">Role Settings</h3>
-                  <Settings className="w-4 h-4 text-white/50" />
-                </div>
+  <StatCard
+    title="System Administrators"
+    value={Number(adminCount).toLocaleString()}
+    description="Accounts with administrator privileges"
+    icon={Settings}
+    variant="purple"
+  />
 
-                <div className="space-y-3">
-                  {roles.length === 0 ? (
-                    <p className="text-xs text-white/50 text-center py-4">No roles found.</p>
-                  ) : (
-                    (showAllRoles ? roles : roles.slice(0, 3)).map((role) => (
-                      <div key={role.role_id} className="glass-inner p-3 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-xs text-white">{role.role_name}</span>
-                          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                            Role
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-white/65">{role.description}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
+</section>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddRoleError('');
-                    setRoleForm({ role_name: '', description: '' });
-                    setShowAddRole(true);
-                  }}
-                  className="glass-btn w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  New Role
-                </button>
+              {/* =================================
+                  MAIN DASHBOARD GRID
+              ================================= */}
 
-                {roles.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllRoles((current) => !current)}
-                    className="w-full text-xs font-bold text-white/80 hover:text-white"
-                  >
-                    {showAllRoles ? 'Show Less' : 'View All Roles'}
-                  </button>
-                )}
-              </div>
+              <section className="admin-content-grid">
 
-              {/* Recent Audit Logs */}
-              <div className="glass-card p-5 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15">
-                  <h3 className="font-bold text-white text-base">Recent Audit Logs</h3>
-                  <ExternalLink className="w-4 h-4 text-white/50" />
-                </div>
+                {/* USER MANAGEMENT */}
 
-                <div className="space-y-4">
-                  {auditLogs.length === 0 ? (
-                    <div className="text-center py-6 text-sm text-white/50">
-                      No audit activity yet.
+                <div className="panel user-panel">
+
+                  <div className="panel-header">
+                    <div>
+                      <h2 className="panel-title">
+                        User Management
+                      </h2>
+
+                      <p className="panel-description">
+                        View and manage registered accounts.
+                      </p>
                     </div>
-                  ) : (
-                    auditLogs.slice(0, 3).map((log, index) => (
-                      <div
-                        key={log.audit_id}
-                        className={`border-l-2 pl-3 space-y-0.5 ${
-                          index === 0
-                            ? 'border-indigo-300'
-                            : index === 1
-                            ? 'border-emerald-300'
-                            : 'border-amber-300'
-                        }`}
+
+                    <span className="panel-count">
+                      {filteredUsers.length} users
+                    </span>
+                  </div>
+
+                  {/* Filters */}
+
+                  <div className="table-toolbar">
+
+                    <div className="search-wrapper">
+                      <Search size={16} />
+
+                      <input
+                        type="search"
+                        placeholder="Search by name or email..."
+                        value={searchTerm}
+                        onChange={(event) =>
+                          setSearchTerm(event.target.value)
+                        }
+                        className="search-input"
+                      />
+                    </div>
+
+                    <CustomSelect
+                      value={roleFilter}
+                      onChange={setRoleFilter}
+                      options={filterOptions}
+                      className="filter-select"
+                    />
+
+                  </div>
+
+                  {/* User table */}
+
+                  <div className="table-wrapper">
+
+                    <table className="data-table">
+
+                      <thead>
+                        <tr>
+                          <th>USER</th>
+                          <th>ROLE</th>
+                          <th>STATUS</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+
+                        {displayedUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={3}>
+                              <EmptyState message="No matching users found." />
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedUsers.map((user) => (
+                           <tr key={user.rowKey}>
+
+                              <td>
+                                <div className="user-cell">
+
+                                  <div className="user-avatar">
+                                    {user.initials}
+                                  </div>
+
+                                  <div className="user-details">
+                                    <span className="user-name">
+                                      {user.name}
+                                    </span>
+
+                                    <span className="user-email">
+                                      {user.email}
+                                    </span>
+                                  </div>
+
+                                </div>
+                              </td>
+
+                              <td>
+                                <span className="role-label">
+                                  {user.role}
+                                </span>
+                              </td>
+
+                              <td>
+                                <StatusBadge active={user.isActive} />
+                              </td>
+
+                            </tr>
+                          ))
+                        )}
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
+
+                  {/* Table footer */}
+
+                  <div className="panel-footer">
+
+                    <span className="table-result-count">
+                      Showing {displayedUsers.length} of {filteredUsers.length} users
+                    </span>
+
+                    {filteredUsers.length > 5 && (
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() =>
+                          setShowAllUsers((current) => !current)
+                        }
                       >
-                        <p className="text-[13px] text-white">
-                          {log.action}
-                          {log.target && `: ${log.target}`}
-                        </p>
-                        <p className="text-[11px] text-white/55">
-                          {log.ip_address
-                            ? `${log.target || 'Unknown User'} (IP: ${log.ip_address})`
-                            : log.target || 'System'}
-                          {' • '}
-                          {new Date(log.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        {showAllUsers ? 'Show less' : 'View all users'}
+                      </button>
+                    )}
+
+                  </div>
+
+                </div>
+
+                {/* RIGHT COLUMN */}
+
+                <div className="admin-side-column">
+
+                  {/* ROLE SETTINGS */}
+
+                  <div className="panel">
+
+                    <div className="panel-header">
+
+                      <div>
+                        <h2 className="panel-title">
+                          Role Settings
+                        </h2>
+
+                        <p className="panel-description">
+                          System access roles.
                         </p>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Add User Modal */}
+                      <Settings size={19} className="panel-icon" />
+
+                    </div>
+
+                    <div className="role-list">
+
+                      {roles.length === 0 ? (
+                        <EmptyState message="No roles available." />
+                      ) : (
+                        (showAllRoles ? roles : roles.slice(0, 3)).map((role) => (
+                          <div
+                            className="role-item"
+                            key={role.role_id}
+                          >
+
+                            <div className="role-item-header">
+                              <span className="role-name">
+                                {role.role_name}
+                              </span>
+
+                              <span className="role-tag">
+                                Role
+                              </span>
+                            </div>
+
+                            <p className="role-description">
+                              {role.description || 'No description provided.'}
+                            </p>
+
+                            <div className="role-meta">
+                              {role.user_count ?? 0} assigned users
+                            </div>
+
+                          </div>
+                        ))
+                      )}
+
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      className="full-width"
+                      onClick={() => {
+                        setAddRoleError('');
+                        setRoleForm(INITIAL_ROLE_FORM);
+                        setShowAddRole(true);
+                      }}
+                    >
+                      <Plus size={16} />
+                      Create New Role
+                    </Button>
+
+                    {roles.length > 3 && (
+                      <button
+                        type="button"
+                        className="text-action role-expand-action"
+                        onClick={() =>
+                          setShowAllRoles((current) => !current)
+                        }
+                      >
+                        {showAllRoles ? 'Show less' : 'View all roles'}
+                      </button>
+                    )}
+
+                  </div>
+
+                  {/* AUDIT LOGS */}
+
+                  <div className="panel">
+
+                    <div className="panel-header">
+
+                      <div>
+                        <h2 className="panel-title">
+                          Recent Audit Logs
+                        </h2>
+
+                        <p className="panel-description">
+                          Recent administrative activity.
+                        </p>
+                      </div>
+
+                      <Activity size={19} className="panel-icon" />
+
+                    </div>
+
+                    <div className="audit-list">
+
+                      {auditLogs.length === 0 ? (
+                        <EmptyState message="No audit activity available." />
+                      ) : (
+                        auditLogs.slice(0, 5).map((log, index) => (
+                          <div
+                            className="audit-item"
+                            key={log.audit_id ?? `${log.created_at}-${index}`}
+                          >
+
+                            <div className="audit-marker">
+                              <Clock size={14} />
+                            </div>
+
+                            <div className="audit-content">
+
+                              <p className="audit-action">
+                                {log.action || 'Unknown action'}
+                              </p>
+
+                              {log.target && (
+                                <p className="audit-target">
+                                  Target: {log.target}
+                                </p>
+                              )}
+
+                              <p className="audit-time">
+                                {formatDate(log.timestamp)}
+                              </p>
+
+                            </div>
+
+                          </div>
+                        ))
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </section>
+
+            </>
+          )}
+
+          {/* =================================
+              ADD USER MODAL
+          ================================= */}
+
           {showAddUser && (
             <Modal
-              title="Add New User"
-              subtitle="Create a new AAGS system account"
-              onClose={() => setShowAddUser(false)}
+              title="Create New User"
+              subtitle="Add a new account to the AAGS system."
+              onClose={() => {
+                if (!addingUser) setShowAddUser(false);
+              }}
             >
-              <form onSubmit={handleAddUser} className="space-y-4">
-                <Field label="Full Name">
+
+              <form
+                onSubmit={handleAddUser}
+                className="app-form"
+              >
+
+                <FormField label="Full Name" required>
                   <input
                     type="text"
-                    value={userForm.name}
-                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                    required
-                    className={inputCls}
+                    className="form-input"
                     placeholder="Enter full name"
+                    value={userForm.name}
+                    onChange={(event) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        name: event.target.value
+                      }))
+                    }
+                    required
                   />
-                </Field>
+                </FormField>
 
-                <Field label="Email">
+                <FormField label="Email Address" required>
                   <input
                     type="email"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    required
-                    className={inputCls}
+                    className="form-input"
                     placeholder="user@uoc.lk"
+                    value={userForm.email}
+                    onChange={(event) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        email: event.target.value
+                      }))
+                    }
+                    required
                   />
-                </Field>
+                </FormField>
 
-                <Field label="Temporary Password">
+                <FormField label="Temporary Password" required>
                   <input
                     type="password"
-                    value={userForm.password}
-                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                    required
-                    minLength={6}
-                    className={inputCls}
+                    className="form-input"
                     placeholder="Minimum 6 characters"
+                    value={userForm.password}
+                    onChange={(event) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        password: event.target.value
+                      }))
+                    }
+                    minLength={6}
+                    required
                   />
-                </Field>
+                </FormField>
 
-                <Field label="Role">
-                  <CustomSelect value={userForm.role} onChange={(v) => setUserForm({ ...userForm, role: v })} options={ROLE_OPTIONS} />
-                </Field>
+                <FormField label="User Role" required>
+                  <CustomSelect
+                    value={userForm.role}
+                    onChange={(value) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        role: value
+                      }))
+                    }
+                    options={ROLE_OPTIONS}
+                  />
+                </FormField>
 
-                {(userForm.role === 'Student' || userForm.role === 'Lecturer') && (
-                  <Field label="Department">
-                    <CustomSelect value={userForm.department_id} onChange={(v) => setUserForm({ ...userForm, department_id: v })} options={DEPT_OPTIONS} />
-                  </Field>
+                {['Student', 'Lecturer'].includes(userForm.role) && (
+                  <FormField label="Department" required>
+                    <CustomSelect
+                      value={userForm.department_id}
+                      onChange={(value) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          department_id: value
+                        }))
+                      }
+                      options={DEPT_OPTIONS}
+                    />
+                  </FormField>
                 )}
 
-                <ErrorBox message={addUserError} />
+                <FeedbackMessage
+                  message={addUserError}
+                  type="error"
+                />
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
+                <div className="modal-actions">
+
+                  <Button
+                    variant="secondary"
                     onClick={() => setShowAddUser(false)}
-                    className="glass-btn flex-1 py-2.5 rounded-xl text-sm font-bold"
+                    disabled={addingUser}
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+
+                  <Button
+                    variant="primary"
                     type="submit"
                     disabled={addingUser}
-                    className="glass-btn flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
                   >
-                    {addingUser ? 'Creating...' : 'Create User'}
-                  </button>
+                    {addingUser ? (
+                      <>
+                        <LoaderCircle size={16} className="loading-spinner" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={16} />
+                        Create User
+                      </>
+                    )}
+                  </Button>
+
                 </div>
+
               </form>
+
             </Modal>
           )}
 
-          {/* Add Role Modal */}
+          {/* =================================
+              ADD ROLE MODAL
+          ================================= */}
+
           {showAddRole && (
             <Modal
               title="Create New Role"
-              subtitle="Add a new role to the AAGS system"
-              onClose={() => setShowAddRole(false)}
+              subtitle="Define a new role for the AAGS system."
+              onClose={() => {
+                if (!addingRole) setShowAddRole(false);
+              }}
             >
-              <form onSubmit={handleAddRole} className="space-y-4">
-                <Field label="Role Name">
+
+              <form
+                onSubmit={handleAddRole}
+                className="app-form"
+              >
+
+                <FormField label="Role Name" required>
                   <input
                     type="text"
-                    value={roleForm.role_name}
-                    onChange={(e) => setRoleForm({ ...roleForm, role_name: e.target.value })}
-                    required
-                    className={inputCls}
+                    className="form-input"
                     placeholder="e.g. Registrar"
-                  />
-                </Field>
-
-                <Field label="Description">
-                  <textarea
-                    value={roleForm.description}
-                    onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                    value={roleForm.role_name}
+                    onChange={(event) =>
+                      setRoleForm((current) => ({
+                        ...current,
+                        role_name: event.target.value
+                      }))
+                    }
                     required
-                    rows={4}
-                    className={`${inputCls} resize-none`}
-                    placeholder="Describe what this role is responsible for"
                   />
-                </Field>
+                </FormField>
 
-                <ErrorBox message={addRoleError} />
+                <FormField label="Description" required>
+                  <textarea
+                    className="form-input form-textarea"
+                    placeholder="Describe the responsibilities of this role."
+                    value={roleForm.description}
+                    onChange={(event) =>
+                      setRoleForm((current) => ({
+                        ...current,
+                        description: event.target.value
+                      }))
+                    }
+                    rows={4}
+                    required
+                  />
+                </FormField>
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
+                <FeedbackMessage
+                  message={addRoleError}
+                  type="error"
+                />
+
+                <div className="modal-actions">
+
+                  <Button
+                    variant="secondary"
                     onClick={() => setShowAddRole(false)}
-                    className="glass-btn flex-1 py-2.5 rounded-xl text-sm font-bold"
+                    disabled={addingRole}
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+
+                  <Button
+                    variant="primary"
                     type="submit"
                     disabled={addingRole}
-                    className="glass-btn flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
                   >
-                    {addingRole ? 'Creating...' : 'Create Role'}
-                  </button>
+                    {addingRole ? (
+                      <>
+                        <LoaderCircle size={16} className="loading-spinner" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} />
+                        Create Role
+                      </>
+                    )}
+                  </Button>
+
                 </div>
+
               </form>
+
             </Modal>
           )}
+
         </main>
+
       </div>
+
     </div>
   );
 };

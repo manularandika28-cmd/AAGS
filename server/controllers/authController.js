@@ -102,6 +102,23 @@ switch (requestedRole) {
         break;
     }
 
+
+    case 'Medical Officer': {
+        const result = await pool.query(
+            'SELECT * FROM medical_officers WHERE email = $1',
+            [email]
+        );
+
+        if (result.rows.length > 0) {
+            user = result.rows[0];
+            role = 'Medical Officer';
+            idColumn = 'medical_officer_id';
+        }
+
+        break;
+    }
+
+
     default:
         return res.status(400).json({
             error: 'Invalid login role'
@@ -132,10 +149,15 @@ if (!user) {
         error: `This account is not authorized to log in as ${requestedRole}.`
     });
 }
-// Block pending (unapproved) accounts
-if ((role === 'Student' || role === 'Lecturer') && user.is_active === false) {
+// Block pending or deactivated accounts
+if (
+    ['Student', 'Lecturer', 'Medical Officer'].includes(role) &&
+    user.is_active === false
+) {
     return res.status(403).json({
-        error: 'Your account is pending Admin approval.'
+        error: role === 'Medical Officer'
+            ? 'Your Medical Officer account is deactivated. Contact the Admin.'
+            : 'Your account is pending Admin approval or has been deactivated.'
     });
 }
 
